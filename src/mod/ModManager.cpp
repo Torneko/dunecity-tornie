@@ -42,6 +42,7 @@ static const char* GAME_OPTIONS_FILE = "GameOptions.ini";
 static const char* VANILLA_MOD_NAME = "vanilla";
 static const char* DUNECITY_MOD_NAME = "dunecity";
 static const char* TORNIE_MOD_NAME = "Tornie";
+static const char* DUNE2R_MOD_NAME = "Dune2R";
 
 // Install config file names (with .default suffix)
 static const char* OBJECT_DATA_DEFAULT = "ObjectData.ini.default";
@@ -90,6 +91,11 @@ void ModManager::initialize() {
     // Seed Tornie mod if not present
     if (!modExists(TORNIE_MOD_NAME)) {
         seedTornieFromDefaults();
+    }
+
+    // Seed Dune2R graphics mod if not present
+    if (!modExists(DUNE2R_MOD_NAME)) {
+        seedDune2RFromDefaults();
     }
 
     // Load active mod from file
@@ -841,6 +847,27 @@ void ModManager::seedTornieFromDefaults() {
         SDL_Log("ModManager: Tornie mod seeded successfully from %s", tornie_src.c_str());
     } catch (const std::exception& e) {
         SDL_Log("ModManager: Warning - Tornie mod seed failed: %s", e.what());
+    }
+}
+
+void ModManager::seedDune2RFromDefaults() {
+    SDL_Log("ModManager: Seeding Dune2R mod from bundled install...");
+
+    std::string dune2r_dst = getModPath(DUNE2R_MOD_NAME);
+    std::string dune2r_src = getDuneLegacyDataDir() + "/mods/Dune2R";
+
+    if (!existsFile(dune2r_src + "/" + MOD_INI_FILE)) {
+        SDL_Log("ModManager: Warning - bundled Dune2R mod not found at %s", dune2r_src.c_str());
+        return;
+    }
+
+    try {
+        std::filesystem::copy(dune2r_src, dune2r_dst,
+            std::filesystem::copy_options::recursive |
+            std::filesystem::copy_options::skip_existing);
+        SDL_Log("ModManager: Dune2R mod seeded successfully from %s", dune2r_src.c_str());
+    } catch (const std::exception& e) {
+        SDL_Log("ModManager: Warning - Dune2R mod seed failed: %s", e.what());
     }
 }
 

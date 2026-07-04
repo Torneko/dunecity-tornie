@@ -204,6 +204,7 @@ public:
      */
     void seedDunecityFromDefaults();
     void seedTornieFromDefaults();
+    void seedDune2RFromDefaults();
 
     /**
      * \return true if the dunecity mod is missing required files or has
