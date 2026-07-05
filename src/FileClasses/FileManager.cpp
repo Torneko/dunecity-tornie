@@ -81,7 +81,9 @@ FileManager::~FileManager() = default;
 std::vector<std::string> FileManager::getSearchPath() {
     std::vector<std::string> searchPath;
 
-    searchPath.push_back(getDuneLegacyDataDir());
+    const std::string dataDir = getDuneLegacyDataDir();
+    searchPath.push_back(dataDir);
+    searchPath.push_back(dataDir + "/data");
     char tmp[FILENAME_MAX];
     fnkdat("data", tmp, FILENAME_MAX, FNKDAT_USER | FNKDAT_CREAT);
     searchPath.push_back(tmp);
@@ -107,7 +109,7 @@ std::vector<std::string> FileManager::getNeededFiles() {
 
     std::string LanguagePakFiles = (pTextManager != nullptr) ? _("LanguagePakFiles") : "";
 
-    if(LanguagePakFiles.empty()) {
+    if(LanguagePakFiles.empty() || LanguagePakFiles == "LanguagePakFiles") {
         LanguagePakFiles = "ENGLISH.PAK,HARK.PAK,ATRE.PAK,ORDOS.PAK";
     }
 

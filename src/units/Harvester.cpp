@@ -113,7 +113,10 @@ void Harvester::blitToScreen()
     SDL_Rect source = calcSpriteSourceRect(pUnitGraphic, drawnAngle, numImagesX);
     SDL_Rect dest = calcSpriteDrawingRect( pUnitGraphic, x, y, numImagesX, 1, HAlign::Center, VAlign::Center);
 
-    SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    if(!pGFXManager->drawHDObjPic(graphicID, getOwner()->getHouseID(), currentZoomlevel,
+                                  drawnAngle, numImagesX, 0, 1, x, y)) {
+        SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    }
 
     if(isHarvesting() == true) {
 

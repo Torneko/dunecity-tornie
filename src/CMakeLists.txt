@@ -37,6 +37,9 @@ if(APPLE)
         MACOSX_PACKAGE_LOCATION "Resources"
     )
     target_sources(dunecity PRIVATE ${CMAKE_SOURCE_DIR}/dunecity.icns)
+elseif(ANDROID)
+    add_library(dunecity SHARED)
+    set_target_properties(dunecity PROPERTIES OUTPUT_NAME main)
 else()
     add_executable(dunecity)
 endif()
@@ -350,6 +353,7 @@ target_sources(dunecity
         misc/sound_util.cpp
         misc/string_util.cpp
         misc/Scaler.cpp
+        misc/TouchInput.cpp
 )
 
 # C source files

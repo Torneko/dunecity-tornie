@@ -8,7 +8,7 @@
 #include <ctime>
 #include <exception>
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <windows.h>
     #include <dbghelp.h>
     #include <shellapi.h>
@@ -16,8 +16,10 @@
     #pragma comment(lib, "dbghelp.lib")
     #pragma comment(lib, "shlwapi.lib")
     #pragma comment(lib, "shell32.lib")
-#else
+#elif !defined(__ANDROID__)
     #include <execinfo.h>  // For backtrace (POSIX)
+    #include <unistd.h>
+#else
     #include <unistd.h>
 #endif
 
@@ -171,10 +173,10 @@ static void signalHandler(int sig) {
     
     SymCleanup(process);
     
-#else
+#elif !defined(__ANDROID__)
     // POSIX (macOS/Linux): Get stack trace using backtrace
     writeCrashLog("Stack Trace:\n");
-    
+
     void* callstack[128];
     int frames = backtrace(callstack, 128);
     char** symbols = backtrace_symbols(callstack, frames);
@@ -187,6 +189,9 @@ static void signalHandler(int sig) {
     } else {
         writeCrashLog("  (Unable to get stack trace)\n");
     }
+#else
+    writeCrashLog("Stack Trace:\n");
+    writeCrashLog("  (Unavailable on Android NDK build)\n");
 #endif
     
     writeCrashLog("\n");

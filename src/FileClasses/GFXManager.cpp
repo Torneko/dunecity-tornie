@@ -20,6 +20,7 @@
 #include <globals.h>
 
 #include <FileClasses/FileManager.h>
+#include <FileClasses/INIFile.h>
 #include <mod/ModManager.h>
 #include <FileClasses/TextManager.h>
 #include <FileClasses/FontManager.h>
@@ -41,6 +42,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
 
 /**
     DuneCity: shift a paletted sprite's cool/neutral body tones toward red while
@@ -1978,14 +1980,18 @@ GFXManager::GFXManager() {
     SDL_Color fogTransparent = { 0, 0, 0, 96};
     SDL_SetPaletteColors(objPic[ObjPic_Terrain_HiddenFog][HOUSE_HARKONNEN][0]->format->palette, &fogTransparent, PALCOLOR_BLACK, 1);
 
+    loadCompactObjPicOverrides();
+
     // scale obj pics and apply color key
     for(int id = 0; id < NUM_OBJPICS; id++) {
-        // Zone sprites (and Star) are 32-bit RGBA with per-pixel alpha.
+        // Some built-in sprites and mod overrides are 32-bit RGBA with per-pixel alpha.
         // SDL_SetColorKey with PALCOLOR_TRANSPARENT (== 0) on them would
         // treat any pixel with raw value 0 as color-keyed, overriding the
         // alpha channel and producing black squares where transparent
         // pixels have non-zero RGB.  Skip color keying for these IDs.
-        const bool isTruecolorSprite = (id == ObjPic_ZoneResidential
+        const bool isTruecolorSprite = (objPic[id][HOUSE_HARKONNEN][0] != nullptr
+                                     && objPic[id][HOUSE_HARKONNEN][0]->format->BytesPerPixel >= 3)
+                                     || (id == ObjPic_ZoneResidential
                                      || id == ObjPic_ZoneCommercial
                                      || id == ObjPic_ZoneIndustrial
                                      || id == ObjPic_CityRoad
@@ -3749,6 +3755,260 @@ sdl2::surface_ptr GFXManager::generateMapChoiceArrowFrames(SDL_Surface* arrowPic
     }
 
     return returnPic;
+}
+
+void GFXManager::loadCompactObjPicOverrides() {
+    if(!ModManager::instance().isInitialized()) {
+        return;
+    }
+
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    if(activeMod == "vanilla") {
+        return;
+    }
+
+    const std::filesystem::path overrideDir =
+        std::filesystem::path(ModManager::instance().getModPath(activeMod))
+        / "graphics_compact" / "objpics";
+
+    if(!std::filesystem::is_directory(overrideDir)) {
+        return;
+    }
+
+    for(unsigned int id = 0; id < NUM_OBJPICS; ++id) {
+        const std::filesystem::path preferredPath = overrideDir / ("ObjPic_" + ObjPicNames[id] + ".png");
+        const std::filesystem::path legacyPath = overrideDir / (ObjPicNames[id] + ".png");
+        std::filesystem::path overridePath;
+
+        if(std::filesystem::is_regular_file(preferredPath)) {
+            overridePath = preferredPath;
+        } else if(std::filesystem::is_regular_file(legacyPath)) {
+            overridePath = legacyPath;
+        } else {
+            continue;
+        }
+
+        auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(overridePath.string().c_str(), "rb") };
+        if(!rwops) {
+            SDL_Log("GFXManager: Failed to open compact override %s: %s",
+                    overridePath.string().c_str(), SDL_GetError());
+            continue;
+        }
+
+        auto raw = LoadPNG_RW(rwops.get());
+        if(!raw) {
+            SDL_Log("GFXManager: Failed to load compact override %s",
+                    overridePath.string().c_str());
+            continue;
+        }
+
+        const int expectedW = objPicTiles[id].x;
+        const int expectedH = objPicTiles[id].y;
+        if(expectedW <= 0 || expectedH <= 0 || raw->w % expectedW != 0 || raw->h % expectedH != 0) {
+            SDL_Log("GFXManager: Skipping compact override %s; size %dx%d does not match ObjPic_%s layout %dx%d",
+                    overridePath.string().c_str(), raw->w, raw->h,
+                    ObjPicNames[id].c_str(), expectedW, expectedH);
+            continue;
+        }
+
+        sdl2::surface_ptr surface;
+        if(raw->format->BytesPerPixel >= 3) {
+            surface = sdl2::surface_ptr{ SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+        } else {
+            surface = sdl2::surface_ptr{ SDL_ConvertSurface(raw.get(), raw->format, 0) };
+        }
+
+        if(!surface) {
+            SDL_Log("GFXManager: Failed to convert compact override %s: %s",
+                    overridePath.string().c_str(), SDL_GetError());
+            continue;
+        }
+
+        for(int h = 0; h < (int)NUM_HOUSES; ++h) {
+            objPic[id][h][0].reset();
+            objPic[id][h][1].reset();
+            objPic[id][h][2].reset();
+            objPicTex[id][h][0].reset();
+            objPicTex[id][h][1].reset();
+            objPicTex[id][h][2].reset();
+        }
+
+        objPic[id][HOUSE_HARKONNEN][0] = std::move(surface);
+
+        for(int h = 1; h < (int)NUM_HOUSES; ++h) {
+            objPic[id][h][0] = sdl2::surface_ptr{
+                SDL_ConvertSurface(objPic[id][HOUSE_HARKONNEN][0].get(),
+                                   objPic[id][HOUSE_HARKONNEN][0]->format, 0)
+            };
+        }
+
+        SDL_Log("GFXManager: Loaded compact override ObjPic_%s from %s",
+                ObjPicNames[id].c_str(), overridePath.string().c_str());
+    }
+}
+
+bool GFXManager::loadHDObjPicOverride(unsigned int id) {
+    if(id >= NUM_OBJPICS) {
+        return false;
+    }
+
+    auto& hd = hdObjPicOverrides[id];
+    if(hd.attempted) {
+        return hd.loaded;
+    }
+    hd.attempted = true;
+
+    if(!ModManager::instance().isInitialized()) {
+        return false;
+    }
+
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    if(activeMod == "vanilla") {
+        return false;
+    }
+
+    const std::filesystem::path overrideDir =
+        std::filesystem::path(ModManager::instance().getModPath(activeMod))
+        / "graphics_hd" / "objpics";
+
+    const std::filesystem::path preferredPng = overrideDir / ("ObjPic_" + ObjPicNames[id] + ".png");
+    const std::filesystem::path legacyPng = overrideDir / (ObjPicNames[id] + ".png");
+    std::filesystem::path pngPath;
+
+    if(std::filesystem::is_regular_file(preferredPng)) {
+        pngPath = preferredPng;
+    } else if(std::filesystem::is_regular_file(legacyPng)) {
+        pngPath = legacyPng;
+    } else {
+        return false;
+    }
+
+    std::filesystem::path metadataPath = pngPath;
+    metadataPath.replace_extension(".ini");
+    if(std::filesystem::is_regular_file(metadataPath)) {
+        try {
+            INIFile metadata(metadataPath.string());
+            hd.columns = std::max(1, metadata.getIntValue("Sprite", "Columns", 1));
+            hd.rows = std::max(1, metadata.getIntValue("Sprite", "Rows", 1));
+            hd.anchorX = metadata.getIntValue("Sprite", "AnchorX", -1);
+            hd.anchorY = metadata.getIntValue("Sprite", "AnchorY", -1);
+            hd.baseWidth = metadata.getIntValue("Render", "BaseWidth", 0);
+            hd.baseHeight = metadata.getIntValue("Render", "BaseHeight", 0);
+            hd.scale = metadata.getDoubleValue("Render", "Scale", 1.0);
+            if(hd.scale <= 0.0) {
+                hd.scale = 1.0;
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: Failed to read HD override metadata %s: %s",
+                    metadataPath.string().c_str(), e.what());
+        }
+    }
+
+    auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(pngPath.string().c_str(), "rb") };
+    if(!rwops) {
+        SDL_Log("GFXManager: Failed to open HD override %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    auto raw = LoadPNG_RW(rwops.get());
+    if(!raw) {
+        SDL_Log("GFXManager: Failed to load HD override %s",
+                pngPath.string().c_str());
+        return false;
+    }
+
+    auto surface = sdl2::surface_ptr{ SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+    if(!surface) {
+        SDL_Log("GFXManager: Failed to convert HD override %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    if(surface->w % hd.columns != 0 || surface->h % hd.rows != 0) {
+        SDL_Log("GFXManager: Skipping HD override %s; size %dx%d does not divide into %dx%d frames",
+                pngPath.string().c_str(), surface->w, surface->h, hd.columns, hd.rows);
+        return false;
+    }
+
+    hd.texture[HOUSE_HARKONNEN] = convertSurfaceToTexture(surface.get());
+    if(!hd.texture[HOUSE_HARKONNEN]) {
+        SDL_Log("GFXManager: Failed to create HD override texture %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    for(int h = 1; h < (int)NUM_HOUSES; ++h) {
+        hd.texture[h] = convertSurfaceToTexture(surface.get());
+    }
+
+    hd.loaded = true;
+    SDL_Log("GFXManager: Loaded HD override ObjPic_%s from %s",
+            ObjPicNames[id].c_str(), pngPath.string().c_str());
+    return true;
+}
+
+bool GFXManager::drawHDObjPic(unsigned int id, int house, unsigned int z,
+                              int col, int numCols, int row, int numRows,
+                              int x, int y) {
+    if(id >= NUM_OBJPICS || z >= NUM_ZOOMLEVEL || house < 0 || house >= (int)NUM_HOUSES) {
+        return false;
+    }
+
+    if(!loadHDObjPicOverride(id)) {
+        return false;
+    }
+
+    auto& hd = hdObjPicOverrides[id];
+    SDL_Texture* texture = hd.texture[house] ? hd.texture[house].get() : hd.texture[HOUSE_HARKONNEN].get();
+    if(texture == nullptr) {
+        return false;
+    }
+
+    const int columns = std::max(1, hd.columns);
+    const int rows = std::max(1, hd.rows);
+    const int textureW = getWidth(texture);
+    const int textureH = getHeight(texture);
+    const int frameW = textureW / columns;
+    const int frameH = textureH / rows;
+    if(frameW <= 0 || frameH <= 0) {
+        return false;
+    }
+
+    const int srcCol = std::clamp(col, 0, columns - 1);
+    const int srcRow = std::clamp(row, 0, rows - 1);
+    SDL_Rect source = { srcCol * frameW, srcRow * frameH, frameW, frameH };
+
+    int destW = hd.baseWidth > 0 ? hd.baseWidth * (int)(z + 1) : 0;
+    int destH = hd.baseHeight > 0 ? hd.baseHeight * (int)(z + 1) : 0;
+    if(destW <= 0 || destH <= 0) {
+        SDL_Texture* classicTexture = objPicTex[id][house][z] ? objPicTex[id][house][z].get() : objPicTex[id][HOUSE_HARKONNEN][z].get();
+        if(classicTexture != nullptr) {
+            destW = getWidth(classicTexture) / std::max(1, numCols);
+            destH = getHeight(classicTexture) / std::max(1, numRows);
+        } else {
+            destW = frameW;
+            destH = frameH;
+        }
+    }
+
+    destW = std::max(1, static_cast<int>(lround(destW * hd.scale)));
+    destH = std::max(1, static_cast<int>(lround(destH * hd.scale)));
+
+    const int anchorX = hd.anchorX >= 0 ? hd.anchorX : frameW / 2;
+    const int anchorY = hd.anchorY >= 0 ? hd.anchorY : frameH / 2;
+    const double scaleX = static_cast<double>(destW) / static_cast<double>(frameW);
+    const double scaleY = static_cast<double>(destH) / static_cast<double>(frameH);
+
+    SDL_Rect dest = {
+        x - static_cast<int>(lround(anchorX * scaleX)),
+        y - static_cast<int>(lround(anchorY * scaleY)),
+        destW,
+        destH
+    };
+
+    SDL_RenderCopy(renderer, texture, &source, &dest);
+    return true;
 }
 
 sdl2::surface_ptr GFXManager::generateDoubledObjPic(unsigned int id, int h) const {

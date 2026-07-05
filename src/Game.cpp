@@ -48,6 +48,7 @@ std::mutex Game::performanceLogMutex;
 #include <misc/SDL2pp.h>
 #include <misc/DiscordManager.h>
 #include <misc/SaveCompat.h>
+#include <misc/TouchInput.h>
 
 #include <players/HumanPlayer.h>
 
@@ -1750,6 +1751,9 @@ void Game::doInput()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event)) {
+        if(TouchInput::translateTouchEvent(event)) {
+            continue;
+        }
         // check for a key press
 
         // first of all update mouse

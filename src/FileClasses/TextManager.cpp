@@ -27,25 +27,47 @@
 #include <misc/FileSystem.h>
 #include <misc/exceptions.h>
 
+#include <vector>
+
 #ifdef _
 #undef _
 #endif
 #define _(msgid) getLocalized(msgid)
 
 TextManager::TextManager() {
-    std::list<std::string> languagesList = getFileNamesList(getDuneLegacyDataDir() + "/locale", settings.general.language + ".po", true, FileListOrder_Name_Asc);
+    const std::vector<std::string> localeDirs = {
+        getDuneLegacyDataDir() + "/locale",
+        getDuneLegacyDataDir() + "/data/locale",
+    };
 
-    if(languagesList.empty()) {
-        std::string filepath = getDuneLegacyDataDir() + "/locale/English.en.po";
-        SDL_Log("Loading localization from '%s'...", filepath.c_str());
-        auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(filepath.c_str(), "r") };
-        localizedString = loadPOFile(rwops.get(), "English.en.po");
-    } else {
-        std::string filepath = getDuneLegacyDataDir() + "/locale/" + languagesList.front();
-        SDL_Log("Loading localization from '%s'...", filepath.c_str());
-        auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(filepath.c_str(), "r") };
-        localizedString = loadPOFile(rwops.get(), languagesList.front());
+    std::string languageFilename;
+    std::string languageFilepath;
+    for(const std::string& localeDir : localeDirs) {
+        std::list<std::string> languagesList = getFileNamesList(localeDir, settings.general.language + ".po", true, FileListOrder_Name_Asc);
+        if(!languagesList.empty()) {
+            languageFilename = languagesList.front();
+            languageFilepath = localeDir + "/" + languageFilename;
+            break;
+        }
     }
+
+    if(languageFilepath.empty()) {
+        languageFilename = "English.en.po";
+        for(const std::string& localeDir : localeDirs) {
+            std::string candidate = localeDir + "/" + languageFilename;
+            if(existsFile(candidate)) {
+                languageFilepath = candidate;
+                break;
+            }
+        }
+        if(languageFilepath.empty()) {
+            languageFilepath = localeDirs.front() + "/" + languageFilename;
+        }
+    }
+
+    SDL_Log("Loading localization from '%s'...", languageFilepath.c_str());
+    auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(languageFilepath.c_str(), "r") };
+    localizedString = loadPOFile(rwops.get(), languageFilename);
 }
 
 TextManager::~TextManager() = default;

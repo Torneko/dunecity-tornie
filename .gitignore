@@ -65,6 +65,7 @@ DuneCity-*-Setup.nsi
 /DuneCity *.exe
 *.exe
 *.dmg
+/releases/android/*.apk
 
 # SourceForge credentials (NEVER commit this!)
 scripts/sourceforge-config.sh

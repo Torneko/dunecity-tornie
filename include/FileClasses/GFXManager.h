@@ -570,6 +570,9 @@ public:
     SDL_Texture*     getZoomedObjPic(unsigned int id, int house, unsigned int z);
     SDL_Texture*     getZoomedObjPic(unsigned int id, unsigned int z) { return getZoomedObjPic(id, HOUSE_HARKONNEN, z); };
     zoomable_texture getObjPic(unsigned int id, int house=HOUSE_HARKONNEN);
+    bool             drawHDObjPic(unsigned int id, int house, unsigned int z,
+                                  int col, int numCols, int row, int numRows,
+                                  int x, int y);
 
     SDL_Texture*     getSmallDetailPic(unsigned int id);
     SDL_Texture*     getTinyPicture(unsigned int id);
@@ -597,6 +600,21 @@ private:
 
     sdl2::surface_ptr   generateDoubledObjPic(unsigned int id, int h) const;
     sdl2::surface_ptr   generateTripledObjPic(unsigned int id, int h) const;
+    void                loadCompactObjPicOverrides();
+    bool                loadHDObjPicOverride(unsigned int id);
+
+    struct HDObjPicOverride {
+        std::array<sdl2::texture_ptr, NUM_HOUSES> texture;
+        int columns = 1;
+        int rows = 1;
+        int anchorX = -1;
+        int anchorY = -1;
+        int baseWidth = 0;
+        int baseHeight = 0;
+        double scale = 1.0;
+        bool attempted = false;
+        bool loaded = false;
+    };
 
     // 8-bit surfaces kept in main memory for processing as needed, e.g. color remapping
     std::array<std::array<std::array<sdl2::surface_ptr, NUM_ZOOMLEVEL>, NUM_HOUSES>, NUM_OBJPICS> objPic;
@@ -609,6 +627,7 @@ private:
 
     // Textures
     std::array<std::array<std::array<sdl2::texture_ptr, NUM_ZOOMLEVEL>, NUM_HOUSES>, NUM_OBJPICS> objPicTex;
+    std::array<HDObjPicOverride, NUM_OBJPICS> hdObjPicOverrides;
     std::array<sdl2::texture_ptr, NUM_SMALLDETAILPICS> smallDetailPicTex;
     std::array<sdl2::texture_ptr, NUM_TINYPICTURE> tinyPictureTex;
     std::array<std::array<sdl2::texture_ptr, NUM_HOUSES>, NUM_UIGRAPHICS> uiGraphicTex;

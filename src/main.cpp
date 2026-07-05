@@ -613,6 +613,18 @@ void logOutputFunction(void *userdata, int category, SDL_LogPriority priority, c
 }
 
 void showMissingFilesMessageBox() {
+#ifdef __ANDROID__
+    if((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0) {
+        std::string instruction = "DuneCity is missing required data files. Search paths:\n";
+        for(const std::string& searchPath : FileManager::getSearchPath()) {
+            instruction += " " + searchPath + "\n";
+        }
+        SDL_Log("%s", instruction.c_str());
+        fprintf(stderr, "%s\n", instruction.c_str());
+        return;
+    }
+#endif
+
     SDL_ShowCursor(SDL_ENABLE);
 
     std::string instruction = "DuneCity uses the data files from original Dune II. The following files are missing:\n";
@@ -679,6 +691,11 @@ int main(int argc, char *argv[]) {
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+#ifdef __ANDROID__
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
 
     // global try/catch around everything
     try {
@@ -766,7 +783,7 @@ int main(int argc, char *argv[]) {
 
         SDL_Log("Starting DuneCity %s on %s", VERSION, SDL_GetPlatform());
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__)
         // Verify that required shared libraries are loadable before proceeding.
         // If the binary was installed without bundled .so files and the system
         // libraries are the wrong version or absent, dlopen catches this and
@@ -993,6 +1010,38 @@ int main(int argc, char *argv[]) {
 
                 myINIFile.saveChangesTo(getConfigFilepath());
             }
+
+#ifdef __ANDROID__
+            if(bFirstInit == true) {
+                SDL_DisplayMode displayMode;
+                SDL_GetDesktopDisplayMode(currentDisplayIndex, &displayMode);
+
+                if(displayMode.w > 0 && displayMode.h > 0 &&
+                   (settings.video.physicalHeight > settings.video.physicalWidth ||
+                    settings.video.physicalWidth != displayMode.w ||
+                    settings.video.physicalHeight != displayMode.h)) {
+                    int factor = getLogicalToPhysicalResolutionFactor(displayMode.w, displayMode.h);
+                    settings.video.physicalWidth = displayMode.w;
+                    settings.video.physicalHeight = displayMode.h;
+                    settings.video.width = std::max(640, displayMode.w / factor);
+                    settings.video.height = std::max(480, displayMode.h / factor);
+                    settings.video.fullscreen = true;
+                    settings.video.preferredZoomLevel = 1;
+
+                    SDL_Log("Android display config updated to %dx%d physical, %dx%d logical",
+                            settings.video.physicalWidth, settings.video.physicalHeight,
+                            settings.video.width, settings.video.height);
+
+                    myINIFile.setIntValue("Video","Width",settings.video.width);
+                    myINIFile.setIntValue("Video","Height",settings.video.height);
+                    myINIFile.setIntValue("Video","Physical Width",settings.video.physicalWidth);
+                    myINIFile.setIntValue("Video","Physical Height",settings.video.physicalHeight);
+                    myINIFile.setBoolValue("Video","Fullscreen",settings.video.fullscreen);
+                    myINIFile.setIntValue("Video","Preferred Zoom Level",settings.video.preferredZoomLevel);
+                    myINIFile.saveChangesTo(getConfigFilepath());
+                }
+            }
+#endif
 
             Scaler::setDefaultScaler(Scaler::getScalerByName(settings.video.scaler));
 

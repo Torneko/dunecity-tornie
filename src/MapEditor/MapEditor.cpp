@@ -31,6 +31,7 @@
 #include <misc/draw_util.h>
 #include <misc/format.h>
 #include <misc/DiscordManager.h>
+#include <misc/TouchInput.h>
 
 
 #include <globals.h>
@@ -1054,6 +1055,9 @@ void MapEditor::processInput() {
     SDL_Event event;
 
     while(SDL_PollEvent(&event)) {
+        if(TouchInput::translateTouchEvent(event)) {
+            continue;
+        }
 
         // first of all update mouse
         if(event.type == SDL_MOUSEMOTION) {

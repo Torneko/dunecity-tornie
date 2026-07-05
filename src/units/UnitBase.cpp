@@ -309,7 +309,10 @@ void UnitBase::blitToScreen() {
     SDL_Rect source = calcSpriteSourceRect(pUnitGraphic, drawnAngle, numImagesX, drawnFrame, numImagesY);
     SDL_Rect dest = calcSpriteDrawingRect( pUnitGraphic, x, y, numImagesX, numImagesY, HAlign::Center, VAlign::Center);
 
-    SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    if(!pGFXManager->drawHDObjPic(graphicID, getOwner()->getHouseID(), currentZoomlevel,
+                                  drawnAngle, numImagesX, drawnFrame, numImagesY, x, y)) {
+        SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    }
 
     if(isBadlyDamaged()) {
         drawSmoke(x, y);
