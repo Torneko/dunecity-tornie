@@ -107,6 +107,13 @@ jobs:
     runs-on: macos-14
     needs: [verify-version]
     if: always() && (needs.verify-version.result == 'success' || needs.verify-version.result == 'skipped')
+    # Fail fast instead of dragging to the 6h default if the build wedges.
+    timeout-minutes: 60
+    env:
+      # macos-14 is a 3-core runner. `cmake --build --parallel` (no count) does
+      # not reliably parallelize here, so pin the job count explicitly — without
+      # this the source build ran ~serially (~55 min).
+      CMAKE_BUILD_PARALLEL_LEVEL: "3"
     steps:
       - uses: actions/checkout@v4
 
