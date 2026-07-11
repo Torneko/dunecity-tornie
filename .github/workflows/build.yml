@@ -393,13 +393,21 @@ jobs:
 
       - name: Update dunelegacy.com website
         env:
-          WEBSITE_TOKEN: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
+          WEBSITE_DEPLOY_KEY: ${{ secrets.WEBSITE_DEPLOY_KEY }}
           TAG: ${{ github.ref_name }}
         run: |
           # Strip leading 'v' to get bare version number (e.g. v1.0.5 -> 1.0.5)
           VERSION="${TAG#v}"
 
-          git clone "https://x-access-token:${WEBSITE_TOKEN}@github.com/svan058/dunelegacy.com.git" website-repo
+          # Authenticate to dunelegacy.com with an SSH deploy key (write-enabled).
+          # Deploy keys don't expire — unlike the old WEBSITE_DEPLOY_TOKEN PAT,
+          # which lapsed and silently broke this step.
+          mkdir -p ~/.ssh
+          printf '%s\n' "$WEBSITE_DEPLOY_KEY" > ~/.ssh/website_deploy
+          chmod 600 ~/.ssh/website_deploy
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/website_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+
+          git clone git@github.com:svan058/dunelegacy.com.git website-repo
           cd website-repo
 
           # Guard: don't let a stale older run overwrite a newer version
