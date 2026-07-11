@@ -101,26 +101,45 @@ jobs:
           path: build/*.zip
 
   build-macos:
-    runs-on: [self-hosted, macOS, ARM64]
+    # GitHub-hosted Apple-silicon runner (was the self-hosted Mac mini, which
+    # went offline and hung this job for 24h). macos-14 is arm64 with Homebrew
+    # at /opt/homebrew; the DMG is ad-hoc signed so no signing certs are needed.
+    runs-on: macos-14
     needs: [verify-version]
     if: always() && (needs.verify-version.result == 'success' || needs.verify-version.result == 'skipped')
-    env:
-      PATH: /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     steps:
       - uses: actions/checkout@v4
 
       - name: Clean previous build
         run: rm -rf build
 
+      # vcpkg builds SDL2 + its audio codecs, curl, miniupnpc and discord-rpc
+      # from source; several are autotools ports needing the GNU build toolchain
+      # (autoconf/automake/libtool) plus nasm for some codecs.
+      - name: Install build deps
+        run: brew install autoconf autoconf-archive automake libtool pkg-config nasm
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: macos-${{ hashFiles('vcpkg.json') }}
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-macos-arm64-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-macos-arm64-
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgJsonGlob: 'vcpkg.json'
 
-      # run-vcpkg sets VCPKG_BINARY_SOURCES to 'clear;x-gha,readwrite' but
-      # the x-gha backend was removed from vcpkg. The 'clear' prefix also
-      # disables the default file-based cache. Override to use a persistent
-      # local directory on the self-hosted runner instead.
+      # run-vcpkg sets VCPKG_BINARY_SOURCES to 'clear;x-gha,readwrite' but the
+      # x-gha backend was removed from vcpkg. Override to files-based caching
+      # backed by the actions/cache step above.
       - name: Fix vcpkg binary caching
         run: |
           mkdir -p "$HOME/.cache/vcpkg/archives"
