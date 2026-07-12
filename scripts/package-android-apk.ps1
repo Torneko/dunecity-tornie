@@ -71,10 +71,20 @@ if ($null -eq $cmakeProject) {
     throw "Could not read the DuneCity version from CMakeLists.txt."
 }
 $projectVersion = $cmakeProject.Matches[0].Groups[1..3].Value -join "."
-$androidVersionCode =
-    ([int]$cmakeProject.Matches[0].Groups[1].Value * 1000000) +
-    ([int]$cmakeProject.Matches[0].Groups[2].Value * 1000) +
-    [int]$cmakeProject.Matches[0].Groups[3].Value
+$androidVersionFile = Join-Path $RepoRoot "android-version.json"
+if (-not (Test-Path -LiteralPath $androidVersionFile)) {
+    throw "Missing Android version metadata: $androidVersionFile"
+}
+$androidVersion = Get-Content -LiteralPath $androidVersionFile -Raw | ConvertFrom-Json
+$androidVersionName = [string]$androidVersion.versionName
+$androidVersionCode = [int]$androidVersion.versionCode
+if ($androidVersionName -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
+    throw "Invalid Android versionName '$androidVersionName'."
+}
+if ($androidVersionCode -le 0 -or $androidVersionCode -gt 2100000000) {
+    throw "Android versionCode must be between 1 and 2100000000."
+}
+$payloadVersion = $androidVersionName -replace '[^0-9A-Za-z._-]', '_'
 
 $nativeLib = Join-Path $RepoRoot "$NativeBuildDir\lib\libmain.so"
 if (-not (Test-Path -LiteralPath $nativeLib)) {
@@ -173,7 +183,7 @@ android {
     }
 }
 '@
-$appBuildGradle = $appBuildGradle.Replace("__VERSION_CODE__", [string]$androidVersionCode).Replace("__VERSION_NAME__", $projectVersion)
+$appBuildGradle = $appBuildGradle.Replace("__VERSION_CODE__", [string]$androidVersionCode).Replace("__VERSION_NAME__", $androidVersionName)
 Set-Content -LiteralPath (Join-Path $stageDir "app\build.gradle") -Value $appBuildGradle -Encoding ASCII
 
 $manifest = @'
@@ -300,7 +310,7 @@ public class Dune2RActivity extends SDLActivity {
     }
 }
 '@
-$activity = $activity.Replace("__PAYLOAD_VERSION__", $projectVersion)
+$activity = $activity.Replace("__PAYLOAD_VERSION__", $payloadVersion)
 Set-Content -LiteralPath (Join-Path $activityDir "Dune2RActivity.java") -Value $activity -Encoding ASCII
 
 $stringsPath = Join-Path $stageDir "app\src\main\res\values\strings.xml"
@@ -370,7 +380,8 @@ if ($BuildApk) {
 }
 
 Write-Host "APK project staged: $stageDir"
-Write-Host "APK version: $projectVersion ($androidVersionCode)"
+Write-Host "APK version: $androidVersionName ($androidVersionCode)"
+Write-Host "DuneCity payload version: $projectVersion"
 Write-Host "Data payload staged: $payloadDir"
 Write-Host "Native libs staged: $jniLibsArm64"
 Write-Host "Install APK: adb install -r `"$stageDir\app\build\outputs\apk\debug\DuneLegacy.apk`""

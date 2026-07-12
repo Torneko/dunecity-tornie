@@ -93,9 +93,14 @@ build-android-payload/
 
 The debug APK also embeds this payload under `assets/dune2r_payload/` and the
 generated `Dune2RActivity` copies it to Android app storage before launching
-the native SDL game. The payload marker uses the DuneCity project version, so
+the native SDL game. The payload marker uses the Android release version, so
 installing a newer APK refreshes bundled game and mod files while preserving
 the user's `config/Dune City.ini` and any additional custom files.
+
+Android package versions are maintained independently in
+`android-version.json`. Increment `versionCode` for every distributed APK and
+use `versionName` for the public Android release number; do not change the
+DuneCity project version merely to publish an Android update.
 
 ## Upstream Payload Policy
 
