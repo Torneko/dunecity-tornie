@@ -93,7 +93,19 @@ build-android-payload/
 
 The debug APK also embeds this payload under `assets/dune2r_payload/` and the
 generated `Dune2RActivity` copies it to Android app storage before launching
-the native SDL game.
+the native SDL game. The payload marker uses the DuneCity project version, so
+installing a newer APK refreshes bundled game and mod files while preserving
+the user's `config/Dune City.ini` and any additional custom files.
+
+## Upstream Payload Policy
+
+Stefan's `svan058/dunecity` `tornie` branch is the source of truth for the
+DuneCity base, Tornie mod, configuration, and data files. Before an Android
+release, merge that branch into `feature/dune2r-mod`; the packager then copies
+`data/`, `config/`, and `mods/` from the merged checkout. Dune2R and the Android
+runtime adaptations are the only layers maintained by this fork. Do not copy
+payload files from a separate desktop installation or keep a second Android-
+specific copy of Stefan's files.
 
 Verified runtime behavior:
 
@@ -145,7 +157,6 @@ imported_sprites/
 
 ## Remaining Work
 
-1. Add first-run payload extraction or a guided data-copy screen.
-2. Add touch camera panning and possibly a small command overlay for mobile.
-3. Keep the original Dune II data licensing boundary explicit. The APK should
+1. Add touch camera panning and possibly a small command overlay for mobile.
+2. Keep the original Dune II data licensing boundary explicit. The APK should
    not include copyrighted data unless the distributor has rights to bundle it.

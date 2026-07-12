@@ -66,6 +66,16 @@ function Convert-ToPropertiesPath([string]$Path) {
 }
 
 $RepoRoot = Get-FullPath $RepoRoot
+$cmakeProject = Select-String -LiteralPath (Join-Path $RepoRoot "CMakeLists.txt") -Pattern '^project\(DuneCity VERSION ([0-9]+)\.([0-9]+)\.([0-9]+) '
+if ($null -eq $cmakeProject) {
+    throw "Could not read the DuneCity version from CMakeLists.txt."
+}
+$projectVersion = $cmakeProject.Matches[0].Groups[1..3].Value -join "."
+$androidVersionCode =
+    ([int]$cmakeProject.Matches[0].Groups[1].Value * 1000000) +
+    ([int]$cmakeProject.Matches[0].Groups[2].Value * 1000) +
+    [int]$cmakeProject.Matches[0].Groups[3].Value
+
 $nativeLib = Join-Path $RepoRoot "$NativeBuildDir\lib\libmain.so"
 if (-not (Test-Path -LiteralPath $nativeLib)) {
     throw "Missing native library: $nativeLib. Build target 'dunecity' in $NativeBuildDir first."
@@ -138,8 +148,8 @@ android {
         applicationId "net.dunecity.dune2r"
         minSdkVersion 23
         targetSdkVersion 34
-        versionCode 1
-        versionName "0.1.0"
+        versionCode __VERSION_CODE__
+        versionName "__VERSION_NAME__"
 
         ndk {
             abiFilters "arm64-v8a"
@@ -163,6 +173,7 @@ android {
     }
 }
 '@
+$appBuildGradle = $appBuildGradle.Replace("__VERSION_CODE__", [string]$androidVersionCode).Replace("__VERSION_NAME__", $projectVersion)
 Set-Content -LiteralPath (Join-Path $stageDir "app\build.gradle") -Value $appBuildGradle -Encoding ASCII
 
 $manifest = @'
@@ -226,7 +237,7 @@ import java.io.OutputStream;
 
 public class Dune2RActivity extends SDLActivity {
     private static final String PAYLOAD_ROOT = "dune2r_payload";
-    private static final String PAYLOAD_MARKER = ".dune2r_payload_v1";
+    private static final String PAYLOAD_MARKER = ".dune2r_payload___PAYLOAD_VERSION__";
 
     @Override
     protected String[] getLibraries() {
@@ -269,7 +280,7 @@ public class Dune2RActivity extends SDLActivity {
 
         String relativePath = assetPath.substring(PAYLOAD_ROOT.length() + 1);
         File outputFile = new File(outputRoot, relativePath);
-        if (outputFile.exists() && outputFile.length() > 0) {
+        if (outputFile.exists() && outputFile.length() > 0 && relativePath.equals("config/Dune City.ini")) {
             return;
         }
 
@@ -289,6 +300,7 @@ public class Dune2RActivity extends SDLActivity {
     }
 }
 '@
+$activity = $activity.Replace("__PAYLOAD_VERSION__", $projectVersion)
 Set-Content -LiteralPath (Join-Path $activityDir "Dune2RActivity.java") -Value $activity -Encoding ASCII
 
 $stringsPath = Join-Path $stageDir "app\src\main\res\values\strings.xml"
@@ -358,6 +370,7 @@ if ($BuildApk) {
 }
 
 Write-Host "APK project staged: $stageDir"
+Write-Host "APK version: $projectVersion ($androidVersionCode)"
 Write-Host "Data payload staged: $payloadDir"
 Write-Host "Native libs staged: $jniLibsArm64"
 Write-Host "Install APK: adb install -r `"$stageDir\app\build\outputs\apk\debug\DuneLegacy.apk`""
