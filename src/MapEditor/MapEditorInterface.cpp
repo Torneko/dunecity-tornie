@@ -537,7 +537,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_VBox.addWidget(&editorModeStructs_HBox7, 3*D2_TILESIZE + 4);
 
     editorModeStructs_AdvancedWindTrap.setToggleButton(true);
-    editorModeStructs_AdvancedWindTrap.setTooltipText(resolveItemName(Structure_AdvancedWindTrap));
+    editorModeStructs_AdvancedWindTrap.setTooltipText(resolveItemName(Structure_AdvancedWindTrap) + _(" — ~3x Windtrap power (needs Radar + Hi-Tech Factory)"));
     editorModeStructs_AdvancedWindTrap.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_AdvancedWindTrap));
     editorModeStructs_HBox7.addWidget(&editorModeStructs_AdvancedWindTrap);
 
@@ -549,23 +549,23 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     // conditional. Two rows so the 3-wide Nuclear sprite doesn't overflow
     // the sidebar width.
     editorModeStructs_ZoneResidential.setToggleButton(true);
-    editorModeStructs_ZoneResidential.setTooltipText(resolveItemName(Structure_ZoneResidential));
+    editorModeStructs_ZoneResidential.setTooltipText(resolveItemName(Structure_ZoneResidential) + _(" — DuneCity: houses population; grows when powered"));
     editorModeStructs_ZoneResidential.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneResidential));
 
     editorModeStructs_ZoneCommercial.setToggleButton(true);
-    editorModeStructs_ZoneCommercial.setTooltipText(resolveItemName(Structure_ZoneCommercial));
+    editorModeStructs_ZoneCommercial.setTooltipText(resolveItemName(Structure_ZoneCommercial) + _(" — DuneCity: jobs & trade; grows with demand"));
     editorModeStructs_ZoneCommercial.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneCommercial));
 
     editorModeStructs_ZoneIndustrial.setToggleButton(true);
-    editorModeStructs_ZoneIndustrial.setTooltipText(resolveItemName(Structure_ZoneIndustrial));
+    editorModeStructs_ZoneIndustrial.setTooltipText(resolveItemName(Structure_ZoneIndustrial) + _(" — DuneCity: jobs & production; pollutes nearby land"));
     editorModeStructs_ZoneIndustrial.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneIndustrial));
 
     editorModeStructs_Road.setToggleButton(true);
-    editorModeStructs_Road.setTooltipText(resolveItemName(Structure_Road));
+    editorModeStructs_Road.setTooltipText(resolveItemName(Structure_Road) + _(" — DuneCity: auto-connecting road; links & powers the city"));
     editorModeStructs_Road.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Road));
 
     editorModeStructs_NuclearPlant.setToggleButton(true);
-    editorModeStructs_NuclearPlant.setTooltipText(resolveItemName(Structure_NuclearPlant));
+    editorModeStructs_NuclearPlant.setTooltipText(resolveItemName(Structure_NuclearPlant) + _(" — DuneCity: massive power (~10x Windtrap)"));
     editorModeStructs_NuclearPlant.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_NuclearPlant));
 
     cityStructsVisible_ = ModManager::instance().isCityModeActive();
@@ -664,28 +664,28 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeUnits_VBox.addWidget(&editorModeUnits_HBoxRocketTrike, 2*D2_TILESIZE);
 
     editorModeUnits_RocketTrike.setToggleButton(true);
-    editorModeUnits_RocketTrike.setTooltipText(resolveItemName(Unit_RocketTrike));
+    editorModeUnits_RocketTrike.setTooltipText(resolveItemName(Unit_RocketTrike) + _(" — Tornie: fast Neutral trike with rockets"));
     editorModeUnits_RocketTrike.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_RocketTrike));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_RocketTrike);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_EliteLauncher.setToggleButton(true);
-    editorModeUnits_EliteLauncher.setTooltipText(resolveItemName(Unit_EliteLauncher));
+    editorModeUnits_EliteLauncher.setTooltipText(resolveItemName(Unit_EliteLauncher) + _(" — Tornie: long-range rockets (Neutral, House IX)"));
     editorModeUnits_EliteLauncher.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_EliteLauncher));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_EliteLauncher);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_EliteSiegeTank.setToggleButton(true);
-    editorModeUnits_EliteSiegeTank.setTooltipText(resolveItemName(Unit_EliteSiegeTank));
+    editorModeUnits_EliteSiegeTank.setTooltipText(resolveItemName(Unit_EliteSiegeTank) + _(" — Tornie: tough long-range siege tank (House IX)"));
     editorModeUnits_EliteSiegeTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_EliteSiegeTank));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_EliteSiegeTank);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_FlameTank.setToggleButton(true);
-    editorModeUnits_FlameTank.setTooltipText(resolveItemName(Unit_FlameTank));
+    editorModeUnits_FlameTank.setTooltipText(resolveItemName(Unit_FlameTank) + _(" — Tornie: short-range flame attack (Heavy Factory, tech 9)"));
     editorModeUnits_FlameTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_FlameTank));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_FlameTank);
 
