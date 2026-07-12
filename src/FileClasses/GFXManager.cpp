@@ -2918,6 +2918,15 @@ GFXManager::GFXManager() {
             uiGraphic[UI_MapEditor_FlameTank][h] = getSubFrame(objPic[ObjPic_FlameTank][h][0].get(),0,0,8,1);
         }
     }
+    // Fallback: when the custom FlameTank asset (Tornie.PAK / FlameTank.png) isn't
+    // present, synthesize a stand-in from vanilla tank graphics so the Map Editor
+    // never crashes requesting UI_MapEditor_FlameTank. Fill the Harkonnen base slot;
+    // getUIGraphicSurface() palette-remaps it per house on demand.
+    if(uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] == nullptr) {
+        uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] = combinePictures(
+            getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(),
+            getSubFrame(objPic[ObjPic_Tank_Gun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 0, 0);
+    }
 
     // Tornie: red/green spice field + bloom editor icons from custom terrain strips.
     // The strip is 17 cols × 2 rows of 16x16 tiles. Layout:
