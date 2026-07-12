@@ -253,18 +253,21 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeTerrain_VBox.addWidget(&editorModeTerrain_HBox1);
 
     editorModeTerrain_Sand.setToggleButton(true);
+    editorModeTerrain_Sand.setTooltipText(_("Sand"));
     editorModeTerrain_Sand.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_Sand));
     editorModeTerrain_HBox1.addWidget(&editorModeTerrain_Sand);
 
     editorModeTerrain_HBox1.addWidget(HSpacer::create(2));
 
     editorModeTerrain_Dunes.setToggleButton(true);
+    editorModeTerrain_Dunes.setTooltipText(_("Dunes"));
     editorModeTerrain_Dunes.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_Dunes));
     editorModeTerrain_HBox1.addWidget(&editorModeTerrain_Dunes);
 
     editorModeTerrain_HBox1.addWidget(HSpacer::create(2));
 
     editorModeTerrain_SpecialBloom.setToggleButton(true);
+    editorModeTerrain_SpecialBloom.setTooltipText(_("Special Bloom (spawns a sandworm when triggered)"));
     editorModeTerrain_SpecialBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_SpecialBloom));
     editorModeTerrain_HBox1.addWidget(&editorModeTerrain_SpecialBloom);
 
@@ -272,18 +275,21 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeTerrain_VBox.addWidget(&editorModeTerrain_HBox2);
 
     editorModeTerrain_Spice.setToggleButton(true);
+    editorModeTerrain_Spice.setTooltipText(_("Spice Field"));
     editorModeTerrain_Spice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_Spice));
     editorModeTerrain_HBox2.addWidget(&editorModeTerrain_Spice);
 
     editorModeTerrain_HBox2.addWidget(HSpacer::create(2));
 
     editorModeTerrain_ThickSpice.setToggleButton(true);
+    editorModeTerrain_ThickSpice.setTooltipText(_("Thick Spice (richer, slower to deplete)"));
     editorModeTerrain_ThickSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_ThickSpice));
     editorModeTerrain_HBox2.addWidget(&editorModeTerrain_ThickSpice);
 
     editorModeTerrain_HBox2.addWidget(HSpacer::create(2));
 
     editorModeTerrain_SpiceBloom.setToggleButton(true);
+    editorModeTerrain_SpiceBloom.setTooltipText(_("Spice Bloom (bursts into a spice field when triggered)"));
     editorModeTerrain_SpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_SpiceBloom));
     editorModeTerrain_HBox2.addWidget(&editorModeTerrain_SpiceBloom);
 
@@ -291,12 +297,14 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeTerrain_VBox.addWidget(&editorModeTerrain_HBox3);
 
     editorModeTerrain_Rock.setToggleButton(true);
+    editorModeTerrain_Rock.setTooltipText(_("Rock (buildable ground)"));
     editorModeTerrain_Rock.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_Rock));
     editorModeTerrain_HBox3.addWidget(&editorModeTerrain_Rock);
 
     editorModeTerrain_HBox3.addWidget(HSpacer::create(2));
 
     editorModeTerrain_Mountain.setToggleButton(true);
+    editorModeTerrain_Mountain.setTooltipText(_("Mountain (impassable; blocks units)"));
     editorModeTerrain_Mountain.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_Mountain));
     editorModeTerrain_HBox3.addWidget(&editorModeTerrain_Mountain);
 
@@ -311,24 +319,28 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeTerrain_HBox4.setVisible(isTornie);
 
     editorModeTerrain_RedSpice.setToggleButton(true);
+    editorModeTerrain_RedSpice.setTooltipText(_("Red Spice Field"));
     editorModeTerrain_RedSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_RedSpice));
     editorModeTerrain_HBox4.addWidget(&editorModeTerrain_RedSpice);
 
     editorModeTerrain_HBox4.addWidget(HSpacer::create(2));
 
     editorModeTerrain_GreenSpice.setToggleButton(true);
+    editorModeTerrain_GreenSpice.setTooltipText(_("Green Spice Field"));
     editorModeTerrain_GreenSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_GreenSpice));
     editorModeTerrain_HBox4.addWidget(&editorModeTerrain_GreenSpice);
 
     editorModeTerrain_HBox4.addWidget(HSpacer::create(4));
 
     editorModeTerrain_RedSpiceBloom.setToggleButton(true);
+    editorModeTerrain_RedSpiceBloom.setTooltipText(_("Red Spice Bloom"));
     editorModeTerrain_RedSpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_RedSpiceBloom));
     editorModeTerrain_HBox4.addWidget(&editorModeTerrain_RedSpiceBloom);
 
     editorModeTerrain_HBox4.addWidget(HSpacer::create(2));
 
     editorModeTerrain_GreenSpiceBloom.setToggleButton(true);
+    editorModeTerrain_GreenSpiceBloom.setTooltipText(_("Green Spice Bloom"));
     editorModeTerrain_GreenSpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_GreenSpiceBloom));
     editorModeTerrain_HBox4.addWidget(&editorModeTerrain_GreenSpiceBloom);
 
@@ -525,7 +537,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_VBox.addWidget(&editorModeStructs_HBox7, 3*D2_TILESIZE + 4);
 
     editorModeStructs_AdvancedWindTrap.setToggleButton(true);
-    editorModeStructs_AdvancedWindTrap.setTooltipText(resolveItemName(Structure_AdvancedWindTrap));
+    editorModeStructs_AdvancedWindTrap.setTooltipText(resolveItemName(Structure_AdvancedWindTrap) + _(" — ~3x Windtrap power (needs Radar + Hi-Tech Factory)"));
     editorModeStructs_AdvancedWindTrap.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_AdvancedWindTrap));
     editorModeStructs_HBox7.addWidget(&editorModeStructs_AdvancedWindTrap);
 
@@ -537,23 +549,23 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     // conditional. Two rows so the 3-wide Nuclear sprite doesn't overflow
     // the sidebar width.
     editorModeStructs_ZoneResidential.setToggleButton(true);
-    editorModeStructs_ZoneResidential.setTooltipText(resolveItemName(Structure_ZoneResidential));
+    editorModeStructs_ZoneResidential.setTooltipText(resolveItemName(Structure_ZoneResidential) + _(" — DuneCity: houses population; grows when powered"));
     editorModeStructs_ZoneResidential.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneResidential));
 
     editorModeStructs_ZoneCommercial.setToggleButton(true);
-    editorModeStructs_ZoneCommercial.setTooltipText(resolveItemName(Structure_ZoneCommercial));
+    editorModeStructs_ZoneCommercial.setTooltipText(resolveItemName(Structure_ZoneCommercial) + _(" — DuneCity: jobs & trade; grows with demand"));
     editorModeStructs_ZoneCommercial.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneCommercial));
 
     editorModeStructs_ZoneIndustrial.setToggleButton(true);
-    editorModeStructs_ZoneIndustrial.setTooltipText(resolveItemName(Structure_ZoneIndustrial));
+    editorModeStructs_ZoneIndustrial.setTooltipText(resolveItemName(Structure_ZoneIndustrial) + _(" — DuneCity: jobs & production; pollutes nearby land"));
     editorModeStructs_ZoneIndustrial.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ZoneIndustrial));
 
     editorModeStructs_Road.setToggleButton(true);
-    editorModeStructs_Road.setTooltipText(resolveItemName(Structure_Road));
+    editorModeStructs_Road.setTooltipText(resolveItemName(Structure_Road) + _(" — DuneCity: auto-connecting road; links & powers the city"));
     editorModeStructs_Road.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Road));
 
     editorModeStructs_NuclearPlant.setToggleButton(true);
-    editorModeStructs_NuclearPlant.setTooltipText(resolveItemName(Structure_NuclearPlant));
+    editorModeStructs_NuclearPlant.setTooltipText(resolveItemName(Structure_NuclearPlant) + _(" — DuneCity: massive power (~10x Windtrap)"));
     editorModeStructs_NuclearPlant.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_NuclearPlant));
 
     cityStructsVisible_ = ModManager::instance().isCityModeActive();
@@ -652,28 +664,28 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeUnits_VBox.addWidget(&editorModeUnits_HBoxRocketTrike, 2*D2_TILESIZE);
 
     editorModeUnits_RocketTrike.setToggleButton(true);
-    editorModeUnits_RocketTrike.setTooltipText(resolveItemName(Unit_RocketTrike));
+    editorModeUnits_RocketTrike.setTooltipText(resolveItemName(Unit_RocketTrike) + _(" — Tornie: fast Neutral trike with rockets"));
     editorModeUnits_RocketTrike.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_RocketTrike));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_RocketTrike);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_EliteLauncher.setToggleButton(true);
-    editorModeUnits_EliteLauncher.setTooltipText(resolveItemName(Unit_EliteLauncher));
+    editorModeUnits_EliteLauncher.setTooltipText(resolveItemName(Unit_EliteLauncher) + _(" — Tornie: long-range rockets (Neutral, House IX)"));
     editorModeUnits_EliteLauncher.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_EliteLauncher));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_EliteLauncher);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_EliteSiegeTank.setToggleButton(true);
-    editorModeUnits_EliteSiegeTank.setTooltipText(resolveItemName(Unit_EliteSiegeTank));
+    editorModeUnits_EliteSiegeTank.setTooltipText(resolveItemName(Unit_EliteSiegeTank) + _(" — Tornie: tough long-range siege tank (House IX)"));
     editorModeUnits_EliteSiegeTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_EliteSiegeTank));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_EliteSiegeTank);
 
     editorModeUnits_HBoxRocketTrike.addWidget(HSpacer::create(2));
 
     editorModeUnits_FlameTank.setToggleButton(true);
-    editorModeUnits_FlameTank.setTooltipText(resolveItemName(Unit_FlameTank));
+    editorModeUnits_FlameTank.setTooltipText(resolveItemName(Unit_FlameTank) + _(" — Tornie: short-range flame attack (Heavy Factory, tech 9)"));
     editorModeUnits_FlameTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_FlameTank));
     editorModeUnits_HBoxRocketTrike.addWidget(&editorModeUnits_FlameTank);
 

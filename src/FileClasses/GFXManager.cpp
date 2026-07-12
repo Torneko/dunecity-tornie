@@ -441,9 +441,50 @@ GFXManager::GFXManager() {
                         }
                     }
                 }
+                SDL_Log("GFXManager: FlameTank sprite loaded OK (paletted)");
+            } else {
+                // Current Tornie asset ships as an RGBA strip (256x32 = eight
+                // 32x32 frames, colours + alpha already baked in), so the
+                // palette-remap path above is skipped. Load it directly:
+                // reorder the eight direction frames (Dune II → Dune Legacy) and
+                // down-scale each to the engine's 16x16 ground-unit frame, then
+                // build the zoom levels. The sprite has no per-house palette, so
+                // it is shared across all houses.
+                sdl2::surface_ptr src{ SDL_ConvertSurfaceFormat(raw, SDL_PIXELFORMAT_RGBA32, 0) };
+                if(src) {
+                    static const int d2toDL[] = {2, 1, 4, 7, 6, 5, 0, 3};
+                    const int srcFrameW = src->w / 8;
+                    const int srcFrameH = src->h;
+                    const int dstFrame  = D2_TILESIZE;   // 16px, matches vanilla ground units
+                    SDL_SetSurfaceBlendMode(src.get(), SDL_BLENDMODE_NONE);
+                    sdl2::surface_ptr base{ SDL_CreateRGBSurfaceWithFormat(0, dstFrame * 8, dstFrame, 32, SDL_PIXELFORMAT_RGBA32) };
+                    if(base) {
+                        for(int i = 0; i < 8; i++) {
+                            SDL_Rect srcRect{ d2toDL[i] * srcFrameW, 0, srcFrameW, srcFrameH };
+                            SDL_Rect dstRect{ i * dstFrame, 0, dstFrame, dstFrame };
+                            SDL_BlitScaled(src.get(), &srcRect, base.get(), &dstRect);
+                        }
+                        for(int h = 0; h < (int)NUM_HOUSES; h++) {
+                            objPic[ObjPic_FlameTank][h][0] = sdl2::surface_ptr{ SDL_ConvertSurface(base.get(), base->format, 0) };
+                            for(int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                                SDL_Surface* s0 = objPic[ObjPic_FlameTank][h][0].get();
+                                if(!s0) continue;
+                                sdl2::surface_ptr dst{ SDL_CreateRGBSurface(0,
+                                    s0->w * (z+1), s0->h * (z+1),
+                                    s0->format->BitsPerPixel,
+                                    s0->format->Rmask, s0->format->Gmask,
+                                    s0->format->Bmask, s0->format->Amask) };
+                                if(dst) {
+                                    SDL_BlitScaled(s0, nullptr, dst.get(), nullptr);
+                                    objPic[ObjPic_FlameTank][h][z] = std::move(dst);
+                                }
+                            }
+                        }
+                        SDL_Log("GFXManager: FlameTank sprite loaded OK (RGBA)");
+                    }
+                }
             }
         }
-        SDL_Log("GFXManager: FlameTank sprite loaded OK");
     }
 
     // DuneCity: Tornie Deviator custom sprite — palette-indexed 8-frame strip.
@@ -2923,6 +2964,15 @@ GFXManager::GFXManager() {
         if(objPic[ObjPic_FlameTank][h][0] != nullptr) {
             uiGraphic[UI_MapEditor_FlameTank][h] = getSubFrame(objPic[ObjPic_FlameTank][h][0].get(),0,0,8,1);
         }
+    }
+    // Fallback: when the custom FlameTank asset (Tornie.PAK / FlameTank.png) isn't
+    // present, synthesize a stand-in from vanilla tank graphics so the Map Editor
+    // never crashes requesting UI_MapEditor_FlameTank. Fill the Harkonnen base slot;
+    // getUIGraphicSurface() palette-remaps it per house on demand.
+    if(uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] == nullptr) {
+        uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] = combinePictures(
+            getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(),
+            getSubFrame(objPic[ObjPic_Tank_Gun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 0, 0);
     }
 
     // Tornie: red/green spice field + bloom editor icons from custom terrain strips.

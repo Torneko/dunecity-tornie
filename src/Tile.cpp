@@ -69,10 +69,10 @@ Tile::~Tile() = default;
 void Tile::load(InputStream& stream) {
     type = stream.readUint32();
 
-    stream.readBools(&explored[0], &explored[1], &explored[2], &explored[3], &explored[4], &explored[5], &explored[6]);
+    stream.readBools(&explored[0], &explored[1], &explored[2], &explored[3], &explored[4], &explored[5], &explored[6], &explored[7]);
 
     bool bLastAccess[NUM_TEAMS];
-    stream.readBools(&bLastAccess[0], &bLastAccess[1], &bLastAccess[2], &bLastAccess[3], &bLastAccess[4], &bLastAccess[5], &bLastAccess[6]);
+    stream.readBools(&bLastAccess[0], &bLastAccess[1], &bLastAccess[2], &bLastAccess[3], &bLastAccess[4], &bLastAccess[5], &bLastAccess[6], &bLastAccess[7]);
 
     for (int i = 0; i < NUM_TEAMS; i++) {
         if (bLastAccess[i] == true) {
@@ -160,9 +160,9 @@ void Tile::load(InputStream& stream) {
 void Tile::save(OutputStream& stream) const {
     stream.writeUint32(type);
 
-    stream.writeBools(explored[0], explored[1], explored[2], explored[3], explored[4], explored[5], explored[6]);
+    stream.writeBools(explored[0], explored[1], explored[2], explored[3], explored[4], explored[5], explored[6], explored[7]);
 
-    stream.writeBools((lastAccess[0] != 0), (lastAccess[1] != 0), (lastAccess[2] != 0), (lastAccess[3] != 0), (lastAccess[4] != 0), (lastAccess[5] != 0), (lastAccess[6] != 0));
+    stream.writeBools((lastAccess[0] != 0), (lastAccess[1] != 0), (lastAccess[2] != 0), (lastAccess[3] != 0), (lastAccess[4] != 0), (lastAccess[5] != 0), (lastAccess[6] != 0), (lastAccess[7] != 0));
     for (auto lastAccessFromTeam : lastAccess) {
         if (lastAccessFromTeam != 0) {
             stream.writeUint32(lastAccessFromTeam);
@@ -420,43 +420,9 @@ void Tile::blitGround(int xPos, int yPos) {
         }
     }
 
-    // city zone overlay
-    if (hasCityZone()) {
-        Uint8 baseR = 0, baseG = 0, baseB = 0;
-        Uint8 borderR = 0, borderG = 0, borderB = 0;
-        
-        switch (cityZoneType_) {
-            case DuneCity::ZoneType::Residential:
-                baseR = 0; baseG = 200; baseB = 0;
-                borderR = 0; borderG = 255; borderB = 0;
-                break;
-            case DuneCity::ZoneType::Commercial:
-                baseR = 0; baseG = 0; baseB = 200;
-                borderR = 0; borderG = 100; borderB = 255;
-                break;
-            case DuneCity::ZoneType::Industrial:
-                baseR = 200; baseG = 200; baseB = 0;
-                borderR = 255; borderG = 255; borderB = 0;
-                break;
-            default:
-                break;
-        }
-        
-        Uint8 alpha = 80 + cityZoneDensity_ * 10;
-        
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, baseR, baseG, baseB, alpha);
-        SDL_RenderFillRect(renderer, &drawLocation);
-        
-        SDL_SetRenderDrawColor(renderer, borderR, borderG, borderB, 255);
-        for (int i = 0; i < 2; i++) {
-            SDL_Rect borderRect = { drawLocation.x + i, drawLocation.y + i, 
-                                     drawLocation.w - 2*i, drawLocation.h - 2*i };
-            SDL_RenderDrawRect(renderer, &borderRect);
-        }
-        
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    }
+    // City-zone overlay removed: the per-tile R/C/I fill + border was drawn
+    // unconditionally for every zoned tile, which covered the whole map in a
+    // bright lattice (residential green, etc.) and read as a rendering glitch.
 }
 
 void Tile::blitStructures(int xPos, int yPos) const {

@@ -494,7 +494,19 @@ void Bullet::update()
             FixPoint currentDamage = dist*damageDecrease + startDamage;
 
             Coord realPos = Coord(lround(realX), lround(realY));
-            currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            // DuneCity 1.0.345: Flame Tank no longer self-damages.
+            // The flame trail hits tiles that the unit's owner stands
+            // on; the damage call below was hitting own-units (Flame
+            // Tank, allied units, same-house units). We now skip the
+            // damage application when the trail's realPos intersects
+            // with the firing Flame Tank's own footprint / own team.
+            // Sonictank keeps the existing damage-on-trail semantics.
+            // For Bullet_Flame we only emit the Explosion_Flames for
+            // visual + wait for the hit call at bullet end to clear
+            // the path.
+            if(bulletID != Bullet_Flame) {
+                currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            }
 
             // Flame Tank: spawn flame explosions at intervals along path
             if(bulletID == Bullet_Flame && (detonationTimer % 8 == 0)) {
@@ -505,7 +517,9 @@ void Bullet::update()
             realY += ySpeed;
 
             realPos = Coord(lround(realX), lround(realY));
-            currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            if(bulletID != Bullet_Flame) {
+                currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            }
         } else if( explodesAtGroundObjects
                     && currentGameMap->tileExists(location)
                     && currentGameMap->getTile(location)->hasAGroundObject()
