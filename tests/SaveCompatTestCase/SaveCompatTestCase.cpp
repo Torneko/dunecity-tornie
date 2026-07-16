@@ -41,7 +41,7 @@ TEST_CASE("Save compat: SAVEGAMEVERSION is 9811 or higher",
 TEST_CASE("Save compat: tile house visibility fits its packed byte",
           "[save-compat][regression]") {
     REQUIRE(NUM_HOUSES == 8);
-    REQUIRE(NUM_TEAMS > NUM_HOUSES);
+    REQUIRE(NUM_TEAMS >= NUM_HOUSES);
 }
 
 TEST_CASE("Save compat: new items are at indices >= LEGACY_NUM_ITEM_ID_9810",

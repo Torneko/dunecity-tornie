@@ -51,7 +51,7 @@ void CitySimulation::load(InputStream& stream) {
     // in a freshly-reordered layout (see CitySimulation::save). Older saves
     // (9809..9817 inclusive) wrote only houseState_[0] AND in a DIFFERENT
     // field order (resPop/valve sandwiched around the global sim fields).
-    // Both branches are kept so existing saves still load — the bug this
+    // Both branches are kept so existing saves still load - the bug this
     // fixes: in any campaign where the local player was NOT house 0 (Ordos =
     // 2, Atreides = 1, etc.), R/C/I / Pop / valves all read 0 after a reload
     // because the player's slot was never on disk. Pre-9818, only Harkonnen's
@@ -60,7 +60,7 @@ void CitySimulation::load(InputStream& stream) {
 
     if (loadedVersion >= 9818) {
         // --- New format (9818+) ---
-        // Global sim fields (same across all houses — read once)
+        // Global sim fields (same across all houses - read once)
         totalFunds_              = stream.readSint32();
         cityTax_                 = stream.readSint16();
         cityYear_                = stream.readSint32();
@@ -79,7 +79,7 @@ void CitySimulation::load(InputStream& stream) {
         // [houseState_[0].police/budget] [milestones]. Note that fields like
         // prevResPop / avgLandValue / hasStadium didn't exist on disk pre-9818,
         // so we leave them at their freshly-initialised defaults. Remaining
-        // slots (1..7) also stay at defaults — same as before the fix, so this
+        // slots (1..7) also stay at defaults - same as before the fix, so this
         // isn't a regression.
         houseState_[0].resPop     = stream.readSint32();
         houseState_[0].comPop     = stream.readSint32();
@@ -120,7 +120,7 @@ void CitySimulation::load(InputStream& stream) {
 }
 
 void CitySimulation::save(OutputStream& stream) const {
-    // Global sim fields (same across all houses — written once)
+    // Global sim fields (same across all houses - written once)
     stream.writeSint32(totalFunds_);
     stream.writeSint16(cityTax_);
     stream.writeSint32(cityYear_);

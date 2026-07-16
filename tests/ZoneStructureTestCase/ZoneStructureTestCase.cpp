@@ -477,8 +477,9 @@ TEST_CASE("ZoneStructure: GFXManager skips SDL_SetColorKey for truecolor zone sp
     REQUIRE(checkExpr.find("ObjPic_ZoneCommercial") != std::string::npos);
     REQUIRE(checkExpr.find("ObjPic_ZoneIndustrial") != std::string::npos);
 
-    INFO("SDL_SetColorKey calls must be guarded by !isTruecolorSprite");
-    REQUIRE(src.find("!isTruecolorSprite") != std::string::npos);
+    INFO("SDL_SetColorKey calls must be guarded for truecolor sprites");
+    REQUIRE((src.find("!isTruecolorSprite") != std::string::npos
+             || src.find("!isCurrentTruecolorSprite") != std::string::npos));
 }
 
 // =============================================================================

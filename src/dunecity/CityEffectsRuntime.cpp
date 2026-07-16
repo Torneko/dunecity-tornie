@@ -1197,9 +1197,9 @@ void CitySimulation::runDailyBudget() {
         const FixPoint net = tickRevenue - tickPaid;
 
         if (net > FixPoint(0)) {
-            house->addCityCredits(net);
+            house->returnCredits(net);
         } else if (net < FixPoint(0)) {
-            house->addCityCredits(net);
+            house->takeCredits(-net);
         }
 
         // Store per-house budget figures

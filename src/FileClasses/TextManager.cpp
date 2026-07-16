@@ -73,6 +73,11 @@ TextManager::TextManager() {
 TextManager::~TextManager() = default;
 
 void TextManager::loadData() {
+    origDuneText.clear();
+    for(auto& mentatString : mentatStrings) {
+        mentatString.reset();
+    }
+
     addOrigDuneText("TEXTH." + _("LanguageFileExtension"), true);
     addOrigDuneText("TEXTA." + _("LanguageFileExtension"), true);
     addOrigDuneText("TEXTO." + _("LanguageFileExtension"), true);
@@ -83,8 +88,6 @@ void TextManager::loadData() {
     mentatStrings[HOUSE_HARKONNEN] = std::make_unique<MentatTextFile>(pFileManager->openFile("MENTATH." + _("LanguageFileExtension")).get());
     mentatStrings[HOUSE_ATREIDES] = std::make_unique<MentatTextFile>(pFileManager->openFile("MENTATA." + _("LanguageFileExtension")).get());
     mentatStrings[HOUSE_ORDOS] = std::make_unique<MentatTextFile>(pFileManager->openFile("MENTATO." + _("LanguageFileExtension")).get());
-    mentatStrings[HOUSE_NEUTRAL] = std::make_unique<MentatTextFile>(pFileManager->openFile("MENTATH." + _("LanguageFileExtension")).get());
-    mentatStrings[HOUSE_REBELS] = std::make_unique<MentatTextFile>(pFileManager->openFile("MENTATH." + _("LanguageFileExtension")).get());
 }
 
 std::string TextManager::getBriefingText(unsigned int mission, unsigned int texttype, int house) const {
@@ -434,6 +437,36 @@ std::string TextManager::getBriefingText(unsigned int mission, unsigned int text
             }
         } break;
 
+        case HOUSE_NEUTRAL: {
+            switch(texttype) {
+                case MISSION_DESCRIPTION: {
+                    switch(mission) {
+                        case 0: return _("House Neutral\nThe Neutral forces operate between the great powers of Arrakis, holding ground through caution, trade, and opportunism."); break;
+                        default: return getBriefingText(mission, texttype, HOUSE_MERCENARY); break;
+                    }
+                } break;
+
+                default: {
+                    return getBriefingText(mission, texttype, HOUSE_MERCENARY);
+                } break;
+            }
+        } break;
+
+        case HOUSE_REBELS: {
+            switch(texttype) {
+                case MISSION_DESCRIPTION: {
+                    switch(mission) {
+                        case 0: return _("House Rebels\nThe Rebels fight from hidden strongholds and stolen supply lines, striking the old powers wherever Arrakis gives them an opening."); break;
+                        default: return getBriefingText(mission, texttype, HOUSE_FREMEN); break;
+                    }
+                } break;
+
+                default: {
+                    return getBriefingText(mission, texttype, HOUSE_FREMEN);
+                } break;
+            }
+        } break;
+
         case HOUSE_MERCENARY:
         default: {
             switch(texttype) {
@@ -505,77 +538,6 @@ std::string TextManager::getBriefingText(unsigned int mission, unsigned int text
 
         } break;
 
-        case HOUSE_REBELS:
-        case HOUSE_NEUTRAL: {
-            switch(texttype) {
-                case MISSION_DESCRIPTION: {
-                    switch(mission) {
-                        case 0: return _("House Neutral\nA house without allegiance, fighting only for spice and survival. On Arrakis, their white-clad warriors are feared for their ruthless efficiency.");  break;
-                        case 1: return _("@TEXTH.ENG|4|Harkonnen->Neutral#Description of Neutral mission 1");   break;
-                        case 2: return _("@TEXTH.ENG|8|Harkonnen->Neutral#Description of Neutral mission 2");   break;
-                        case 3: return _("@TEXTH.ENG|12|Harkonnen->Neutral#Description of Neutral mission 3");  break;
-                        case 4: return _("@TEXTH.ENG|16|Harkonnen->Neutral#Description of Neutral mission 4");  break;
-                        case 5: return _("@TEXTH.ENG|20|Harkonnen->Neutral#Description of Neutral mission 5");  break;
-                        case 6: return _("@TEXTH.ENG|24|Harkonnen->Neutral#Description of Neutral mission 6");  break;
-                        case 7: return _("@TEXTH.ENG|28|Harkonnen->Neutral#Description of Neutral mission 7");  break;
-                        case 8: return _("@TEXTH.ENG|32|Harkonnen->Neutral#Description of Neutral mission 8");  break;
-                        case 9: return _("@TEXTH.ENG|36|Harkonnen->Neutral#Description of Neutral mission 9");  break;
-                        default: return "";                                                    break;
-                    }
-                } break;
-
-                case MISSION_WIN: {
-                    switch(mission) {
-                        case 1: return _("@TEXTH.ENG|5|Harkonnen->Neutral#Winning text of Neutral mission 1");   break;
-                        case 2: return _("@TEXTH.ENG|9|Harkonnen->Neutral#Winning text of Neutral mission 2");   break;
-                        case 3: return _("@TEXTH.ENG|13|Harkonnen->Neutral#Winning text of Neutral mission 3");  break;
-                        case 4: return _("@TEXTH.ENG|17|Harkonnen->Neutral#Winning text of Neutral mission 4");  break;
-                        case 5: return _("@TEXTH.ENG|21|Harkonnen->Neutral#Winning text of Neutral mission 5");  break;
-                        case 6: return _("@TEXTH.ENG|25|Harkonnen->Neutral#Winning text of Neutral mission 6");  break;
-                        case 7: return _("@TEXTH.ENG|29|Harkonnen->Neutral#Winning text of Neutral mission 7");  break;
-                        case 8: return _("@TEXTH.ENG|33|Harkonnen->Neutral#Winning text of Neutral mission 8");  break;
-                        case 9: return _("@TEXTH.ENG|37|Harkonnen->Neutral#Winning text of Neutral mission 9");  break;
-                        default: return "";                                                     break;
-                    }
-                } break;
-
-                case MISSION_LOSE: {
-                    switch(mission) {
-                        case 1: return _("@TEXTH.ENG|6|Harkonnen->Neutral#Losing text of Neutral mission 1");   break;
-                        case 2: return _("@TEXTH.ENG|10|Harkonnen->Neutral#Losing text of Neutral mission 2");  break;
-                        case 3: return _("@TEXTH.ENG|14|Harkonnen->Neutral#Losing text of Neutral mission 3");  break;
-                        case 4: return _("@TEXTH.ENG|18|Harkonnen->Neutral#Losing text of Neutral mission 4");  break;
-                        case 5: return _("@TEXTH.ENG|22|Harkonnen->Neutral#Losing text of Neutral mission 5");  break;
-                        case 6: return _("@TEXTH.ENG|26|Harkonnen->Neutral#Losing text of Neutral mission 6");  break;
-                        case 7: return _("@TEXTH.ENG|30|Harkonnen->Neutral#Losing text of Neutral mission 7");  break;
-                        case 8: return _("@TEXTH.ENG|34|Harkonnen->Neutral#Losing text of Neutral mission 8");  break;
-                        case 9: return _("@TEXTH.ENG|38|Harkonnen->Neutral#Losing text of Neutral mission 9");  break;
-                        default: return "";                                                    break;
-                    }
-                } break;
-
-                case MISSION_ADVICE: {
-                    switch(mission) {
-                        case 1: return _("@TEXTH.ENG|7|Harkonnen->Neutral#Advice text for Neutral mission 1");   break;
-                        case 2: return _("@TEXTH.ENG|11|Harkonnen->Neutral#Advice text for Neutral mission 2");  break;
-                        case 3: return _("@TEXTH.ENG|15|Harkonnen->Neutral#Advice text for Neutral mission 3");  break;
-                        case 4: return _("@TEXTH.ENG|19|Harkonnen->Neutral#Advice text for Neutral mission 4");  break;
-                        case 5: return _("@TEXTH.ENG|23|Harkonnen->Neutral#Advice text for Neutral mission 5");  break;
-                        case 6: return _("@TEXTH.ENG|27|Harkonnen->Neutral#Advice text for Neutral mission 6");  break;
-                        case 7: return _("@TEXTH.ENG|31|Harkonnen->Neutral#Advice text for Neutral mission 7");  break;
-                        case 8: return _("@TEXTH.ENG|35|Harkonnen->Neutral#Advice text for Neutral mission 8");  break;
-                        case 9: return _("@TEXTH.ENG|39|Harkonnen->Neutral#Advice text for Neutral mission 9");  break;
-                        default: return "";                                                 break;
-                    }
-                } break;
-
-                default: {
-                    return "";
-                } break;
-            }
-
-        } break;
-
     }
 }
 
@@ -603,9 +565,7 @@ std::vector<MentatTextFile::MentatEntry> TextManager::getAllMentatEntries(int ho
         } break;
 
         case HOUSE_ORDOS:
-        case HOUSE_MERCENARY:
-        case HOUSE_NEUTRAL:
-        case HOUSE_REBELS: {
+        case HOUSE_MERCENARY: {
             for(unsigned int i = 0; i <  mentatStrings[HOUSE_ORDOS]->getNumEntries(); i++) {
                 if(mentatStrings[HOUSE_ORDOS]->getMentatEntry(i).techLevel <= techLevel) {
                     mentatEntries.push_back(mentatStrings[HOUSE_ORDOS]->getMentatEntry(i));
@@ -663,4 +623,3 @@ const std::string& TextManager::postProcessString(const std::string& unprocessed
 void TextManager::addOrigDuneText(const std::string& filename, bool bDecode) {
     origDuneText[filename] = std::make_unique<IndexedTextFile>(pFileManager->openFile(filename).get(), bDecode);
 }
-
