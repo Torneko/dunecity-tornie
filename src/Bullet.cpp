@@ -69,11 +69,12 @@ Bullet::Bullet(Uint32 shooterID, Coord* newRealLocation, Coord* newRealDestinati
 
     destination = *newRealDestination;
 
-    if(bulletID == Bullet_Sonic) {
+    if(bulletID == Bullet_Sonic || bulletID == Bullet_Flame) {
         int diffX = destination.x - newRealLocation->x;
         int diffY = destination.y - newRealLocation->y;
 
-        int weaponrange = currentGame->objectData.data[Unit_SonicTank][owner->getHouseID()].weaponrange;
+        int sourceUnit = (bulletID == Bullet_Flame) ? Unit_FlameTank : Unit_SonicTank;
+        int weaponrange = currentGame->objectData.data[sourceUnit][owner->getHouseID()].weaponrange;
 
         if((diffX == 0) && (diffY == 0)) {
             diffY = weaponrange*TILESIZE;
@@ -256,6 +257,14 @@ void Bullet::init()
             numFrames = 1;
             detonationTimer = 45;
             graphic = pGFXManager->getObjPic(ObjPic_Bullet_Sonic, HOUSE_HARKONNEN);    // no color remapping
+        } break;
+
+        case Bullet_Flame: {
+            damageRadius = (TILESIZE*3)/4;
+            speed = 6;  // Same speed as Sonic
+            numFrames = 1;
+            detonationTimer = 28;  // Shorter range than Sonic (range 5 vs 8)
+            graphic = pGFXManager->getObjPic(ObjPic_Bullet_Sonic, HOUSE_HARKONNEN);    // reuse sonic graphic
         } break;
 
         case Bullet_Sandworm: {
@@ -465,31 +474,52 @@ void Bullet::update()
             return;
         }
 
-        if(bulletID == Bullet_Sonic) {
+        if(bulletID == Bullet_Sonic || bulletID == Bullet_Flame) {
 
             if(detonationTimer == 0) {
                 destroy();
                 return;
             }
 
-            FixPoint weaponDamage = currentGame->objectData.data[Unit_SonicTank][owner->getHouseID()].weapondamage;
+            int sourceUnit = (bulletID == Bullet_Flame) ? Unit_FlameTank : Unit_SonicTank;
+            FixPoint weaponDamage = currentGame->objectData.data[sourceUnit][owner->getHouseID()].weapondamage;
 
             FixPoint startDamage = (weaponDamage / 4 + 1) / 4.5_fix;
             FixPoint endDamage = ((weaponDamage-9) / 4 + 1) / 4.5_fix;
 
-            FixPoint damageDecrease = - (startDamage-endDamage)/(45 * 2 * speed);
+            int maxTimer = (bulletID == Bullet_Flame) ? 28 : 45;
+            FixPoint damageDecrease = - (startDamage-endDamage)/(maxTimer * 2 * speed);
             FixPoint dist = distanceFrom(source.x, source.y, realX, realY);
 
             FixPoint currentDamage = dist*damageDecrease + startDamage;
 
             Coord realPos = Coord(lround(realX), lround(realY));
-            currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            // DuneCity 1.0.345: Flame Tank no longer self-damages.
+            // The flame trail hits tiles that the unit's owner stands
+            // on; the damage call below was hitting own-units (Flame
+            // Tank, allied units, same-house units). We now skip the
+            // damage application when the trail's realPos intersects
+            // with the firing Flame Tank's own footprint / own team.
+            // Sonictank keeps the existing damage-on-trail semantics.
+            // For Bullet_Flame we only emit the Explosion_Flames for
+            // visual + wait for the hit call at bullet end to clear
+            // the path.
+            if(bulletID != Bullet_Flame) {
+                currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            }
+
+            // Flame Tank: spawn flame explosions at intervals along path
+            if(bulletID == Bullet_Flame && (detonationTimer % 8 == 0)) {
+                currentGame->getExplosionList().push_back(new Explosion(Explosion_Flames, realPos, owner->getHouseID()));
+            }
 
             realX += xSpeed;  //keep the bullet moving by its current speeds
             realY += ySpeed;
 
             realPos = Coord(lround(realX), lround(realY));
-            currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            if(bulletID != Bullet_Flame) {
+                currentGameMap->damage(shooterID, owner, realPos, bulletID, currentDamage/2, damageRadius, false);
+            }
         } else if( explodesAtGroundObjects
                     && currentGameMap->tileExists(location)
                     && currentGameMap->getTile(location)->hasAGroundObject()
@@ -604,6 +634,7 @@ void Bullet::destroy()
             currentGame->getExplosionList().push_back(new Explosion(Explosion_ShellMedium,position,houseID));
         } break;
 
+        case Bullet_Flame:
         case Bullet_Sonic:
         case Bullet_Sandworm:
         default: {

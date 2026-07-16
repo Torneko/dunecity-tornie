@@ -1320,6 +1320,8 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
     if(pMap->hasSection("Fremen"))    boundHousesOnMap.push_back(HOUSE_FREMEN);
     if(pMap->hasSection("Sardaukar")) boundHousesOnMap.push_back(HOUSE_SARDAUKAR);
     if(pMap->hasSection("Mercenary")) boundHousesOnMap.push_back(HOUSE_MERCENARY);
+    if(pMap->hasSection("Neutral"))    boundHousesOnMap.push_back(HOUSE_NEUTRAL);
+    if(pMap->hasSection("Rebels"))     boundHousesOnMap.push_back(HOUSE_REBELS);
 
     numHouses = boundHousesOnMap.size();
     if(pMap->hasSection("Player1"))   numHouses++;
@@ -1328,6 +1330,8 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
     if(pMap->hasSection("Player4"))   numHouses++;
     if(pMap->hasSection("Player5"))   numHouses++;
     if(pMap->hasSection("Player6"))   numHouses++;
+    if(pMap->hasSection("Player7"))   numHouses++;  // DuneCity: 7-team support (Neutral as Team7)
+    if(pMap->hasSection("Player8"))   numHouses++;  // DuneCity: 8-team support (Rebels as Team8)
 
     mapPropertyPlayers.setText(std::to_string(numHouses));
 
@@ -1452,6 +1456,12 @@ void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int house
         addToHouseDropDown(curHouseInfo.houseDropDown, HOUSE_INVALID);
 
         for(int h=0;h<NUM_HOUSES;h++) {
+            // DuneCity 1.0.344: drop the AI-only skip. HOUSE_REBELS is
+            // a fully playable 8th faction selectable in any custom
+            // game. Tornie's instruction: 'no longer AI-only or enemy
+            // from everyone'.
+            // if (h == HOUSE_REBELS) continue; // removed in 1.0.344
+
             bool bAddHouse;
 
             bool bCheck;

@@ -37,6 +37,9 @@ if(APPLE)
         MACOSX_PACKAGE_LOCATION "Resources"
     )
     target_sources(dunecity PRIVATE ${CMAKE_SOURCE_DIR}/dunecity.icns)
+elseif(ANDROID)
+    add_library(dunecity SHARED)
+    set_target_properties(dunecity PROPERTIES OUTPUT_NAME main)
 else()
     add_executable(dunecity)
 endif()
@@ -253,6 +256,7 @@ target_sources(dunecity
         structures/StarPort.cpp
         structures/Wall.cpp
         structures/WindTrap.cpp
+        structures/AdvancedWindTrap.cpp
         structures/WOR.cpp
         structures/NuclearPlant.cpp
         structures/PoliceStation.cpp
@@ -273,6 +277,8 @@ target_sources(dunecity
         units/Frigate.cpp
         units/Harvester.cpp
         units/Launcher.cpp
+        units/EliteLauncher.cpp
+        units/EliteSiegeTank.cpp
         units/MCV.cpp
         units/Ornithopter.cpp
         units/Quad.cpp
@@ -287,6 +293,8 @@ target_sources(dunecity
         units/Trooper.cpp
         units/AmbientAirplane.cpp
         units/AmbientHelicopter.cpp
+        units/RocketTrike.cpp
+        units/FlameTank.cpp
 
         # CutScenes
         CutScenes/CutScene.cpp
@@ -345,6 +353,7 @@ target_sources(dunecity
         misc/sound_util.cpp
         misc/string_util.cpp
         misc/Scaler.cpp
+        misc/TouchInput.cpp
 )
 
 # C source files
@@ -492,6 +501,18 @@ if(APPLE)
         COMMENT "Copying data and config files into app bundle Resources"
     )
 
+    # Copy mods directory into the app bundle
+    if(EXISTS "${CMAKE_SOURCE_DIR}/mods")
+        add_custom_command(
+            TARGET dunecity
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/mods"
+                "${BUNDLE_RESOURCES_DIR}/mods"
+            COMMENT "Copying mods into app bundle Resources"
+        )
+    endif()
+
     # Copy imported Micropolis-derived zone sprites into the bundle so they
     # are found by getDuneLegacyDataDir() + "imported_sprites/..." at runtime.
     set(IMPORTED_SPRITES_SRC "${CMAKE_SOURCE_DIR}/imported_sprites")
@@ -543,6 +564,18 @@ else()
         COMMENT "Copying config template files to build output"
     )
 
+    # Copy mods directory next to the binary for non-bundle builds
+    if(EXISTS "${CMAKE_SOURCE_DIR}/mods")
+        add_custom_command(
+            TARGET dunecity
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/mods"
+                "${CMAKE_BINARY_DIR}/bin/mods"
+            COMMENT "Copying mods to build output"
+        )
+    endif()
+
     # Copy imported zone sprites next to the binary for non-bundle builds
     set(IMPORTED_SPRITES_SRC "${CMAKE_SOURCE_DIR}/imported_sprites")
     if(EXISTS "${IMPORTED_SPRITES_SRC}")
@@ -593,6 +626,49 @@ if(WIN32)
         DIRECTORY ${CMAKE_SOURCE_DIR}/config
         DESTINATION .
     )
+
+    # Neutral campaign scenario and region files (REGIONN.INI, scenn001-022.ini)
+    # are now packed inside Tornie.PAK and loaded via pFileManager->openFile().
+    # Install Neutral house voice VOC files (not in VOC.PAK, loaded as loose files)
+    install(
+        FILES
+            "${DATA_DIR}/ANEU.VOC"
+            "${DATA_DIR}/HNEU.VOC"
+            "${DATA_DIR}/MNEU.VOC"
+            "${DATA_DIR}/NNEU.VOC"
+            "${DATA_DIR}/ONEU.VOC"
+        DESTINATION .
+    )
+    # Install Advanced Windtrap icon (custom PNG, loaded as a loose file by GFXManager)
+    install(
+        FILES "${DATA_DIR}/Tornie_AdvancedWindtrap_icon.png"
+        DESTINATION .
+    )
+    # Install Advanced Windtrap building graphic (custom PNG, loaded as a loose file by GFXManager)
+    install(
+        FILES "${DATA_DIR}/Tornie_AdvancedWindtrap_gfx.png"
+        DESTINATION .
+    )
+    # Install Neutral mentat assets (MENTATM.CPS background, MENSHPM.SHP animations)
+    install(
+        FILES "${DATA_DIR}/MENTATM.CPS" "${DATA_DIR}/MENSHPM.SHP"
+        DESTINATION .
+    )
+    # Install Tornie.PAK (bundled Neutral-house art assets)
+    if(EXISTS "${DATA_DIR}/Tornie.PAK")
+        install(
+            FILES "${DATA_DIR}/Tornie.PAK"
+            DESTINATION .
+        )
+    endif()
+
+    # Install mods directory (Windows)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/mods")
+        install(
+            DIRECTORY "${CMAKE_SOURCE_DIR}/mods/"
+            DESTINATION mods
+        )
+    endif()
 elseif(NOT APPLE)
     # Linux: use FHS structure
     install(
@@ -600,6 +676,14 @@ elseif(NOT APPLE)
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
         FILES_MATCHING PATTERN "*.*"
     )
+
+    # Install mods directory (Linux)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/mods")
+        install(
+            DIRECTORY "${CMAKE_SOURCE_DIR}/mods/"
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/mods
+        )
+    endif()
 endif()
 
 # Install imported sprite assets (Micropolis-derived civic/zone PNGs).
@@ -672,10 +756,32 @@ elseif(APPLE)
         message(STATUS \"Installed dunecity.app signature verified.\")
     ")
 else()
-    # Linux: install to bin directory
+    # Linux: set rpath so the installed binary finds bundled .so files relative
+    # to itself rather than requiring system-installed or build-tree libraries.
+    # $ORIGIN expands to the directory containing the binary at runtime, so
+    # $ORIGIN/../lib/dunecity resolves to <prefix>/lib/dunecity.
+    set_target_properties(dunecity PROPERTIES
+        INSTALL_RPATH "$ORIGIN/../lib/dunecity"
+        BUILD_WITH_INSTALL_RPATH FALSE
+    )
+
     install(TARGETS dunecity
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
+
+    # Bundle all vcpkg-built shared libraries so the installed binary is
+    # self-contained and does not depend on system SDL2/mixer/ttf/curl/etc.
+    # VCPKG_INSTALLED_DIR and VCPKG_TARGET_TRIPLET are set by the vcpkg
+    # toolchain file; skip silently if building without vcpkg.
+    if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        install(DIRECTORY "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib/"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/dunecity"
+            FILES_MATCHING
+                PATTERN "*.so"
+                PATTERN "*.so.*"
+            PATTERN "pkgconfig" EXCLUDE
+        )
+    endif()
 endif()
 
 # DUNELEGACY_DATADIR is set at the top of this file (before configure_file)

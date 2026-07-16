@@ -85,6 +85,10 @@
 #include <misc/MacFunctions.h>
 #endif
 
+#if defined(__linux__)
+#include <dlfcn.h>
+#endif
+
 #if !defined(__GNUG__) || (defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1) && (ATOMIC_INT_LOCK_FREE > 1) && !defined(_GLIBCXX_HAS_GTHREADS))
 // g++ does not provide std::async on all platforms
 #define HAS_ASYNC
@@ -609,6 +613,18 @@ void logOutputFunction(void *userdata, int category, SDL_LogPriority priority, c
 }
 
 void showMissingFilesMessageBox() {
+#ifdef __ANDROID__
+    if((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0) {
+        std::string instruction = "DuneCity is missing required data files. Search paths:\n";
+        for(const std::string& searchPath : FileManager::getSearchPath()) {
+            instruction += " " + searchPath + "\n";
+        }
+        SDL_Log("%s", instruction.c_str());
+        fprintf(stderr, "%s\n", instruction.c_str());
+        return;
+    }
+#endif
+
     SDL_ShowCursor(SDL_ENABLE);
 
     std::string instruction = "DuneCity uses the data files from original Dune II. The following files are missing:\n";
@@ -675,6 +691,11 @@ int main(int argc, char *argv[]) {
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);
 
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+#ifdef __ANDROID__
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
 
     // global try/catch around everything
     try {
@@ -762,6 +783,42 @@ int main(int argc, char *argv[]) {
 
         SDL_Log("Starting DuneCity %s on %s", VERSION, SDL_GetPlatform());
 
+#if defined(__linux__) && !defined(__ANDROID__)
+        // Verify that required shared libraries are loadable before proceeding.
+        // If the binary was installed without bundled .so files and the system
+        // libraries are the wrong version or absent, dlopen catches this and
+        // logs a human-readable error instead of crashing silently on SDL_Init.
+        {
+            const char* const requiredLibs[] = {
+                "libSDL2-2.0.so.0",
+                "libSDL2_mixer-2.0.so.0",
+                "libSDL2_ttf-2.0.so.0",
+            };
+            bool allLibsFound = true;
+            for (const char* lib : requiredLibs) {
+                // RTLD_NOLOAD checks if already loaded (it is, since we're running);
+                // if it returns null anyway, fall back to a full load attempt.
+                void* handle = dlopen(lib, RTLD_LAZY | RTLD_NOLOAD);
+                if (!handle) {
+                    handle = dlopen(lib, RTLD_LAZY);
+                }
+                if (!handle) {
+                    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                        "Required library missing or incompatible: %s — %s", lib, dlerror());
+                    allLibsFound = false;
+                } else {
+                    dlclose(handle);
+                }
+            }
+            if (!allLibsFound) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "Cannot start: one or more required shared libraries could not be loaded. "
+                    "See log at: %s", getLogFilepath().c_str());
+                return EXIT_FAILURE;
+            }
+        }
+#endif
+
         // First check for missing files
         std::vector<std::string> missingFiles = FileManager::getMissingFiles();
 
@@ -816,6 +873,8 @@ int main(int argc, char *argv[]) {
             settings.video.preferredZoomLevel = myINIFile.getIntValue("Video","Preferred Zoom Level", 0);
             settings.video.scaler = myINIFile.getStringValue("Video","Scaler","ScaleHD");
             settings.video.rotateUnitGraphics = myINIFile.getBoolValue("Video","RotateUnitGraphics",false);
+            settings.video.showWatermark = myINIFile.getBoolValue("Video","Show Watermark",true);
+            settings.video.cursorScale = myINIFile.getIntValue("Video","Cursor Scale",0);
             settings.audio.musicType = myINIFile.getStringValue("Audio","Music Type","adl");
             settings.audio.playMusic = myINIFile.getBoolValue("Audio","Play Music", true);
             settings.audio.musicVolume = myINIFile.getIntValue("Audio","Music Volume", 64);
@@ -952,6 +1011,38 @@ int main(int argc, char *argv[]) {
                 myINIFile.saveChangesTo(getConfigFilepath());
             }
 
+#ifdef __ANDROID__
+            if(bFirstInit == true) {
+                SDL_DisplayMode displayMode;
+                SDL_GetDesktopDisplayMode(currentDisplayIndex, &displayMode);
+
+                if(displayMode.w > 0 && displayMode.h > 0 &&
+                   (settings.video.physicalHeight > settings.video.physicalWidth ||
+                    settings.video.physicalWidth != displayMode.w ||
+                    settings.video.physicalHeight != displayMode.h)) {
+                    int factor = getLogicalToPhysicalResolutionFactor(displayMode.w, displayMode.h);
+                    settings.video.physicalWidth = displayMode.w;
+                    settings.video.physicalHeight = displayMode.h;
+                    settings.video.width = std::max(640, displayMode.w / factor);
+                    settings.video.height = std::max(480, displayMode.h / factor);
+                    settings.video.fullscreen = true;
+                    settings.video.preferredZoomLevel = 1;
+
+                    SDL_Log("Android display config updated to %dx%d physical, %dx%d logical",
+                            settings.video.physicalWidth, settings.video.physicalHeight,
+                            settings.video.width, settings.video.height);
+
+                    myINIFile.setIntValue("Video","Width",settings.video.width);
+                    myINIFile.setIntValue("Video","Height",settings.video.height);
+                    myINIFile.setIntValue("Video","Physical Width",settings.video.physicalWidth);
+                    myINIFile.setIntValue("Video","Physical Height",settings.video.physicalHeight);
+                    myINIFile.setBoolValue("Video","Fullscreen",settings.video.fullscreen);
+                    myINIFile.setIntValue("Video","Preferred Zoom Level",settings.video.preferredZoomLevel);
+                    myINIFile.saveChangesTo(getConfigFilepath());
+                }
+            }
+#endif
+
             Scaler::setDefaultScaler(Scaler::getScalerByName(settings.video.scaler));
 
             if(bFirstInit == true) {
@@ -1023,6 +1114,23 @@ int main(int argc, char *argv[]) {
                 pTextManager->loadData();
 
                 palette = LoadPalette_RW(pFileManager->openFile("IBM.PAL").get());
+                ibmPalette = palette;  // save vanilla IBM.PAL before any mod overrides
+
+                // Tornie mod: load Custom_IBM.pal to replace palette entries 192-199 with rebels grey
+                if (ModManager::instance().getActiveModName() == "Tornie" && pFileManager->exists("Custom_IBM.pal")) {
+                    auto palRw = pFileManager->openFile("Custom_IBM.pal");
+                    std::vector<Uint8> palData(768);
+                    SDL_RWread(palRw.get(), palData.data(), 1, 768);
+                    for (int i = 192; i < 200; ++i) {
+                        SDL_Color c;
+                        c.r = std::min(255, (int)palData[i*3+0] * 4);
+                        c.g = std::min(255, (int)palData[i*3+1] * 4);
+                        c.b = std::min(255, (int)palData[i*3+2] * 4);
+                        c.a = 255;
+                        palette[i] = c;
+                    }
+                    SDL_Log("Tornie Custom_IBM.pal applied (rebels grey range 192-199)");
+                }
 
                 SDL_Log("Setting video mode...");
                 setVideoMode(currentDisplayIndex);
@@ -1030,15 +1138,15 @@ int main(int argc, char *argv[]) {
                 // Give the renderer time to fully initialize
                 SDL_Delay(100);
                 
-                SDL_RendererInfo rendererInfo;
-                SDL_GetRendererInfo(renderer, &rendererInfo);
-                SDL_Log("Renderer: %s (max texture size: %dx%d)", rendererInfo.name, rendererInfo.max_texture_width, rendererInfo.max_texture_height);
-
                 // Verify renderer is valid before proceeding
                 if(renderer == nullptr) {
                     SDL_Log("Error: Renderer is null after setVideoMode!");
                     THROW(std::runtime_error, "Failed to create renderer during video mode initialization");
                 }
+
+                SDL_RendererInfo rendererInfo;
+                SDL_GetRendererInfo(renderer, &rendererInfo);
+                SDL_Log("Renderer: %s (max texture size: %dx%d)", rendererInfo.name, rendererInfo.max_texture_width, rendererInfo.max_texture_height);
 
                 SDL_Log("Loading fonts...");
                 pFontManager = std::make_unique<FontManager>();

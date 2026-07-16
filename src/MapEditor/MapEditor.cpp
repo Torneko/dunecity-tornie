@@ -31,8 +31,11 @@
 #include <misc/draw_util.h>
 #include <misc/format.h>
 #include <misc/DiscordManager.h>
+#include <misc/TouchInput.h>
+
 
 #include <globals.h>
+#include <mod/ModManager.h>
 #include <mmath.h>
 #include <sand.h>
 #include <main.h>
@@ -44,6 +47,10 @@
 #include <algorithm>
 
 extern int currentZoomlevel;
+
+static bool isSpiceTerrain(int t) {
+    return t == Terrain_Spice || t == Terrain_ThickSpice || t == Terrain_RedSpice || t == Terrain_GreenSpice;
+}
 
 // functor for std::find_if
 class CoordDistance {
@@ -128,6 +135,9 @@ void MapEditor::setMirrorMode(MirrorMode newMirrorMode) {
 }
 
 void MapEditor::RunEditor() {
+    // Restore cursor in case a game or cutscene left it hidden
+    SDL_ShowCursor(SDL_ENABLE);
+
     while(!bQuitEditor) {
 
         int frameStart = SDL_GetTicks();
@@ -185,6 +195,8 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.push_back(Player(getHouseNameByNumber(HOUSE_FREMEN),HOUSE_FREMEN,HOUSE_FREMEN,false,false,"CPU",25));
         players.emplace_back(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,true,false,"CPU",25);
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"CPU",25));
+        players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"CPU",0));
+        players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,true,false,"CPU",25));
     } else {
         players.push_back(Player(getHouseNameByNumber(HOUSE_HARKONNEN),HOUSE_HARKONNEN,HOUSE_HARKONNEN,true,true,"Team1"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_ATREIDES),HOUSE_ATREIDES,HOUSE_ATREIDES,true,true,"Team2"));
@@ -192,6 +204,8 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.push_back(Player(getHouseNameByNumber(HOUSE_FREMEN),HOUSE_FREMEN,HOUSE_FREMEN,false,false,"Team4"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,true,true,"Team5"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
+        players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
+        players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,true,true,"Team8"));
     }
 
     // setup default choam
@@ -374,13 +388,25 @@ void MapEditor::loadMap(const std::string& filepath) {
     players.push_back(Player(getHouseNameByNumber(HOUSE_FREMEN),HOUSE_FREMEN,HOUSE_FREMEN,false,false,"Team4"));
     players.push_back(Player(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,false,false,"Team5"));
     players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
+    players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
+    players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,true,true,"Team8"));
 
     // load map
     loadedINIFile = std::make_unique<INIFile>(filepath, false);
     lastSaveName = filepath;
 
     // do the actual loading
-    INIMapEditorLoader INIMapEditorLoader(this, loadedINIFile.get());
+    // Defensive: same as Game::init. A malformed map with bad unit/structure
+    // positions or unknown item IDs could throw std::runtime_error from deep
+    // inside INIMapEditorLoader. Without this catch, the throw escapes and
+    // crashes the process. Log and continue with a partially-loaded map.
+    try {
+        INIMapEditorLoader INIMapEditorLoader(this, loadedINIFile.get());
+    } catch(const std::exception& e) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+            "MapEditor::loadMap(): failed to load map '%s': %s",
+            filepath.c_str(), e.what());
+    }
 
     // update interface
     if(pInterface != nullptr) {
@@ -494,6 +520,31 @@ void MapEditor::saveMap(const std::string& filepath) {
             loadedINIFile->removeKey("MAP", "Special");
         }
 
+        // Tornie: red spice blooms
+        std::string strRedBloom = "";
+        for(size_t i=0;i<redBlooms.size();++i) {
+            if(i>0) strRedBloom += ",";
+            int position = (logicalOffsetY+redBlooms[i].y) * logicalSizeX + (logicalOffsetX+redBlooms[i].x);
+            strRedBloom += std::to_string(position);
+        }
+        if(!strRedBloom.empty()) {
+            loadedINIFile->setStringValue("MAP", "RedBloom", strRedBloom, false);
+        } else {
+            loadedINIFile->removeKey("MAP", "RedBloom");
+        }
+
+        // Tornie: green spice blooms
+        std::string strGreenBloom = "";
+        for(size_t i=0;i<greenBlooms.size();++i) {
+            if(i>0) strGreenBloom += ",";
+            int position = (logicalOffsetY+greenBlooms[i].y) * logicalSizeX + (logicalOffsetX+greenBlooms[i].x);
+            strGreenBloom += std::to_string(position);
+        }
+        if(!strGreenBloom.empty()) {
+            loadedINIFile->setStringValue("MAP", "GreenBloom", strGreenBloom, false);
+        } else {
+            loadedINIFile->removeKey("MAP", "GreenBloom");
+        }
 
         std::string strFieldBloom = "";
         for(size_t i=0;i<spiceFields.size();++i) {
@@ -562,6 +613,26 @@ void MapEditor::saveMap(const std::string& filepath) {
                     case Terrain_SpecialBloom: {
                         // Special Bloom
                         row += 'Q';
+                    } break;
+
+                    case Terrain_RedSpice: {
+                        // Red Spice (Tornie)
+                        row += 'r';
+                    } break;
+
+                    case Terrain_GreenSpice: {
+                        // Green Spice (Tornie)
+                        row += 'g';
+                    } break;
+
+                    case Terrain_RedSpiceBloom: {
+                        // Red Spice Bloom (Tornie)
+                        row += 'R';
+                    } break;
+
+                    case Terrain_GreenSpiceBloom: {
+                        // Green Spice Bloom (Tornie)
+                        row += 'G';
                     } break;
 
                     case Terrain_Sand:
@@ -743,6 +814,16 @@ void MapEditor::performMapEdit(int xpos, int ypos, bool bRepeated) {
 
                         case Terrain_SpecialBloom: {
                             MapEditorTerrainAddSpecialBloomOperation editOperation(xpos, ypos);
+                            addUndoOperation(editOperation.perform(this));
+                        } break;
+
+                        case Terrain_RedSpiceBloom: {
+                            MapEditorTerrainAddRedBloomOperation editOperation(xpos, ypos);
+                            addUndoOperation(editOperation.perform(this));
+                        } break;
+
+                        case Terrain_GreenSpiceBloom: {
+                            MapEditorTerrainAddGreenBloomOperation editOperation(xpos, ypos);
                             addUndoOperation(editOperation.perform(this));
                         } break;
 
@@ -933,7 +1014,9 @@ void MapEditor::performTerrainChange(int x, int y, TERRAINTYPE terrainType) {
         case Terrain_Sand:
         case Terrain_Dunes:
         case Terrain_SpiceBloom:
-        case Terrain_SpecialBloom: {
+        case Terrain_SpecialBloom:
+        case Terrain_RedSpiceBloom:
+        case Terrain_GreenSpiceBloom: {
             if(map.isInsideMap(x-1, y) && (map(x-1,y) == Terrain_Mountain))     performTerrainChange(x-1,y,Terrain_Rock);
             if(map.isInsideMap(x, y-1) && (map(x,y-1) == Terrain_Mountain))     performTerrainChange(x,y-1,Terrain_Rock);
             if(map.isInsideMap(x+1, y) && (map(x+1,y) == Terrain_Mountain))     performTerrainChange(x+1,y,Terrain_Rock);
@@ -972,6 +1055,9 @@ void MapEditor::processInput() {
     SDL_Event event;
 
     while(SDL_PollEvent(&event)) {
+        if(TouchInput::translateTouchEvent(event)) {
+            continue;
+        }
 
         // first of all update mouse
         if(event.type == SDL_MOUSEMOTION) {
@@ -1352,6 +1438,14 @@ TERRAINTYPE MapEditor::getTerrain(int x, int y) {
         terrainType = Terrain_SpecialBloom;
     }
 
+    if(std::find(redBlooms.begin(), redBlooms.end(), Coord(x,y)) != redBlooms.end()) {
+        terrainType = Terrain_RedSpiceBloom;
+    }
+
+    if(std::find(greenBlooms.begin(), greenBlooms.end(), Coord(x,y)) != greenBlooms.end()) {
+        terrainType = Terrain_GreenSpiceBloom;
+    }
+
     return terrainType;
 }
 
@@ -1375,6 +1469,13 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
         for(int x = TopLeftTile.x; x <= BottomRightTile.x; x++) {
 
             int tile;
+            // Tornie custom spice fields/blooms live in a separate sprite strip
+            // (ObjPic_TerrainRedSpice/GreenSpice), not the vanilla ObjPic_Terrain
+            // atlas. Sampling the vanilla atlas at their tile index renders black,
+            // so draw them from the custom texture instead (mirrors Tile::blitGround).
+            SDL_Texture* customSpiceTex = nullptr;
+            SDL_Rect customSpiceSrc{};
+            bool customSpiceNeedsSand = false;
 
             switch(getTerrain(x,y)) {
                 case Terrain_Slab: {
@@ -1443,17 +1544,55 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                     tile = Tile::TerrainTile_SpecialBloom;
                 } break;
 
+                case Terrain_RedSpice:
+                case Terrain_GreenSpice: {
+                    bool up = (y-1 < 0) || isSpiceTerrain(getTerrain(x, y-1));
+                    bool right = (x+1 >= map.getSizeX()) || isSpiceTerrain(getTerrain(x+1, y));
+                    bool down = (y+1 >= map.getSizeY()) || isSpiceTerrain(getTerrain(x, y+1));
+                    bool left = (x-1 < 0) || isSpiceTerrain(getTerrain(x-1, y));
+                    int mask = (up | (right << 1) | (down << 2) | (left << 3));
+                    int objPicId = (getTerrain(x,y) == Terrain_RedSpice) ? ObjPic_TerrainRedSpice : ObjPic_TerrainGreenSpice;
+                    customSpiceTex = pGFXManager->getZoomedObjPic(objPicId, currentZoomlevel);
+                    if(customSpiceTex) {
+                        // Field: connectivity variant on row 0 of the custom strip, over a sand base.
+                        customSpiceSrc = { mask*zoomedTilesize, 0, zoomedTilesize, zoomedTilesize };
+                        customSpiceNeedsSand = true;
+                    }
+                    tile = Tile::TerrainTile_Spice + mask;   // vanilla fallback if custom strip missing
+                } break;
+
+                case Terrain_RedSpiceBloom:
+                case Terrain_GreenSpiceBloom: {
+                    int objPicId = (getTerrain(x,y) == Terrain_RedSpiceBloom) ? ObjPic_TerrainRedSpice : ObjPic_TerrainGreenSpice;
+                    customSpiceTex = pGFXManager->getZoomedObjPic(objPicId, currentZoomlevel);
+                    if(customSpiceTex) {
+                        // Bloom is pre-composited on sand at column 16, row 1 of the strip.
+                        customSpiceSrc = { 16*zoomedTilesize, 1*zoomedTilesize, zoomedTilesize, zoomedTilesize };
+                        customSpiceNeedsSand = false;
+                    }
+                    tile = Tile::TerrainTile_SpiceBloom;   // vanilla fallback if custom strip missing
+                } break;
+
                 default: {
                     THROW(std::runtime_error, "MapEditor::DrawMap(): Invalid terrain type");
                 } break;
             }
 
             //draw map[x][y]
-            SDL_Rect source = { (tile % NUM_TERRAIN_TILES_X)*zoomedTilesize, (tile / NUM_TERRAIN_TILES_X)*zoomedTilesize,
-                                zoomedTilesize, zoomedTilesize };
             SDL_Rect drawLocation = {   pScreenborder->world2screenX(x*TILESIZE), pScreenborder->world2screenY(y*TILESIZE),
                                         zoomedTilesize, zoomedTilesize };
-            SDL_RenderCopy(renderer, TerrainSprite, &source, &drawLocation);
+            if(customSpiceTex) {
+                if(customSpiceNeedsSand) {
+                    SDL_Rect sandSrc = { (Tile::TerrainTile_Sand % NUM_TERRAIN_TILES_X)*zoomedTilesize, (Tile::TerrainTile_Sand / NUM_TERRAIN_TILES_X)*zoomedTilesize,
+                                         zoomedTilesize, zoomedTilesize };
+                    SDL_RenderCopy(renderer, TerrainSprite, &sandSrc, &drawLocation);
+                }
+                SDL_RenderCopy(renderer, customSpiceTex, &customSpiceSrc, &drawLocation);
+            } else {
+                SDL_Rect source = { (tile % NUM_TERRAIN_TILES_X)*zoomedTilesize, (tile / NUM_TERRAIN_TILES_X)*zoomedTilesize,
+                                    zoomedTilesize, zoomedTilesize };
+                SDL_RenderCopy(renderer, TerrainSprite, &source, &drawLocation);
+            }
         }
     }
 
@@ -1601,6 +1740,7 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                 case Structure_ZoneCommercial:      objectPic = ObjPic_ZoneCommercial;      break;
                 case Structure_ZoneIndustrial:      objectPic = ObjPic_ZoneIndustrial;      break;
                 case Structure_NuclearPlant:        objectPic = ObjPic_NuclearPlant;        break;
+                case Structure_AdvancedWindTrap:    objectPic = ObjPic_AdvancedWindTrap;    break;
                 default:                            objectPic = 0;                          break;
             }
 
@@ -1618,6 +1758,23 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
             SDL_Rect dest = { pScreenborder->world2screenX(position.x*TILESIZE), pScreenborder->world2screenY(position.y*TILESIZE), frameSize.x, frameSize.y };
 
             SDL_RenderCopy(renderer, ObjectSprite, &source, &dest);
+
+            // Tornie mod: draw AWT corner flags (static, frame 0) in map editor
+            if (structure.itemID == Structure_AdvancedWindTrap
+                && ModManager::instance().getActiveModName() == "Tornie") {
+                SDL_Texture* flagTex = pGFXManager->getZoomedObjPic(ObjPic_CornerFlag, structure.house, currentZoomlevel);
+                if (flagTex) {
+                    const int flagPx = 7 * (currentZoomlevel + 1);
+                    // frame 0 only (static)
+                    SDL_Rect flagSrc = { 0, 0, flagPx, flagPx };
+                    // top-left corner
+                    SDL_Rect tlDst = { dest.x, dest.y, flagPx, flagPx };
+                    SDL_RenderCopy(renderer, flagTex, &flagSrc, &tlDst);
+                    // bottom-right corner
+                    SDL_Rect brDst = { dest.x + dest.w - flagPx, dest.y + dest.h - flagPx, flagPx, flagPx };
+                    SDL_RenderCopy(renderer, flagTex, &flagSrc, &brDst);
+                }
+            }
 
             selectionDest = dest;
         }
@@ -1734,6 +1891,10 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
             case Unit_Tank:             objectPicBase = ObjPic_Tank_Base;       objectPicGun = ObjPic_Tank_Gun;         gunOffset = tankTurretOffset;           break;
             case Unit_Trike:            objectPicBase = ObjPic_Trike;                                                                                           break;
             case Unit_RaiderTrike:      objectPicBase = ObjPic_Trike;                                                                                           break;
+            case Unit_RocketTrike:      objectPicBase = ObjPic_RocketTrike;                                                                                     break;
+            case Unit_EliteLauncher:    objectPicBase = ObjPic_Tank_Base;       objectPicGun = ObjPic_Launcher_Gun;     gunOffset = launcherTurretOffset;       break;
+            case Unit_EliteSiegeTank:   objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_Siegetank_Gun;    gunOffset = siegeTankTurretOffset;      break;
+            case Unit_FlameTank:        objectPicBase = ObjPic_FlameTank;                                                                                      break;
             case Unit_Trooper:          objectPicBase = ObjPic_Trooper;         framesX = 4;    framesY = 3;                                                    break;
             case Unit_Special:          objectPicBase = ObjPic_Devastator_Base; objectPicGun = ObjPic_Devastator_Gun;   gunOffset = devastatorTurretOffset;     break;
             case Unit_Infantry:         objectPicBase = ObjPic_Infantry;         framesX = 4;    framesY = 4;                                                   break;
@@ -1768,8 +1929,19 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
             SDL_RenderCopy(renderer, pGunSprite, &source2, &drawLocation2);
         }
 
-        if(unit.itemID == Unit_RaiderTrike || unit.itemID == Unit_Deviator || unit.itemID == Unit_Special) {
+        if(unit.itemID == Unit_RaiderTrike || unit.itemID == Unit_Deviator || unit.itemID == Unit_Special
+           || unit.itemID == Unit_RocketTrike || unit.itemID == Unit_EliteLauncher || unit.itemID == Unit_EliteSiegeTank
+           || unit.itemID == Unit_FlameTank) {
             SDL_Texture* pStarSprite = pGFXManager->getZoomedObjPic(ObjPic_Star, currentZoomlevel);
+
+            // Tornie mod units get a purple star; vanilla specials keep the default yellow
+            bool isTornieMod = (unit.itemID == Unit_RocketTrike
+                             || unit.itemID == Unit_EliteLauncher
+                             || unit.itemID == Unit_EliteSiegeTank
+                             || unit.itemID == Unit_FlameTank);
+            if (isTornieMod) {
+                SDL_SetTextureColorMod(pStarSprite, 180, 0, 255);  // purple
+            }
 
             SDL_Rect drawLocation2 = calcDrawingRect(   pStarSprite,
                                                         pScreenborder->world2screenX((position.x*TILESIZE)+(TILESIZE/2)) + frameSizeX/2 - 1,
@@ -1777,6 +1949,11 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                                                         HAlign::Right, VAlign::Bottom);
 
             SDL_RenderCopy(renderer, pStarSprite, nullptr, &drawLocation2);
+
+            // Reset tint so other draw calls aren't affected
+            if (isTornieMod) {
+                SDL_SetTextureColorMod(pStarSprite, 255, 255, 255);
+            }
         }
 
     }

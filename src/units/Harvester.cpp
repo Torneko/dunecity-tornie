@@ -113,7 +113,10 @@ void Harvester::blitToScreen()
     SDL_Rect source = calcSpriteSourceRect(pUnitGraphic, drawnAngle, numImagesX);
     SDL_Rect dest = calcSpriteDrawingRect( pUnitGraphic, x, y, numImagesX, 1, HAlign::Center, VAlign::Center);
 
-    SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    if(!pGFXManager->drawHDObjPic(graphicID, getOwner()->getHouseID(), currentZoomlevel,
+                                  drawnAngle, numImagesX, 0, 1, x, y)) {
+        SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    }
 
     if(isHarvesting() == true) {
 
@@ -199,20 +202,24 @@ void Harvester::checkPos()
                         awaitingPickup = false;
                         setReturned();
                     } else {
-                        // the repair yard is already in use by some other unit => move out
+                        // the refinery is already in use => move out of the way without
+                        // clearing the refinery target (doMove2Pos calls setTarget(nullptr)
+                        // which would drop returningToRefinery, so use setDestination directly).
                         Coord newDestination = currentGameMap->findDeploySpot(this, target.getObjPointer()->getLocation(), currentGame->randomGen, getLocation(), pRefinery->getStructureSize());
-                        doMove2Pos(newDestination, true);
-                        requestCarryall();
+                        setDestination(newDestination);
+                        clearPath();
                     }
-                } else if(!awaitingPickup && owner->hasCarryalls() && pRefinery->isFree() && blockDistance(location, pRefinery->getClosestPoint(location)) >= MIN_CARRYALL_LIFT_DISTANCE) {
-                    requestCarryall();
+                } else if(!awaitingPickup && owner->hasCarryalls() && pRefinery->isFree() && blockDistance(location, pRefinery->getClosestPoint(location)) >= MIN_CARRYALL_LIFT_DISTANCE && carryallRequestCooldown <= 0) {
+                    if(requestCarryall()) {
+                        carryallRequestCooldown = MILLI2CYCLES(2000);
+                    }
                 }
                 
                 // Check if path to refinery is blocked - request carryall if stuck
                 if(!awaitingPickup && !moving && pathList.empty() && destination != location) {
                     // Not moving, no path, but has a destination - path is likely blocked
                     returnPathFailCounter++;
-                    if(returnPathFailCounter >= 3) {
+                    if(returnPathFailCounter >= 3 && carryallRequestCooldown <= 0) {
                         if(pRefinery->isFree() && owner->hasCarryalls()) {
                             // Refinery is free but path is blocked - request carryall
                             SDL_Log("HARVESTER %d: Path to refinery blocked, requesting carryall pickup", getObjectID());
@@ -531,9 +538,18 @@ void Harvester::move()
                     Tile* tile = currentGameMap->getTile(location);
 
                     if(tile->hasSpice()) {
+                        // Tornie: track what color of spice we're harvesting
+                        if (tile->isRedSpice())        currentSpiceColor = SpiceColor::Red;
+                        else if (tile->isGreenSpice())  currentSpiceColor = SpiceColor::Green;
+                        else                            currentSpiceColor = SpiceColor::Vanilla;
 
                         int beforeTileType = tile->getType();
-                        spice += tile->harvestSpice();
+                        FixPoint harvested = tile->harvestSpice();
+                        // Tornie: green spice harvests 30% faster
+                        if (currentSpiceColor == SpiceColor::Green) {
+                            harvested = harvested * (1.3_fix);
+                        }
+                        spice += harvested;
                         int afterTileType = tile->getType();
 
                         if(beforeTileType != afterTileType) {
@@ -559,9 +575,12 @@ void Harvester::move()
                     doReturn();
                 }
             } else if(pathList.empty()) {
-                // Stuck: in harvesting mode with a destination, but can't path there
-                // Clear harvesting mode so checkPos() can search for new spice
-                harvestingMode = false;
+                // Stuck: in harvesting mode with a destination, but can't path there.
+                // If a carryall is coming to deliver us, preserve harvestingMode so
+                // checkPos() doesn't reset guardPoint/destination back to the old tile.
+                if(!awaitingPickup) {
+                    harvestingMode = false;
+                }
             }
         }
     }

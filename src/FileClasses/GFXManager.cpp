@@ -20,6 +20,8 @@
 #include <globals.h>
 
 #include <FileClasses/FileManager.h>
+#include <FileClasses/INIFile.h>
+#include <mod/ModManager.h>
 #include <FileClasses/TextManager.h>
 #include <FileClasses/FontManager.h>
 #include <FileClasses/PictureFactory.h>
@@ -38,7 +40,52 @@
 #include <misc/Scaler.h>
 #include <misc/exceptions.h>
 
+#include <algorithm>
 #include <cstdlib>
+#include <filesystem>
+
+/**
+    DuneCity: shift a paletted sprite's cool/neutral body tones toward red while
+    preserving shading, the dark outline/shadow pixels, and the Harkonnen
+    house-colour stripe (so per-house team-colour remapping in
+    getZoomedObjPic still works).  Used to derive the red Rocket Trike and the
+    red Neutral Launcher from the stock blue-grey body art.  Only palette RGB
+    values are rewritten, never pixel indices.
+*/
+static void tintSurfaceRed(SDL_Surface* surface) {
+    SDL_Palette* pal = (surface != nullptr) ? surface->format->palette : nullptr;
+    if(pal == nullptr) {
+        return;
+    }
+
+    for(int i = 0; i < pal->ncolors; i++) {
+        // Leave the Harkonnen house-colour stripe untouched so team colours
+        // survive the per-house remap.
+        if(i >= PALCOLOR_HARKONNEN && i < PALCOLOR_HARKONNEN + 7) {
+            continue;
+        }
+
+        const SDL_Color c = pal->colors[i];
+        const int maxc = (c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b));
+        const int minc = (c.r < c.g ? (c.r < c.b ? c.r : c.b) : (c.g < c.b ? c.g : c.b));
+        const bool nearGrey = (maxc - minc) <= 32;
+        const bool coolish  = (c.b >= c.r) && (c.b >= c.g);
+
+        // Skip near-black outline/shadow pixels so the silhouette and shading
+        // stay intact; recolour everything else that reads as a cool/neutral
+        // body tone.
+        if(maxc > 24 && (nearGrey || coolish)) {
+            const int lum = (c.r * 30 + c.g * 59 + c.b * 11) / 100;
+            SDL_Color red;
+            int r = lum + lum / 2;          // boost red, preserve shading
+            red.r = static_cast<Uint8>(r > 255 ? 255 : r);
+            red.g = static_cast<Uint8>(lum / 6);
+            red.b = static_cast<Uint8>(lum / 7);
+            red.a = c.a;
+            SDL_SetPaletteColors(pal, &red, i, 1);
+        }
+    }
+}
 
 /**
     Number of columns and rows each obj pic has
@@ -54,6 +101,9 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_Launcher_Gun
     { 8, 1 },   // ObjPic_Quad
     { 8, 1 },   // ObjPic_Trike
+    { 8, 1 },   // ObjPic_RocketTrike
+    { 8, 1 },   // ObjPic_LauncherRed_Base
+    { 8, 1 },   // ObjPic_LauncherRed_Gun
     { 8, 1 },   // ObjPic_Harvester
     { 8, 3 },   // ObjPic_Harvester_Sand
     { 8, 1 },   // ObjPic_MCV
@@ -129,6 +179,13 @@ static const Coord objPicTiles[] {
     { 4, 1 },   // ObjPic_Airport (4 frame slots, all identical; 3x3 footprint)
     { 1, 1 },   // ObjPic_Hospital (single cell, 2x2 footprint, auto-placed on residential)
     { 1, 1 },   // ObjPic_Church   (single cell, 2x2 footprint, auto-placed on residential)
+    { 1, 1 },   // ObjPic_AdvancedWindTrap (Tornie super power plant, 3x3 footprint, single static frame — the previous NUM_WINDTRAP_ANIMATIONS_PER_ROW layout caused the engine's animation cycle to read past the real atlas into grey out-of-bounds cells and to render the editor palette icon as the vanilla Windtrap animation's first frame)
+    { 2, 1 },   // ObjPic_CornerFlag (2 animation frames from Tornie_CornerFlagNew.png; 7x7 each)
+    { 8, 1 },   // ObjPic_FlameTank (8-dir palette-indexed strip from Tornie.PAK)
+    { 8, 1 },   // ObjPic_DeviatorCustom (8-dir palette-indexed strip from Tornie.PAK)
+    { 8, 1 },   // ObjPic_EliteSiegeTankCustom (8-dir palette-indexed strip from Tornie.PAK)
+    { 17, 2 },  // ObjPic_TerrainRedSpice (17 cols × 2 rows: thin spice + thick/bloom)
+    { 17, 2 },  // ObjPic_TerrainGreenSpice (17 cols × 2 rows: thin spice + thick/bloom)
 };
 
 
@@ -182,6 +239,23 @@ GFXManager::GFXManager() {
     // open bene palette
     Palette benePalette = LoadPalette_RW(pFileManager->openFile("BENE.PAL").get());
 
+    // Tornie mod: load Custom_IBM.pal to replace palette entries 192-199 with rebels grey
+    if (ModManager::instance().getActiveModName() == "Tornie" && pFileManager->exists("Custom_IBM.pal")) {
+        auto palRw = pFileManager->openFile("Custom_IBM.pal");
+        std::vector<Uint8> palData(768);
+        SDL_RWread(palRw.get(), palData.data(), 1, 768);
+        // Apply entries 192-199 (6-bit VGA → 8-bit)
+        for (int i = 192; i < 200; ++i) {
+            SDL_Color c;
+            c.r = static_cast<Uint8>(std::min(255, static_cast<int>(palData[i*3+0]) * 4));
+            c.g = static_cast<Uint8>(std::min(255, static_cast<int>(palData[i*3+1]) * 4));
+            c.b = static_cast<Uint8>(std::min(255, static_cast<int>(palData[i*3+2]) * 4));
+            c.a = 255;
+            palette[i] = c;
+        }
+        SDL_Log("GFX INIT: Tornie Custom_IBM.pal applied (rebels grey range 192-199)");
+    }
+
     //create PictureFactory
     std::unique_ptr<PictureFactory> PicFactory = std::make_unique<PictureFactory>();
 
@@ -198,6 +272,328 @@ GFXManager::GFXManager() {
     objPic[ObjPic_Launcher_Gun][HOUSE_HARKONNEN][0] = units2->getPictureArray(8,1,GROUNDUNIT_ROW(35));
     objPic[ObjPic_Quad][HOUSE_HARKONNEN][0] = units->getPictureArray(8,1,GROUNDUNIT_ROW(0));
     objPic[ObjPic_Trike][HOUSE_HARKONNEN][0] = units->getPictureArray(8,1,GROUNDUNIT_ROW(5));
+
+    // DuneCity: the Rocket Trike in-world sprite.
+    // Preferred path: RocketTrikeMask.png as 8-bit palette-indexed strip — load
+    // into HOUSE_HARKONNEN only; getZoomedObjPic remaps palette indices 144-150
+    // per house (same approach as regular Trike).
+    // Fallback: RocketTrike.png as truecolor RGBA — pre-build all zoom/house
+    // slots so getZoomedObjPic never palette-remaps RGBA data.
+    // Final fallback: SHP from the base game data.
+    objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][0] = units->getPictureArray(8,1,GROUNDUNIT_ROW(5));
+    {
+        bool usedPaletteIndexed = false;
+        if(pFileManager->exists("RocketTrikeMask.png")) {
+            auto rtMask = LoadPNG_RW(pFileManager->openFile("RocketTrikeMask.png").get());
+            if(rtMask && rtMask->format->BitsPerPixel == 8 && rtMask->format->palette) {
+                benePalette.applyToSurface(rtMask.get());
+                objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][0] = std::move(rtMask);
+                usedPaletteIndexed = true;
+                SDL_Log("GFXManager: Loaded RocketTrikeMask.png (palette-indexed, per-house remap)");
+            } else if(rtMask) {
+                SDL_Log("GFXManager: RocketTrikeMask.png is not 8-bit palette-indexed (%d bpp), falling back to RGBA path",
+                        rtMask->format->BitsPerPixel);
+            }
+        }
+        if(!usedPaletteIndexed && pFileManager->exists("RocketTrike.png")) {
+            auto rtRaw = LoadPNG_RW(pFileManager->openFile("RocketTrike.png").get());
+            if(rtRaw) {
+                sdl2::surface_ptr rtSurf{ SDL_ConvertSurfaceFormat(rtRaw.get(), SCREEN_FORMAT, 0) };
+                if(rtSurf) {
+                    auto scaleRT = [](SDL_Surface* src, int factor) -> sdl2::surface_ptr {
+                        sdl2::surface_ptr dst{ SDL_CreateRGBSurface(0,
+                            src->w * factor, src->h * factor,
+                            src->format->BitsPerPixel,
+                            src->format->Rmask, src->format->Gmask,
+                            src->format->Bmask, src->format->Amask) };
+                        if(dst) SDL_BlitScaled(src, nullptr, dst.get(), nullptr);
+                        return dst;
+                    };
+                    objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][0] = std::move(rtSurf);
+                    objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][1] = scaleRT(objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][0].get(), 2);
+                    objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][2] = scaleRT(objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][0].get(), 3);
+                    for(int h = 1; h < (int)NUM_HOUSES; h++) {
+                        for(int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                            if(objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][z]) {
+                                objPic[ObjPic_RocketTrike][h][z] = sdl2::surface_ptr{
+                                    SDL_ConvertSurface(objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][z].get(),
+                                                       objPic[ObjPic_RocketTrike][HOUSE_HARKONNEN][z]->format, 0) };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // DuneCity: Flame Tank (Tornie mod) — palette-indexed 8-frame strip from Tornie.PAK.
+    // House tinting uses luminance-based remap: each red palette index is remapped to
+    // the house anchor colour scaled by relative luminance.
+    if(pFileManager->exists("FlameTank.png")) {
+        auto ftRaw = LoadPNG_RW(pFileManager->openFile("FlameTank.png").get());
+        if(ftRaw) {
+            SDL_Surface* raw = ftRaw.get();
+            if(raw->format->palette) {
+                // Red palette indices in the source asset (Harkonnen base colour)
+                static const int redIdx[] = {58,121,139,140,141,144,145,146,147,148,199,200,201,202,203,231,243,244,245,246,247};
+                static const int numRedIdx = 21;
+                // Per-house bright anchor RGB (H=red, A=blue, O=green, F=orange, S=purple, M=gold)
+                static const int houseAnchor[NUM_HOUSES][3] = {
+                    {212,  0,  0}, {  0, 80,212}, {  0,180,  0},
+                    {212,140,  0}, {120,  0,200}, {200,160,  0}, {128,128,128},
+                    { 96, 96, 96}  // HOUSE_REBELS: dark grey
+                };
+
+                SDL_Palette* srcPal = raw->format->palette;
+                float redLum[21], minLum = 1e9f, maxLum = 0.f;
+                for(int i = 0; i < numRedIdx; i++) {
+                    if(redIdx[i] < srcPal->ncolors) {
+                        SDL_Color& c = srcPal->colors[redIdx[i]];
+                        redLum[i] = c.r*0.299f + c.g*0.587f + c.b*0.114f;
+                        if(redLum[i] < minLum) minLum = redLum[i];
+                        if(redLum[i] > maxLum) maxLum = redLum[i];
+                    }
+                }
+                float lumRange = (maxLum - minLum) > 0.f ? (maxLum - minLum) : 1.f;
+
+                for(int h = 0; h < (int)NUM_HOUSES; h++) {
+                    sdl2::surface_ptr copy{SDL_ConvertSurface(raw, raw->format, 0)};
+                    if(!copy) continue;
+                    SDL_Palette* pal = copy->format->palette;
+                    if(!pal) continue;
+
+                    float hr = houseAnchor[h][0], hg = houseAnchor[h][1], hb = houseAnchor[h][2];
+                    for(int i = 0; i < numRedIdx; i++) {
+                        if(redIdx[i] >= pal->ncolors) continue;
+                        float t = 0.25f + 0.75f * (redLum[i] - minLum) / lumRange;
+                        SDL_Color& col = pal->colors[redIdx[i]];
+                        col.r = (Uint8)std::min(255, (int)(hr * t));
+                        col.g = (Uint8)std::min(255, (int)(hg * t));
+                        col.b = (Uint8)std::min(255, (int)(hb * t));
+                    }
+
+                    objPic[ObjPic_FlameTank][h][0] = std::move(copy);
+
+                    // Convert palette surface to RGBA and make black pixels
+                    // (palette index 2 = background) fully transparent.
+                    SDL_Surface* palSurf = objPic[ObjPic_FlameTank][h][0].get();
+                    if(palSurf) {
+                        sdl2::surface_ptr rgba{ SDL_ConvertSurfaceFormat(palSurf, SDL_PIXELFORMAT_RGBA32, 0) };
+                        if(rgba) {
+                            SDL_LockSurface(rgba.get());
+                            Uint32* pix = static_cast<Uint32*>(rgba->pixels);
+                            for(int i = 0; i < rgba->w * rgba->h; ++i) {
+                                Uint8 r, g, b, a;
+                                SDL_GetRGBA(pix[i], rgba->format, &r, &g, &b, &a);
+                                if(r == 0 && g == 0 && b == 0) {
+                                    pix[i] = SDL_MapRGBA(rgba->format, 0, 0, 0, 0);
+                                }
+                            }
+                            SDL_UnlockSurface(rgba.get());
+                            objPic[ObjPic_FlameTank][h][0] = std::move(rgba);
+                        }
+                    }
+
+                    // Reorder frames: FlameTank.png uses Dune II convention
+                    // (DOWN=0, RIGHTUP=1, RIGHT=2, RIGHTDOWN=3, UP=4, LEFTDOWN=5, LEFT=6, LEFTUP=7)
+                    // → Dune Legacy convention
+                    // (RIGHT=0, RIGHTUP=1, UP=2, LEFTUP=3, LEFT=4, LEFTDOWN=5, DOWN=6, RIGHTDOWN=7)
+                    {
+                        static const int d2toDL[] = {2, 1, 4, 7, 6, 5, 0, 3};
+                        SDL_Surface* src = objPic[ObjPic_FlameTank][h][0].get();
+                        if (src) {
+                            int frameW = src->w / 8;
+                            // Force frameH to D2_TILESIZE (16) regardless of the
+                            // source PNG height. FlameTank.png has historically
+                            // been exported as 128x20 (16-pixel sprite + 4 trailing
+                            // rows of background artefacts), which produced frames
+                            // of 16x20 → visible "blur/transparency" at the bottom
+                            // of every Flame Tank and a 4-pixel-tall band of garbage
+                            // colours above the tile. Clamping to 16 keeps the
+                            // engine's tile math intact and is robust against
+                            // future re-exports at any height.
+                            int frameH = D2_TILESIZE;
+                            sdl2::surface_ptr reordered{ SDL_CreateRGBSurfaceWithFormat(0, src->w, frameH, 32, SDL_PIXELFORMAT_RGBA32) };
+                            if (reordered) {
+                                SDL_SetSurfaceBlendMode(src, SDL_BLENDMODE_NONE);
+                                for (int i = 0; i < 8; i++) {
+                                    SDL_Rect srcRect{d2toDL[i] * frameW, 0, frameW, frameH};
+                                    SDL_Rect dstRect{i * frameW, 0, frameW, frameH};
+                                    SDL_BlitSurface(src, &srcRect, reordered.get(), &dstRect);
+                                }
+                                objPic[ObjPic_FlameTank][h][0] = std::move(reordered);
+                            }
+                        }
+                    }
+
+                    // Scale RGBA surface for zoom levels
+                    for(int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                        SDL_Surface* src0 = objPic[ObjPic_FlameTank][h][0].get();
+                        if(!src0) continue;
+                        sdl2::surface_ptr dst{ SDL_CreateRGBSurface(0,
+                            src0->w * (z+1), src0->h * (z+1),
+                            src0->format->BitsPerPixel,
+                            src0->format->Rmask, src0->format->Gmask,
+                            src0->format->Bmask, src0->format->Amask) };
+                        if(dst) {
+                            SDL_BlitScaled(src0, nullptr, dst.get(), nullptr);
+                            objPic[ObjPic_FlameTank][h][z] = std::move(dst);
+                        }
+                    }
+                }
+                SDL_Log("GFXManager: FlameTank sprite loaded OK (paletted)");
+            } else {
+                // Current Tornie asset ships as an RGBA strip (256x32 = eight
+                // 32x32 frames, colours + alpha already baked in), so the
+                // palette-remap path above is skipped. Load it directly:
+                // reorder the eight direction frames (Dune II → Dune Legacy) and
+                // down-scale each to the engine's 16x16 ground-unit frame, then
+                // build the zoom levels. The sprite has no per-house palette, so
+                // it is shared across all houses.
+                sdl2::surface_ptr src{ SDL_ConvertSurfaceFormat(raw, SDL_PIXELFORMAT_RGBA32, 0) };
+                if(src) {
+                    static const int d2toDL[] = {2, 1, 4, 7, 6, 5, 0, 3};
+                    const int srcFrameW = src->w / 8;
+                    const int srcFrameH = src->h;
+                    const int dstFrame  = D2_TILESIZE;   // 16px, matches vanilla ground units
+                    SDL_SetSurfaceBlendMode(src.get(), SDL_BLENDMODE_NONE);
+                    sdl2::surface_ptr base{ SDL_CreateRGBSurfaceWithFormat(0, dstFrame * 8, dstFrame, 32, SDL_PIXELFORMAT_RGBA32) };
+                    if(base) {
+                        for(int i = 0; i < 8; i++) {
+                            SDL_Rect srcRect{ d2toDL[i] * srcFrameW, 0, srcFrameW, srcFrameH };
+                            SDL_Rect dstRect{ i * dstFrame, 0, dstFrame, dstFrame };
+                            SDL_BlitScaled(src.get(), &srcRect, base.get(), &dstRect);
+                        }
+                        for(int h = 0; h < (int)NUM_HOUSES; h++) {
+                            objPic[ObjPic_FlameTank][h][0] = sdl2::surface_ptr{ SDL_ConvertSurface(base.get(), base->format, 0) };
+                            for(int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                                SDL_Surface* s0 = objPic[ObjPic_FlameTank][h][0].get();
+                                if(!s0) continue;
+                                sdl2::surface_ptr dst{ SDL_CreateRGBSurface(0,
+                                    s0->w * (z+1), s0->h * (z+1),
+                                    s0->format->BitsPerPixel,
+                                    s0->format->Rmask, s0->format->Gmask,
+                                    s0->format->Bmask, s0->format->Amask) };
+                                if(dst) {
+                                    SDL_BlitScaled(s0, nullptr, dst.get(), nullptr);
+                                    objPic[ObjPic_FlameTank][h][z] = std::move(dst);
+                                }
+                            }
+                        }
+                        SDL_Log("GFXManager: FlameTank sprite loaded OK (RGBA)");
+                    }
+                }
+            }
+        }
+    }
+
+    // DuneCity: Tornie Deviator custom sprite — palette-indexed 8-frame strip.
+    // Loaded into HOUSE_HARKONNEN only; the house-tinting loop at the end of
+    // getZoomedObjPic() remaps palette indices 144-150 for all other houses.
+    if(ModManager::instance().getActiveModName() == "Tornie"
+       && pFileManager->exists("Tornie_Deviator.png")) {
+        auto devRaw = LoadPNG_RW(pFileManager->openFile("Tornie_Deviator.png").get());
+        if(devRaw && devRaw->format->BitsPerPixel == 8) {
+            benePalette.applyToSurface(devRaw.get());
+            objPic[ObjPic_DeviatorCustom][HOUSE_HARKONNEN][0] = std::move(devRaw);
+            for(int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                SDL_Surface* src0 = objPic[ObjPic_DeviatorCustom][HOUSE_HARKONNEN][0].get();
+                if(!src0) continue;
+                sdl2::surface_ptr dst{ SDL_CreateRGBSurface(0,
+                    src0->w * (z+1), src0->h * (z+1),
+                    src0->format->BitsPerPixel,
+                    src0->format->Rmask, src0->format->Gmask,
+                    src0->format->Bmask, src0->format->Amask) };
+                if(dst) {
+                    SDL_BlitScaled(src0, nullptr, dst.get(), nullptr);
+                    objPic[ObjPic_DeviatorCustom][HOUSE_HARKONNEN][z] = std::move(dst);
+                }
+            }
+            SDL_Log("GFXManager: Loaded Tornie_Deviator.png (palette-indexed)");
+        } else if(devRaw) {
+            SDL_Log("GFXManager WARNING: Tornie_Deviator.png is not 8-bit palette-indexed (%d bpp), skipped",
+                    devRaw->format->BitsPerPixel);
+        }
+    }
+
+    // DuneCity: Tornie Elite Siege Tank custom sprite — palette-indexed 8-frame strip.
+    // Tiles must match the vanilla SiegeTank (same frame count/dimensions) so blitToScreen
+    // picks up the correct frame offsets.  Uses ibmPalette (not benePalette) because the
+    // sprite is authored against IBM.PAL indices just like all other vehicle sprites.
+    if(pFileManager->exists("Tornie_EliteSiegeTank.png")) {
+        auto estRaw = LoadPNG_RW(pFileManager->openFile("Tornie_EliteSiegeTank.png").get());
+        if(estRaw && estRaw->format->BitsPerPixel == 8) {
+            ibmPalette.applyToSurface(estRaw.get());
+            objPic[ObjPic_EliteSiegeTankCustom][HOUSE_HARKONNEN][0] = std::move(estRaw);
+            // Generate zoom levels 1 and 2 so getZoomedObjPic never throws on
+            // a null HOUSE_HARKONNEN[z] entry for this custom sprite.
+            for (int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                SDL_Surface* src = objPic[ObjPic_EliteSiegeTankCustom][HOUSE_HARKONNEN][0].get();
+                if (!src) break;
+                auto scaled = Scaler::defaultDoubleSurface(src);
+                if (z == 1) {
+                    objPic[ObjPic_EliteSiegeTankCustom][HOUSE_HARKONNEN][1] = std::move(scaled);
+                } else {
+                    // zoom 2: double again from zoom 1
+                    SDL_Surface* src1 = objPic[ObjPic_EliteSiegeTankCustom][HOUSE_HARKONNEN][1].get();
+                    if (src1) objPic[ObjPic_EliteSiegeTankCustom][HOUSE_HARKONNEN][2] = Scaler::defaultDoubleSurface(src1);
+                }
+            }
+            SDL_Log("GFXManager: Loaded Tornie_EliteSiegeTank.png (palette-indexed, all zoom levels)");
+        } else if(estRaw) {
+            SDL_Log("GFXManager WARNING: Tornie_EliteSiegeTank.png is not 8-bit palette-indexed (%d bpp), skipped",
+                    estRaw->format->BitsPerPixel);
+        }
+    }
+
+    // DuneCity: Tornie custom spice terrain strips — palette-indexed 17×2 tile grids.
+    // Terrain is not house-tinted, so copy to all houses to prevent mapSurfaceColorRange.
+    if(pFileManager->exists("Tornie_SpiceRed.png")) {
+        auto surf = LoadPNG_RW(pFileManager->openFile("Tornie_SpiceRed.png").get());
+        if(surf && surf->format->BitsPerPixel == 8) {
+            ibmPalette.applyToSurface(surf.get()); // terrain tiles use IBM.PAL indices, not BENE.PAL
+            objPic[ObjPic_TerrainRedSpice][HOUSE_HARKONNEN][0] = std::move(surf);
+            for (int h = 1; h < NUM_HOUSES; h++) {
+                objPic[ObjPic_TerrainRedSpice][h][0] = sdl2::surface_ptr{
+                    SDL_ConvertSurface(objPic[ObjPic_TerrainRedSpice][HOUSE_HARKONNEN][0].get(),
+                                       objPic[ObjPic_TerrainRedSpice][HOUSE_HARKONNEN][0]->format, 0)
+                };
+            }
+            SDL_Log("GFXManager: Loaded Tornie_SpiceRed.png (palette-indexed)");
+        } else if(surf) {
+            SDL_Log("GFXManager WARNING: Tornie_SpiceRed.png is not 8-bit palette-indexed (%d bpp), skipped",
+                    surf->format->BitsPerPixel);
+        }
+    }
+    if(pFileManager->exists("Tornie_SpiceGreen.png")) {
+        auto surf = LoadPNG_RW(pFileManager->openFile("Tornie_SpiceGreen.png").get());
+        if(surf && surf->format->BitsPerPixel == 8) {
+            ibmPalette.applyToSurface(surf.get()); // terrain tiles use IBM.PAL indices, not BENE.PAL
+            objPic[ObjPic_TerrainGreenSpice][HOUSE_HARKONNEN][0] = std::move(surf);
+            for (int h = 1; h < NUM_HOUSES; h++) {
+                objPic[ObjPic_TerrainGreenSpice][h][0] = sdl2::surface_ptr{
+                    SDL_ConvertSurface(objPic[ObjPic_TerrainGreenSpice][HOUSE_HARKONNEN][0].get(),
+                                       objPic[ObjPic_TerrainGreenSpice][HOUSE_HARKONNEN][0]->format, 0)
+                };
+            }
+            SDL_Log("GFXManager: Loaded Tornie_SpiceGreen.png (palette-indexed)");
+        } else if(surf) {
+            SDL_Log("GFXManager WARNING: Tornie_SpiceGreen.png is not 8-bit palette-indexed (%d bpp), skipped",
+                    surf->format->BitsPerPixel);
+        }
+    }
+
+    // DuneCity: the Neutral Launcher reuses the standard Launcher body (tank
+    // base) and rocket turret art, but red-tinted instead of blue-grey.  Load
+    // independent copies of both pieces (getPictureArray allocates fresh
+    // surfaces with their own palettes, so the regular all-house Launcher,
+    // Tank and other tank-base units stay untouched) and tint them with the
+    // same palette remap used for the Rocket Trike.
+    objPic[ObjPic_LauncherRed_Base][HOUSE_HARKONNEN][0] = units2->getPictureArray(8,1,GROUNDUNIT_ROW(0));
+    tintSurfaceRed(objPic[ObjPic_LauncherRed_Base][HOUSE_HARKONNEN][0].get());
+    objPic[ObjPic_LauncherRed_Gun][HOUSE_HARKONNEN][0] = units2->getPictureArray(8,1,GROUNDUNIT_ROW(35));
+    tintSurfaceRed(objPic[ObjPic_LauncherRed_Gun][HOUSE_HARKONNEN][0].get());
+
     objPic[ObjPic_Harvester][HOUSE_HARKONNEN][0] = units->getPictureArray(8,1,GROUNDUNIT_ROW(10));
     objPic[ObjPic_Harvester_Sand][HOUSE_HARKONNEN][0] = units1->getPictureArray(8,3,HARVESTERSAND_ROW(72),HARVESTERSAND_ROW(73),HARVESTERSAND_ROW(74));
     objPic[ObjPic_MCV][HOUSE_HARKONNEN][0] = units->getPictureArray(8,1,GROUNDUNIT_ROW(15));
@@ -1149,7 +1545,401 @@ GFXManager::GFXManager() {
             }
         }
     }
+        // ----- DuneCity advanced wind trap (super power plant) sprite -----
+        //
+        // Tornie's custom super_power_plant.png art. 3x3 gameplay footprint,
+        // no real animation — we build a 3-frame horizontal atlas (all
+        // identical) so StructureBase animation indexing has somewhere to
+        // land, and the building shows its own sprite statically. Same
+        // approach as the nuclear plant above.
+        {
+            std::vector<std::string> superDirs = {
+                getDuneLegacyDataDir(),
+                binDir,
+                binDir + "../../",
+                binDir + "../../../../../",
+            };
+            if (srcDirEnv && srcDirEnv[0]) {
+                std::string srcDir = srcDirEnv;
+                if (srcDir.back() != '/' && srcDir.back() != '\\') srcDir += '/';
+                superDirs.push_back(srcDir);
+            }
+
+            const int frameW = 3 * D2_TILESIZE;
+            const int frameH = 3 * D2_TILESIZE;
+            // Single static frame. Previous code built a 3-frame atlas
+            // (144x48) with 3 identical blits of a 48x48 source. The engine's
+            // animation cycle (curAnimFrame 0..2) then read past the real
+            // atlas into grey out-of-bounds cells. Now 1 frame × 1 row —
+            // matches the {1, 1} atlas declaration on the line above.
+            const int numFrames = 1;
+            const int atlasW = numFrames * frameW;
+            const int atlasH = frameH;
+            sdl2::surface_ptr atlas{ SDL_CreateRGBSurface(0, atlasW, atlasH,
+                SCREEN_BPP, RMASK, GMASK, BMASK, AMASK) };
+            if (atlas) {
+                SDL_FillRect(atlas.get(), nullptr, SDL_MapRGBA(atlas->format, 0, 0, 0, 0));
+            }
+
+            sdl2::surface_ptr superSrc;
+            // Prefer Tornie's custom gfx (single 48x48 frame)
+            if (pFileManager->exists("Tornie_AdvancedWindtrap_gfx.png")) {
+                auto gfxSurf = LoadPNG_RW(pFileManager->openFile("Tornie_AdvancedWindtrap_gfx.png").get());
+                if (gfxSurf) {
+                    sdl2::surface_ptr converted{ SDL_ConvertSurfaceFormat(gfxSurf.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+                    superSrc = converted ? std::move(converted) : std::move(gfxSurf);
+                    SDL_Log("Loaded AdvancedWindtrap gfx from Tornie_AdvancedWindtrap_gfx.png");
+                }
+            }
+            if (!superSrc) for (const auto& dir : superDirs) {
+                std::string path = dir + "super_power_plant.png";
+                auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(path.c_str(), "rb") };
+                if (rwops) {
+                    superSrc = LoadPNG_RW(rwops.get());
+                    if (superSrc) {
+                        // Convert RGB→RGBA so the blit sets alpha=255 instead of leaving it 0
+                        sdl2::surface_ptr converted{SDL_ConvertSurfaceFormat(superSrc.get(), SDL_PIXELFORMAT_RGBA32, 0)};
+                        if (converted) superSrc = std::move(converted);
+                        SDL_Log("Loaded super power plant sprite from: %s", path.c_str());
+                        break;
+                    }
+                }
+            }
+
+            if (atlas && superSrc) {
+                // Scale the source to fill the full 48×48 frame so the
+                // advanced wind trap occupies its entire 3×3 gameplay footprint.
+                SDL_SetSurfaceBlendMode(superSrc.get(), SDL_BLENDMODE_NONE);
+                for (int f = 0; f < numFrames; ++f) {
+                    SDL_Rect frameDst = { f * frameW, 0, frameW, frameH };
+                    SDL_BlitScaled(superSrc.get(), nullptr, atlas.get(), &frameDst);
+                }
+
+                objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0] = std::move(atlas);
+                objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][1] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 2);
+                objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][2] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 3);
+
+                for (int h = 1; h < NUM_HOUSES; h++) {
+                    for (int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                        if (objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z]) {
+                            // Clone the Harkonnen sprite, then modulate RGB by
+                            // this house's tint colour. The previous code did a
+                            // bare SDL_ConvertSurface copy which left every house
+                            // showing the Harkonnen grey/red palette — no
+                            // per-house owner flag in the editor palette or in
+                            // the in-world sprite. Per-house anchor RGB matches
+                            // the Flame Tank loader (h=0 red, h=1 blue, h=2
+                            // green, h=3 orange, h=4 purple, h=5 gold, h=6 grey,
+                            // h=7 dark grey). The factor scales the source
+                            // channels toward the house colour while preserving
+                            // alpha and shading contrast.
+                            SDL_Surface* src0 = objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z].get();
+                            sdl2::surface_ptr tinted{ SDL_CreateRGBSurface(0, src0->w, src0->h, 32,
+                                src0->format->Rmask, src0->format->Gmask,
+                                src0->format->Bmask, src0->format->Amask) };
+                            if (tinted) {
+                                static const int houseAnchor[NUM_HOUSES][3] = {
+                                    {255,  60,  60}, { 80, 120,255}, { 60,220, 60},
+                                    {255, 180,  40}, {180, 80, 220}, {240,200,  60}, {160,160,160},
+                                    {110,110,110}  // HOUSE_REBELS: dark grey
+                                };
+                                const int hr = houseAnchor[h][0];
+                                const int hg = houseAnchor[h][1];
+                                const int hb = houseAnchor[h][2];
+                                // Blend factor 0.55: 55% house colour + 45% original.
+                                // Keeps shading contrast readable while tinting
+                                // recognisably. Same idea as the Flame Tank
+                                // luminance-tier remap but for RGBA sprites.
+                                constexpr int blendNumer = 55;
+                                constexpr int blendDenom = 100;
+                                SDL_LockSurface(src0);
+                                SDL_LockSurface(tinted.get());
+                                const Uint32* sp = static_cast<const Uint32*>(src0->pixels);
+                                Uint32* dp = static_cast<Uint32*>(tinted->pixels);
+                                const int npix = src0->w * src0->h;
+                                for (int p = 0; p < npix; ++p) {
+                                    Uint8 r, g, b, a;
+                                    SDL_GetRGBA(sp[p], src0->format, &r, &g, &b, &a);
+                                    if (a == 0) {
+                                        dp[p] = sp[p];
+                                        continue;
+                                    }
+                                    Uint8 nr = static_cast<Uint8>((r * (blendDenom - blendNumer) + hr * blendNumer) / blendDenom);
+                                    Uint8 ng = static_cast<Uint8>((g * (blendDenom - blendNumer) + hg * blendNumer) / blendDenom);
+                                    Uint8 nb = static_cast<Uint8>((b * (blendDenom - blendNumer) + hb * blendNumer) / blendDenom);
+                                    dp[p] = SDL_MapRGBA(tinted->format, nr, ng, nb, a);
+                                }
+                                SDL_UnlockSurface(tinted.get());
+                                SDL_UnlockSurface(src0);
+                                objPic[ObjPic_AdvancedWindTrap][h][z] = std::move(tinted);
+                            }
+                        }
+                    }
+                }
+
+                // Per-house corner flag: blit 2×2 Tornie_AdvHouseFlag.png at (0,0)
+                // with palette index 147 (PALCOLOR_HARKONNEN+3) recoloured to each
+                // house's own accent colour (houseToPaletteIndex[h]+3).
+                if (pFileManager->exists("Tornie_AdvHouseFlag.png")) {
+                    auto flagSrc = LoadPNG_RW(pFileManager->openFile("Tornie_AdvHouseFlag.png").get());
+                    if (flagSrc && flagSrc->format->BitsPerPixel == 8) {
+                        for (int h = 0; h < NUM_HOUSES; h++) {
+                            if (!objPic[ObjPic_AdvancedWindTrap][h][0]) continue;
+                            // For Fremen, source colours from vanilla IBM.PAL (ibmPalette) so Custom_IBM.pal rebels grey doesn't bleed in
+                            const Palette& srcPal = (h == HOUSE_FREMEN) ? ibmPalette : palette;
+                            // Clone flag surface and substitute palette entries for this house
+                            sdl2::surface_ptr flagCopy{ SDL_ConvertSurface(flagSrc.get(), flagSrc->format, 0) };
+                            if (flagCopy && flagCopy->format->palette) {
+                                // Remap dark Harkonnen slot (index 147 = PALCOLOR_HARKONNEN+3)
+                                flagCopy->format->palette->colors[147] = srcPal[houseToPaletteIndex[h] + 3];
+                                // Remap highlight slot (index 51) to lighter house tone (+1)
+                                flagCopy->format->palette->colors[51] = srcPal[houseToPaletteIndex[h] + 1];
+                            }
+                            sdl2::surface_ptr flagRGBA{ SDL_ConvertSurfaceFormat(flagCopy.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+                            if (flagRGBA) {
+                                // Fill flag body with #65654c base color under house colours
+                                {
+                                    SDL_LockSurface(flagRGBA.get());
+                                    const Uint32 bodyColor = SDL_MapRGBA(flagRGBA->format, 101, 101, 76, 255);
+                                    const int pixelCount = flagRGBA->w * flagRGBA->h;
+                                    auto* pixels = static_cast<Uint32*>(flagRGBA->pixels);
+                                    for (int i = 0; i < pixelCount; i++) {
+                                        Uint8 r, g, b, a;
+                                        SDL_GetRGBA(pixels[i], flagRGBA->format, &r, &g, &b, &a);
+                                        // Fill opaque non-house-colour pixels with the base colour
+                                        if (a > 0) {
+                                            // Preserve house-remapped pixels (dark=index 147, highlight=index 51)
+                                            // by checking if this pixel matches a house palette entry
+                                            const SDL_Color& dark = srcPal[houseToPaletteIndex[h] + 3];
+                                            const SDL_Color& light = srcPal[houseToPaletteIndex[h] + 1];
+                                            if ((r == dark.r && g == dark.g && b == dark.b) ||
+                                                (r == light.r && g == light.g && b == light.b)) {
+                                                continue; // keep house colours
+                                            }
+                                            pixels[i] = bodyColor;
+                                        }
+                                    }
+                                    SDL_UnlockSurface(flagRGBA.get());
+                                }
+                                SDL_SetSurfaceBlendMode(flagRGBA.get(), SDL_BLENDMODE_BLEND);
+                                for (int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                                    if (objPic[ObjPic_AdvancedWindTrap][h][z]) {
+                                        int flagSize = (z + 1) * 2; // z=0→2px, z=1→4px, z=2→6px
+                                        sdl2::surface_ptr flagScaled{ SDL_CreateRGBSurfaceWithFormat(0, flagSize, flagSize,
+                                            32, SDL_PIXELFORMAT_RGBA32) };
+                                        if (flagScaled) {
+                                            SDL_SetSurfaceBlendMode(flagScaled.get(), SDL_BLENDMODE_NONE);
+                                            SDL_BlitScaled(flagRGBA.get(), nullptr, flagScaled.get(), nullptr);
+                                            SDL_SetSurfaceBlendMode(flagScaled.get(), SDL_BLENDMODE_BLEND);
+                                            SDL_Rect dst{0, 0, flagSize, flagSize};
+                                            SDL_BlitSurface(flagScaled.get(), nullptr, objPic[ObjPic_AdvancedWindTrap][h][z].get(), &dst);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (flagSrc) {
+                        // RGBA flag PNG — blit directly with blend mode, no palette remapping
+                        sdl2::surface_ptr flagRGBA{ SDL_ConvertSurfaceFormat(flagSrc.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+                        if (flagRGBA) {
+                            // Fill flag body with #65654c base color
+                            {
+                                SDL_LockSurface(flagRGBA.get());
+                                const Uint32 bodyColor = SDL_MapRGBA(flagRGBA->format, 101, 101, 76, 255);
+                                const int pixelCount = flagRGBA->w * flagRGBA->h;
+                                auto* pixels = static_cast<Uint32*>(flagRGBA->pixels);
+                                for (int i = 0; i < pixelCount; i++) {
+                                    Uint8 r, g, b, a;
+                                    SDL_GetRGBA(pixels[i], flagRGBA->format, &r, &g, &b, &a);
+                                    if (a > 0) {
+                                        pixels[i] = bodyColor;
+                                    }
+                                }
+                                SDL_UnlockSurface(flagRGBA.get());
+                            }
+                            SDL_SetSurfaceBlendMode(flagRGBA.get(), SDL_BLENDMODE_BLEND);
+                            for (int h = 0; h < NUM_HOUSES; h++) {
+                                for (int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                                    if (objPic[ObjPic_AdvancedWindTrap][h][z]) {
+                                        int flagSize = (z + 1) * 2;
+                                        sdl2::surface_ptr flagScaled{ SDL_CreateRGBSurfaceWithFormat(0, flagSize, flagSize,
+                                            32, SDL_PIXELFORMAT_RGBA32) };
+                                        if (flagScaled) {
+                                            SDL_SetSurfaceBlendMode(flagScaled.get(), SDL_BLENDMODE_NONE);
+                                            SDL_BlitScaled(flagRGBA.get(), nullptr, flagScaled.get(), nullptr);
+                                            SDL_SetSurfaceBlendMode(flagScaled.get(), SDL_BLENDMODE_BLEND);
+                                            SDL_Rect dst{0, 0, flagSize, flagSize};
+                                            SDL_BlitSurface(flagScaled.get(), nullptr, objPic[ObjPic_AdvancedWindTrap][h][z].get(), &dst);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Zone-colour corner markers removed — replaced by animated ObjPic_CornerFlag
+                // drawn at runtime in AdvancedWindTrap::blitToScreen().
+
+            } else {
+                SDL_Log("Super power plant sprite not found; AdvancedWindTrap will fall back to Windtrap art");
+                SDL_Surface* fallback = objPic[ObjPic_Windtrap][HOUSE_HARKONNEN][0].get();
+                if (atlas && fallback) {
+                    const int fallbackFrames = objPicTiles[ObjPic_Windtrap].x;
+                    const int fallbackFrameW = fallback->w / fallbackFrames;
+                    const int fallbackFrameH = fallback->h / objPicTiles[ObjPic_Windtrap].y;
+
+                    SDL_SetSurfaceBlendMode(fallback, SDL_BLENDMODE_NONE);
+                    for (int f = 0; f < numFrames; ++f) {
+                        const int sourceFrame = f % fallbackFrames;
+                        SDL_Rect src{ sourceFrame * fallbackFrameW, 0, fallbackFrameW, fallbackFrameH };
+                        SDL_Rect dst{ f * frameW, 0, frameW, frameH };
+                        SDL_BlitScaled(fallback, &src, atlas.get(), &dst);
+                    }
+
+                    objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0] = std::move(atlas);
+                    objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][1] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 2);
+                    objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][2] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 3);
+
+                    for (int h = 1; h < NUM_HOUSES; h++) {
+                        for (int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                            if (objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z]) {
+                                objPic[ObjPic_AdvancedWindTrap][h][z] = sdl2::surface_ptr{
+                                    SDL_ConvertSurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z].get(),
+                                                       objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z]->format, 0)
+                                };
+                            }
+                        }
+                    }
+                }
+                // Last resort: if fallback sprite was also null, fill atlas
+                // with a debug placeholder so objPic is never null.
+                if (!objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0]) {
+                    sdl2::surface_ptr ph{ SDL_CreateRGBSurface(0, atlasW, atlasH,
+                        SCREEN_BPP, RMASK, GMASK, BMASK, AMASK) };
+                    if (ph) {
+                        SDL_FillRect(ph.get(), nullptr, SDL_MapRGBA(ph->format, 100, 100, 180, 255));
+                        objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0] = std::move(ph);
+                        objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][1] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 2);
+                        objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][2] = scaleRGBASurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 3);
+                        for (int h = 1; h < NUM_HOUSES; h++) {
+                            for (int z = 0; z < NUM_ZOOMLEVEL; z++) {
+                                if (objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z]) {
+                                    objPic[ObjPic_AdvancedWindTrap][h][z] = sdl2::surface_ptr{
+                                        SDL_ConvertSurface(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z].get(),
+                                                           objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][z]->format, 0)
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     } // end city-sprite loading scope (binDir, srcDirEnv, scaleRGBASurface)
+
+    // ----- DuneCity corner flag sprite -----
+    // Tornie_AdvancedWindtrap_gfx.png: 48×96 (or 48×48 single-frame), 8-bit
+    // palette-indexed.  2 frames stacked vertically, each 48×48.  Loaded into
+    // HOUSE_HARKONNEN only; getZoomedObjPic remaps palette indices 144-150 for
+    // other houses (same as Trike).  Rearranged into a horizontal strip
+    // (numFrames × frameSize wide, frameSize tall) for rendering consistency.
+    // Falls back to Tornie_CornerFlagNew.png (old RGBA path) if unavailable.
+    {
+        bool loadedNewFlag = false;
+        if (pFileManager->exists("Tornie_AdvancedWindtrap_gfx.png")) {
+            auto flagSrc = LoadPNG_RW(pFileManager->openFile("Tornie_AdvancedWindtrap_gfx.png").get());
+            if (flagSrc && flagSrc->format->BitsPerPixel == 8 && flagSrc->format->palette) {
+                const int frameSize = flagSrc->w;  // 48
+                const int numFrames = (flagSrc->h >= frameSize * 2) ? 2 : 1;
+                benePalette.applyToSurface(flagSrc.get());
+
+                // Rearrange vertically-stacked frames into a horizontal strip
+                sdl2::surface_ptr strip{ SDL_CreateRGBSurface(0, numFrames * frameSize, frameSize,
+                    8, 0, 0, 0, 0) };
+                if (strip) {
+                    SDL_SetPaletteColors(strip->format->palette, flagSrc->format->palette->colors, 0, 256);
+                    for (int f = 0; f < numFrames; f++) {
+                        SDL_Rect srcRect = { 0, f * frameSize, frameSize, frameSize };
+                        SDL_Rect dstRect = { f * frameSize, 0, frameSize, frameSize };
+                        SDL_SetSurfaceBlendMode(flagSrc.get(), SDL_BLENDMODE_NONE);
+                        SDL_BlitSurface(flagSrc.get(), &srcRect, strip.get(), &dstRect);
+                    }
+                    objPic[ObjPic_CornerFlag][HOUSE_HARKONNEN][0] = std::move(strip);
+                    loadedNewFlag = true;
+                    SDL_Log("GFXManager: Loaded Tornie_AdvancedWindtrap_gfx.png as CornerFlag (%dx%d, %d frames)",
+                            frameSize, frameSize, numFrames);
+                }
+            } else if (flagSrc) {
+                SDL_Log("GFXManager: Tornie_AdvancedWindtrap_gfx.png is not 8-bit palette-indexed (%d bpp), skipping",
+                        flagSrc->format->BitsPerPixel);
+            }
+        }
+
+        // Fallback: old RGBA corner flag (Tornie_CornerFlagNew.png, 14x7, 2×7x7 frames)
+        if (!loadedNewFlag && pFileManager->exists("Tornie_CornerFlagNew.png")) {
+            auto flagSrc = LoadPNG_RW(pFileManager->openFile("Tornie_CornerFlagNew.png").get());
+            if (flagSrc) {
+                sdl2::surface_ptr flagRGBA{ SDL_ConvertSurfaceFormat(flagSrc.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+                if (!flagRGBA) flagRGBA = std::move(flagSrc);
+
+                const int frameSize = 7;
+                const int numFrames = 2;
+                const Uint32 srcLight = SDL_MapRGBA(flagRGBA->format, 214, 65, 48, 255);
+                const Uint32 srcDark  = SDL_MapRGBA(flagRGBA->format, 153, 44, 32, 255);
+                const Uint32 srcBlack = SDL_MapRGBA(flagRGBA->format, 0, 0, 0, 255);
+                const Uint32 dstPole  = SDL_MapRGBA(flagRGBA->format, 30, 30, 30, 255);
+
+                for (int h = 0; h < NUM_HOUSES; h++) {
+                    // For Fremen, source colours from vanilla IBM.PAL so rebels grey doesn't bleed in
+                    const Palette& hPal = (h == HOUSE_FREMEN) ? ibmPalette : palette;
+                    SDL_Color cLight = hPal[houseToPaletteIndex[h] + 0];
+                    SDL_Color cDark  = hPal[houseToPaletteIndex[h] + 2];
+                    Uint32 dstLight = SDL_MapRGBA(flagRGBA->format, cLight.r, cLight.g, cLight.b, 255);
+                    Uint32 dstDark  = SDL_MapRGBA(flagRGBA->format, cDark.r, cDark.g, cDark.b, 255);
+
+                    sdl2::surface_ptr atlas{ SDL_CreateRGBSurface(0, numFrames * frameSize, frameSize,
+                        flagRGBA->format->BitsPerPixel,
+                        flagRGBA->format->Rmask, flagRGBA->format->Gmask,
+                        flagRGBA->format->Bmask, flagRGBA->format->Amask) };
+                    if (!atlas) continue;
+                    SDL_FillRect(atlas.get(), nullptr, SDL_MapRGBA(atlas->format, 0, 0, 0, 0));
+
+                    SDL_LockSurface(flagRGBA.get());
+                    SDL_LockSurface(atlas.get());
+                    for (int y = 0; y < frameSize && y < flagRGBA->h; y++) {
+                        const Uint32* srcRow = reinterpret_cast<const Uint32*>(
+                            static_cast<const Uint8*>(flagRGBA->pixels) + y * flagRGBA->pitch);
+                        Uint32* dstRow = reinterpret_cast<Uint32*>(
+                            static_cast<Uint8*>(atlas->pixels) + y * atlas->pitch);
+                        for (int x = 0; x < numFrames * frameSize && x < flagRGBA->w; x++) {
+                            Uint32 px = srcRow[x];
+                            if (px == srcLight)      dstRow[x] = dstLight;
+                            else if (px == srcDark)  dstRow[x] = dstDark;
+                            else if (px == srcBlack) dstRow[x] = dstPole;
+                            else                     dstRow[x] = px;
+                        }
+                    }
+                    SDL_UnlockSurface(atlas.get());
+                    SDL_UnlockSurface(flagRGBA.get());
+
+                    objPic[ObjPic_CornerFlag][h][0] = std::move(atlas);
+                    for (int z = 1; z < NUM_ZOOMLEVEL; z++) {
+                        const int factor = z + 1;
+                        auto* src = objPic[ObjPic_CornerFlag][h][0].get();
+                        sdl2::surface_ptr scaled{ SDL_CreateRGBSurface(0, src->w * factor, src->h * factor,
+                            src->format->BitsPerPixel,
+                            src->format->Rmask, src->format->Gmask, src->format->Bmask, src->format->Amask) };
+                        if (scaled) {
+                            SDL_SetSurfaceBlendMode(src, SDL_BLENDMODE_NONE);
+                            SDL_BlitScaled(src, nullptr, scaled.get(), nullptr);
+                            objPic[ObjPic_CornerFlag][h][z] = std::move(scaled);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Final safety net: ensure every DuneCity civic sprite has a populated
     // objPic for HOUSE_HARKONNEN at all zoom levels, and cloned for every
@@ -1159,7 +1949,8 @@ GFXManager::GFXManager() {
     {
         static const unsigned int civicIds[] = {
             ObjPic_NuclearPlant, ObjPic_PoliceStation, ObjPic_Stadium,
-            ObjPic_Airport, ObjPic_Hospital, ObjPic_Church
+            ObjPic_Airport, ObjPic_Hospital, ObjPic_Church, ObjPic_AdvancedWindTrap,
+            ObjPic_CornerFlag
         };
         for (auto cid : civicIds) {
             if (!objPic[cid][HOUSE_HARKONNEN][0]) {
@@ -1230,14 +2021,18 @@ GFXManager::GFXManager() {
     SDL_Color fogTransparent = { 0, 0, 0, 96};
     SDL_SetPaletteColors(objPic[ObjPic_Terrain_HiddenFog][HOUSE_HARKONNEN][0]->format->palette, &fogTransparent, PALCOLOR_BLACK, 1);
 
+    loadCompactObjPicOverrides();
+
     // scale obj pics and apply color key
     for(int id = 0; id < NUM_OBJPICS; id++) {
-        // Zone sprites (and Star) are 32-bit RGBA with per-pixel alpha.
+        // Some built-in sprites and mod overrides are 32-bit RGBA with per-pixel alpha.
         // SDL_SetColorKey with PALCOLOR_TRANSPARENT (== 0) on them would
         // treat any pixel with raw value 0 as color-keyed, overriding the
         // alpha channel and producing black squares where transparent
         // pixels have non-zero RGB.  Skip color keying for these IDs.
-        const bool isTruecolorSprite = (id == ObjPic_ZoneResidential
+        const bool isTruecolorSprite = (objPic[id][HOUSE_HARKONNEN][0] != nullptr
+                                     && objPic[id][HOUSE_HARKONNEN][0]->format->BytesPerPixel >= 3)
+                                     || (id == ObjPic_ZoneResidential
                                      || id == ObjPic_ZoneCommercial
                                      || id == ObjPic_ZoneIndustrial
                                      || id == ObjPic_CityRoad
@@ -1245,7 +2040,16 @@ GFXManager::GFXManager() {
                                      || id == ObjPic_PoliceStation
                                      || id == ObjPic_Stadium
                                      || id == ObjPic_Airport
-                                     || id == ObjPic_Star);
+                                     || id == ObjPic_AdvancedWindTrap
+                                     || id == ObjPic_CornerFlag
+                                     || id == ObjPic_Star
+                                     || id == ObjPic_FlameTank
+                                     // RocketTrike is truecolor only when the
+                                     // data/RocketTrike.png override is loaded
+                                     // (32-bit); the SHP fallback stays 8-bit.
+                                     || (id == ObjPic_RocketTrike
+                                         && objPic[id][HOUSE_HARKONNEN][0] != nullptr
+                                         && objPic[id][HOUSE_HARKONNEN][0]->format->BytesPerPixel >= 3));
 
         for(int h = 0; h < (int) NUM_HOUSES; h++) {
             if(objPic[id][h][0] != nullptr) {
@@ -1302,11 +2106,76 @@ GFXManager::GFXManager() {
     smallDetailPicTex[Picture_Soldier] = extractSmallDetailPic("INFANTRY.WSA");
     smallDetailPicTex[Picture_IX] = extractSmallDetailPic("IX.WSA");
     smallDetailPicTex[Picture_Launcher] = extractSmallDetailPic("RTANK.WSA");
+    // DuneCity: Neutral house gets a custom build-menu icon (NeutralLauncherIcon.png if present),
+    // falling back to the plain RTANK.WSA portrait (no red tint).
+    if (pFileManager->exists("NeutralLauncherIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("NeutralLauncherIcon.png").get());
+        if (iconSurf) {
+            if (iconSurf->format->palette) { palette.applyToSurface(iconSurf.get()); }
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_LauncherNeutral] = std::move(tex);
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_LauncherNeutral]) {
+        smallDetailPicTex[Picture_LauncherNeutral] = extractSmallDetailPic("RTANK.WSA");
+    }
     smallDetailPicTex[Picture_LightFactory] = extractSmallDetailPic("LITEFTRY.WSA");
     smallDetailPicTex[Picture_MCV] = extractSmallDetailPic("MCV.WSA");
     smallDetailPicTex[Picture_Ornithopter] = extractSmallDetailPic("ORNI.WSA");
-    smallDetailPicTex[Picture_Palace] = extractSmallDetailPic("PALACE.WSA");
-    smallDetailPicTex[Picture_Quad] = extractSmallDetailPic("QUAD.WSA");
+    // Prefer PalaceIcon.png from Tornie.PAK/data for all houses if present
+    if (pFileManager->exists("PalaceIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("PalaceIcon.png").get());
+        if (iconSurf) {
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_Palace] = std::move(tex);
+                SDL_Log("Loaded Palace icon from PalaceIcon.png");
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_Palace]) {
+        smallDetailPicTex[Picture_Palace] = extractSmallDetailPic("PALACE.WSA");
+    }
+    // DuneCity: Neutral Palace ability icon (Trike & Quad spawn action button).
+    // This is separate from the building icon (Picture_Palace) which uses
+    // vanilla PALACE.WSA for all houses.
+    if (pFileManager->exists("PalaceTrikeAndQuadIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("PalaceTrikeAndQuadIcon.png").get());
+        if (iconSurf) {
+            if (iconSurf->format->palette) { palette.applyToSurface(iconSurf.get()); }
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_PalaceNeutral] = std::move(tex);
+                SDL_Log("Loaded Neutral Palace ability icon from PalaceTrikeAndQuadIcon.png");
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_PalaceNeutral]) {
+        smallDetailPicTex[Picture_PalaceNeutral] = extractSmallDetailPic("PALACE.WSA");
+    }
+    SDL_Log("GFX INIT: post-PalaceNeutral icon");
+    // Quad: the neutral Palace activation ability (PalaceInterface) uses
+    // Picture_Quad. Prefer the standalone QuadIcon.png in data/ — it ships at
+    // the exact 91×55 sidebar-slot size, so load it straight to a texture.
+    // Fall back to the QUAD.WSA build portrait if the PNG is absent.
+    if (pFileManager->exists("QuadIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("QuadIcon.png").get());
+        if (iconSurf) {
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_Quad] = std::move(tex);
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_Quad]) {
+        smallDetailPicTex[Picture_Quad] = extractSmallDetailPic("QUAD.WSA");
+    }
     smallDetailPicTex[Picture_Radar] = extractSmallDetailPic("HEADQRTS.WSA");
     smallDetailPicTex[Picture_RaiderTrike] = extractSmallDetailPic("OTRIKE.WSA");
     smallDetailPicTex[Picture_Refinery] = extractSmallDetailPic("REFINERY.WSA");
@@ -1328,6 +2197,7 @@ GFXManager::GFXManager() {
     smallDetailPicTex[Picture_Wall] = extractSmallDetailPic("WALL.WSA");
     smallDetailPicTex[Picture_WindTrap] = extractSmallDetailPic("WINDTRAP.WSA");
     smallDetailPicTex[Picture_WOR] = extractSmallDetailPic("WOR.WSA");
+    SDL_Log("GFX INIT: small detail pics done");
 
     // DuneCity zone build-menu icons — scale the imported zone sprite down
     // to 91x55 for the small detail pic.  Falls back to SLAB.WSA if the
@@ -1421,6 +2291,7 @@ GFXManager::GFXManager() {
         smallDetailPicTex[Picture_Road]        = extractSmallDetailPic("SLAB.WSA");
     }
     smallDetailPicTex[Picture_PowerLine]       = extractSmallDetailPic("SLAB.WSA");
+    SDL_Log("GFX INIT: zone detail pics done");
 
     // Nuclear plant, police, stadium, airport build-menu icons — pull
     // first frame from their Micropolis atlases so they're recognizable.
@@ -1466,9 +2337,84 @@ GFXManager::GFXManager() {
         auto airTex = makeStructDetailPic(ObjPic_Airport, 3 * D2_TILESIZE, 3 * D2_TILESIZE);
         if (airTex) smallDetailPicTex[Picture_Airport] = std::move(airTex);
         else        smallDetailPicTex[Picture_Airport] = extractSmallDetailPic("STARPORT.WSA");
+
+        // Advanced Windtrap: prefer Tornie's custom sidebar icon PNG. It ships
+        // pre-sized at 91×55 — exactly the sidebar slot — so load it straight
+        // to a texture with no subsampling or scaling. Fall through to the
+        // sprite-atlas-derived icon, then WINDTRAP.WSA, if the file is absent.
+        if (pFileManager->exists("Tornie_AdvancedWindtrap_icon.png")) {
+            auto iconSurf = LoadPNG_RW(pFileManager->openFile("Tornie_AdvancedWindtrap_icon.png").get());
+            if (iconSurf) {
+                if (iconSurf->format->palette) { palette.applyToSurface(iconSurf.get()); }
+                auto tex = convertSurfaceToTexture(iconSurf.get());
+                if (tex) {
+                    SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                    smallDetailPicTex[Picture_AdvancedWindTrap] = std::move(tex);
+                }
+            }
+        }
+        if (!smallDetailPicTex[Picture_AdvancedWindTrap]) {
+            auto advTex = makeStructDetailPic(ObjPic_AdvancedWindTrap, 3 * D2_TILESIZE, 3 * D2_TILESIZE);
+            if (advTex) smallDetailPicTex[Picture_AdvancedWindTrap] = std::move(advTex);
+            else        smallDetailPicTex[Picture_AdvancedWindTrap] = extractSmallDetailPic("WINDTRAP.WSA");
+        }
+    }
+
+    // Rocket Trike: prefer RocketTrikeIcon.png (91x55 sidebar slot), fall back
+    // to the standard Trike WSA portrait.
+    if (pFileManager->exists("RocketTrikeIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("RocketTrikeIcon.png").get());
+        if (iconSurf) {
+            if (iconSurf->format->palette) { palette.applyToSurface(iconSurf.get()); }
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_RocketTrike] = std::move(tex);
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_RocketTrike]) {
+        smallDetailPicTex[Picture_RocketTrike] = extractSmallDetailPic("TRIKE.WSA");
+    }
+    if (pFileManager->exists("RocketTrikeIconMask.png")) {
+        SDL_Log("RocketTrikeIconMask.png found — mask companion for RocketTrikeIcon is available");
+    }
+
+    // Elite Siege Tank: prefer EliteSiegeTankIcon.png (sidebar slot), fall back to SiegeTank portrait.
+    if (pFileManager->exists("EliteSiegeTankIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("EliteSiegeTankIcon.png").get());
+        if (iconSurf) {
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_EliteSiegeTank] = std::move(tex);
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_EliteSiegeTank]) {
+        // Try Tornie.PAK custom WSA first, fall back to Siege Tank WSA
+        const char* estWsa = pFileManager->exists("EliteSiegeTank.WSA") ? "EliteSiegeTank.WSA" : "HTANK.WSA";
+        smallDetailPicTex[Picture_EliteSiegeTank] = extractSmallDetailPic(estWsa);
+    }
+
+    // Flame Tank: prefer FlameTankIcon.png (sidebar slot), fall back to Sonic Tank portrait.
+    if (pFileManager->exists("FlameTankIcon.png")) {
+        auto iconSurf = LoadPNG_RW(pFileManager->openFile("FlameTankIcon.png").get());
+        if (iconSurf) {
+            if (iconSurf->format->palette) { palette.applyToSurface(iconSurf.get()); }
+            auto tex = convertSurfaceToTexture(iconSurf.get());
+            if (tex) {
+                SDL_SetTextureBlendMode(tex.get(), SDL_BLENDMODE_BLEND);
+                smallDetailPicTex[Picture_FlameTank] = std::move(tex);
+            }
+        }
+    }
+    if (!smallDetailPicTex[Picture_FlameTank]) {
+        smallDetailPicTex[Picture_FlameTank] = extractSmallDetailPic("STANK.WSA");
     }
 
     // unused: FARTR.WSA, FHARK.WSA, FORDOS.WSA
+    SDL_Log("GFX INIT: road/struct detail pics done");
 
 
     // Helper function to safely create tiny picture textures
@@ -1521,6 +2467,7 @@ GFXManager::GFXManager() {
     tinyPictureTex[TinyPicture_Special] = createTinyPictureTexture(75, "Special");    // use devastator picture
     tinyPictureTex[TinyPicture_Infantry] = createTinyPictureTexture(81, "Infantry");
     tinyPictureTex[TinyPicture_Troopers] = createTinyPictureTexture(91, "Troopers");
+    SDL_Log("GFX INIT: tiny pics done");
 
     // load UI graphics
     uiGraphic[UI_RadarAnimation][HOUSE_HARKONNEN] = Scaler::doubleSurfaceNN(radar->getAnimationAsPictureRow(NUM_STATIC_ANIMATIONS_PER_ROW).get());
@@ -1583,6 +2530,8 @@ GFXManager::GFXManager() {
     uiGraphic[UI_GameStatsBackground][HOUSE_FREMEN] = PicFactory->createGameStatsBackground(HOUSE_FREMEN);
     uiGraphic[UI_GameStatsBackground][HOUSE_SARDAUKAR] = PicFactory->createGameStatsBackground(HOUSE_SARDAUKAR);
     uiGraphic[UI_GameStatsBackground][HOUSE_MERCENARY] = PicFactory->createGameStatsBackground(HOUSE_MERCENARY);
+    uiGraphic[UI_GameStatsBackground][HOUSE_NEUTRAL] = PicFactory->createGameStatsBackground(HOUSE_NEUTRAL);
+    uiGraphic[UI_GameStatsBackground][HOUSE_REBELS] = PicFactory->createGameStatsBackground(HOUSE_REBELS);
     uiGraphic[UI_SelectionBox_Zoomlevel0][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("UI_SelectionBox.png").get());
     SDL_SetColorKey(uiGraphic[UI_SelectionBox_Zoomlevel0][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
     uiGraphic[UI_SelectionBox_Zoomlevel1][HOUSE_HARKONNEN] = Scaler::defaultDoubleTiledSurface(uiGraphic[UI_SelectionBox_Zoomlevel0][HOUSE_HARKONNEN].get(), 1, 1);
@@ -1668,10 +2617,61 @@ GFXManager::GFXManager() {
 
     uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATH.CPS").get()).get());
     uiGraphic[UI_MentatBackground][HOUSE_ATREIDES] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATA.CPS").get()).get());
+    // Paul Atreides mentat background override (Tornie mod)
+    if (pFileManager->exists("PaulAtreidesMentat.png")) {
+        auto paulBg = LoadPNG_RW(pFileManager->openFile("PaulAtreidesMentat.png").get());
+        if (paulBg) {
+            SDL_Log("GFX INIT: Paul Atreides mentat background loaded (%dx%d)", paulBg->w, paulBg->h);
+            uiGraphic[UI_MentatBackground][HOUSE_ATREIDES] = std::move(paulBg);
+        }
+    }
     uiGraphic[UI_MentatBackground][HOUSE_ORDOS] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATO.CPS").get()).get());
     uiGraphic[UI_MentatBackground][HOUSE_FREMEN] = PictureFactory::mapMentatSurfaceToFremen(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get());
     uiGraphic[UI_MentatBackground][HOUSE_SARDAUKAR] = PictureFactory::mapMentatSurfaceToSardaukar(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get());
     uiGraphic[UI_MentatBackground][HOUSE_MERCENARY] = PictureFactory::mapMentatSurfaceToMercenary(uiGraphic[UI_MentatBackground][HOUSE_ORDOS].get());
+    // DuneCity: Neutral mentat background.
+    // Tornie mod: use ChaniMentat.png (320×200 palette-indexed) if available.
+    // Default: Mentat Cyrit — remap Atreides portrait blue to neutral grey.
+    {
+        bool loadedChani = false;
+        if (ModManager::instance().getActiveModName() == "Tornie" && pFileManager->exists("ChaniMentat.png")) {
+            auto chaniSurf = LoadPNG_RW(pFileManager->openFile("ChaniMentat.png").get());
+            if (chaniSurf) {
+                if (chaniSurf->format->BitsPerPixel == 8)
+                    benePalette.applyToSurface(chaniSurf.get());
+                auto doubled = Scaler::defaultDoubleSurface(chaniSurf.get());
+                if (doubled) {
+                    uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = std::move(doubled);
+                    loadedChani = true;
+                    SDL_Log("GFXManager: Loaded ChaniMentat.png as Neutral mentat background");
+                }
+            }
+        }
+        if (!loadedChani) {
+            auto atreidesSurf = LoadCPS_RW(pFileManager->openFile("MENTATA.CPS").get());
+            if (atreidesSurf) {
+                auto doubled = Scaler::defaultDoubleSurface(atreidesSurf.get());
+                if (doubled) {
+                    uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] =
+                        mapSurfaceColorRange(doubled.get(), PALCOLOR_ATREIDES, PALCOLOR_NEUTRAL);
+                }
+            }
+        }
+        // Final fallback
+        if (!uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL]) {
+            uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] =
+                PictureFactory::mapMentatSurfaceToNeutral(uiGraphic[UI_MentatBackground][HOUSE_ORDOS].get());
+        }
+    }
+
+    // HOUSE_REBELS mentat background — use the Harkonnen portrait (the
+    // bearded man) recoloured to the Rebels grey palette. The user
+    // explicitly asked for "Harkonnen mentor with Rebels house colours",
+    // so we remap Harkonnen->Rebels instead of using the Ordos/Neutral
+    // portrait (which was the buggy default and produced a double-face
+    // visual artefact when stacked with the underlying Harkonnen layer).
+    uiGraphic[UI_MentatBackground][HOUSE_REBELS] =
+        PictureFactory::mapMentatSurfaceToRebels(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get());
 
     uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATM.CPS").get()).get());
     if(uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] != nullptr) {
@@ -1684,6 +2684,8 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_SARDAUKAR] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_SARDAUKAR, benePalette);
     uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_FREMEN] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_FREMEN, benePalette);
     uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_MERCENARY] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_MERCENARY, benePalette);
+    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_NEUTRAL] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_NEUTRAL, benePalette);
+    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_REBELS] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_REBELS, benePalette);
 
     uiGraphic[UI_MentatYes][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(mentat->getPicture(0).get());
     uiGraphic[UI_MentatYes_Pressed][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(mentat->getPicture(1).get());
@@ -1719,6 +2721,43 @@ GFXManager::GFXManager() {
         uiGraphic[UI_Herald_ColoredLarge][HOUSE_SARDAUKAR] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_SARDAUKAR].get());
         uiGraphic[UI_Herald_Colored][HOUSE_MERCENARY] = PicFactory->createHeraldMerc(uiGraphic[UI_Herald_Colored][HOUSE_ATREIDES].get(), uiGraphic[UI_Herald_Colored][HOUSE_ORDOS].get());
         uiGraphic[UI_Herald_ColoredLarge][HOUSE_MERCENARY] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_MERCENARY].get());
+        uiGraphic[UI_Herald_Colored][HOUSE_NEUTRAL] = PicFactory->createHeraldNeu(uiGraphic[UI_Herald_Colored][HOUSE_ORDOS].get());
+        uiGraphic[UI_Herald_ColoredLarge][HOUSE_NEUTRAL] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_NEUTRAL].get());
+
+        // HOUSE_REBELS herald
+        // Try the explicit HeraldRebels.png first if the mod ships one.
+        if (ModManager::instance().getActiveModName() == "Tornie" && pFileManager->exists("HeraldRebels.png")) {
+            auto pRebels = LoadPNG_RW(pFileManager->openFile("HeraldRebels.png").get());
+            if (pRebels) {
+                if (pRebels->format->BitsPerPixel == 8)
+                    benePalette.applyToSurface(pRebels.get());
+                uiGraphic[UI_Herald_Colored][HOUSE_REBELS] = std::move(pRebels);
+            }
+        }
+        if (!uiGraphic[UI_Herald_Colored][HOUSE_REBELS]) {
+            // Fallback: assemble a Sonic Tank herald (Tank_Base + Sonictank_Gun),
+            // matching the Map Editor Sonic Tank icon pattern. This gives Rebels
+            // a distinctive silhouette (turret with sonic cannon) instead of
+            // looking like a Neutral colour-shift.
+            // The combinePictures is a one-direction 8-frame tank on a 16-px grid,
+            // so the result is centred at the right offset for a herald (which is
+            // typically 24-30 px on each axis inside the 83x91 frame).
+            if (objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0] && objPic[ObjPic_Sonictank_Gun][HOUSE_HARKONNEN][0]) {
+                sdl2::surface_ptr pSonicHerald{combinePictures(
+                    getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(), 0, 0, 8, 1).get(),
+                    getSubFrame(objPic[ObjPic_Sonictank_Gun][HOUSE_HARKONNEN][0].get(), 0, 0, 8, 1).get(),
+                    3, 1)};
+                if (pSonicHerald) {
+                    uiGraphic[UI_Herald_Colored][HOUSE_REBELS] = std::move(pSonicHerald);
+                }
+            }
+            // Last-resort fallback: remap Neutral herald to Rebels palette
+            if (!uiGraphic[UI_Herald_Colored][HOUSE_REBELS]) {
+                uiGraphic[UI_Herald_Colored][HOUSE_REBELS] =
+                    mapSurfaceColorRange(uiGraphic[UI_Herald_Colored][HOUSE_NEUTRAL].get(), PALCOLOR_NEUTRAL, PALCOLOR_REBELS);
+            }
+        }
+        uiGraphic[UI_Herald_ColoredLarge][HOUSE_REBELS] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_REBELS].get());
     }
 
     uiGraphic[UI_Herald_Grey][HOUSE_HARKONNEN] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
@@ -1727,6 +2766,10 @@ GFXManager::GFXManager() {
     uiGraphic[UI_Herald_Grey][HOUSE_FREMEN] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_FREMEN].get());
     uiGraphic[UI_Herald_Grey][HOUSE_SARDAUKAR] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_SARDAUKAR].get());
     uiGraphic[UI_Herald_Grey][HOUSE_MERCENARY] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_MERCENARY].get());
+    uiGraphic[UI_Herald_Grey][HOUSE_NEUTRAL] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_NEUTRAL].get());
+    if (uiGraphic[UI_Herald_Colored][HOUSE_REBELS]) {
+        uiGraphic[UI_Herald_Grey][HOUSE_REBELS] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_REBELS].get());
+    }
 
     uiGraphic[UI_Herald_ArrowLeft][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("ArrowLeft.png").get());
     uiGraphic[UI_Herald_ArrowLeftLarge][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_ArrowLeft][HOUSE_HARKONNEN].get());
@@ -1741,8 +2784,15 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapChoiceScreen][HOUSE_ATREIDES] = PicFactory->createMapChoiceScreen(HOUSE_ATREIDES);
     uiGraphic[UI_MapChoiceScreen][HOUSE_ORDOS] = PicFactory->createMapChoiceScreen(HOUSE_ORDOS);
     uiGraphic[UI_MapChoiceScreen][HOUSE_FREMEN] = PicFactory->createMapChoiceScreen(HOUSE_FREMEN);
+    // Restore IBM.PAL orange at 192-207 so Fremen campaign banner uses house colour,
+    // not the Rebels grey that Custom_IBM.pal writes at those indices.
+    if (uiGraphic[UI_MapChoiceScreen][HOUSE_FREMEN] && uiGraphic[UI_MapChoiceScreen][HOUSE_FREMEN]->format->palette) {
+        ibmPalette.applyToSurface(uiGraphic[UI_MapChoiceScreen][HOUSE_FREMEN].get(), PALCOLOR_FREMEN, PALCOLOR_FREMEN + 15);
+    }
     uiGraphic[UI_MapChoiceScreen][HOUSE_SARDAUKAR] = PicFactory->createMapChoiceScreen(HOUSE_SARDAUKAR);
     uiGraphic[UI_MapChoiceScreen][HOUSE_MERCENARY] = PicFactory->createMapChoiceScreen(HOUSE_MERCENARY);
+    uiGraphic[UI_MapChoiceScreen][HOUSE_NEUTRAL] = PicFactory->createMapChoiceScreen(HOUSE_NEUTRAL);
+    uiGraphic[UI_MapChoiceScreen][HOUSE_REBELS] = PicFactory->createMapChoiceScreen(HOUSE_REBELS);
     uiGraphic[UI_MapChoicePlanet][HOUSE_HARKONNEN] = Scaler::doubleSurfaceNN(LoadCPS_RW(pFileManager->openFile("PLANET.CPS").get()).get());
     SDL_SetColorKey(uiGraphic[UI_MapChoicePlanet][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
     uiGraphic[UI_MapChoiceMapOnly][HOUSE_HARKONNEN] = Scaler::doubleSurfaceNN(LoadCPS_RW(pFileManager->openFile("DUNEMAP.CPS").get()).get());
@@ -1907,12 +2957,74 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapEditor_Carryall][HOUSE_HARKONNEN] = getSubFrame(objPic[ObjPic_Carryall][HOUSE_HARKONNEN][0].get(),0,0,8,2);
     uiGraphic[UI_MapEditor_Ornithopter][HOUSE_HARKONNEN] = getSubFrame(objPic[ObjPic_Ornithopter][HOUSE_HARKONNEN][0].get(),0,0,8,3);
 
-    uiGraphic[UI_MapEditor_Pen1x1][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("MapEditorPen1x1.png").get());
-    SDL_SetColorKey(uiGraphic[UI_MapEditor_Pen1x1][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
-    uiGraphic[UI_MapEditor_Pen3x3][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("MapEditorPen3x3.png").get());
-    SDL_SetColorKey(uiGraphic[UI_MapEditor_Pen3x3][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
-    uiGraphic[UI_MapEditor_Pen5x5][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("MapEditorPen5x5.png").get());
-    SDL_SetColorKey(uiGraphic[UI_MapEditor_Pen5x5][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
+    // DuneCity/Tornie: FlameTank editor icon — built per-house from the RGBA
+    // ObjPic (which already has per-house colour variants), so we bypass the
+    // palette-remap path in getUIGraphicSurface().
+    for(int h = 0; h < (int) NUM_HOUSES; h++) {
+        if(objPic[ObjPic_FlameTank][h][0] != nullptr) {
+            uiGraphic[UI_MapEditor_FlameTank][h] = getSubFrame(objPic[ObjPic_FlameTank][h][0].get(),0,0,8,1);
+        }
+    }
+    // Fallback: when the custom FlameTank asset (Tornie.PAK / FlameTank.png) isn't
+    // present, synthesize a stand-in from vanilla tank graphics so the Map Editor
+    // never crashes requesting UI_MapEditor_FlameTank. Fill the Harkonnen base slot;
+    // getUIGraphicSurface() palette-remaps it per house on demand.
+    if(uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] == nullptr) {
+        uiGraphic[UI_MapEditor_FlameTank][HOUSE_HARKONNEN] = combinePictures(
+            getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(),
+            getSubFrame(objPic[ObjPic_Tank_Gun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 0, 0);
+    }
+
+    // Tornie: red/green spice field + bloom editor icons from custom terrain strips.
+    // The strip is 17 cols × 2 rows of 16x16 tiles. Layout:
+    //   Row 0 = light spice ("with sand", low density, bloom preview)
+    //   Row 1 = heavy spice ("full spice", high density, field preview)
+    // Column 7 (center of 0-16) is the most "full spice" tile with no sand
+    // collision; it's the most representative icon for both density variants.
+    for (int h = 0; h < (int)NUM_HOUSES; h++) {
+        if (objPic[ObjPic_TerrainRedSpice][h][0] != nullptr) {
+            // Red field = col 7, row 1 (heavy/full spice, no sand)
+            uiGraphic[UI_MapEditor_RedSpice][h] = getSubFrame(
+                objPic[ObjPic_TerrainRedSpice][h][0].get(), 7, 1, 17, 2);
+            // Red bloom = col 7, row 0 (light/spice+bloom preview)
+            uiGraphic[UI_MapEditor_RedSpiceBloom][h] = getSubFrame(
+                objPic[ObjPic_TerrainRedSpice][h][0].get(), 7, 0, 17, 2);
+        }
+        if (objPic[ObjPic_TerrainGreenSpice][h][0] != nullptr) {
+            // Green field = col 7, row 1
+            uiGraphic[UI_MapEditor_GreenSpice][h] = getSubFrame(
+                objPic[ObjPic_TerrainGreenSpice][h][0].get(), 7, 1, 17, 2);
+            // Green bloom = col 7, row 0
+            uiGraphic[UI_MapEditor_GreenSpiceBloom][h] = getSubFrame(
+                objPic[ObjPic_TerrainGreenSpice][h][0].get(), 7, 0, 17, 2);
+        }
+    }
+
+    // Brush-size pen buttons — scale each down by 20px from native 31×31 → 11×11.
+    {
+        const int penIds[] = { UI_MapEditor_Pen1x1, UI_MapEditor_Pen3x3, UI_MapEditor_Pen5x5 };
+        const char* penFiles[] = { "MapEditorPen1x1.png", "MapEditorPen3x3.png", "MapEditorPen5x5.png" };
+        for (int i = 0; i < 3; i++) {
+            auto raw = LoadPNG_RW(pFileManager->openFile(penFiles[i]).get());
+            if (raw && raw->w > 20 && raw->h > 20) {
+                int newW = raw->w - 20;
+                int newH = raw->h - 20;
+                sdl2::surface_ptr scaled{ SDL_CreateRGBSurface(0, newW, newH,
+                    raw->format->BitsPerPixel,
+                    raw->format->Rmask, raw->format->Gmask, raw->format->Bmask, raw->format->Amask) };
+                if (scaled) {
+                    if (raw->format->palette && scaled->format->palette)
+                        SDL_SetPaletteColors(scaled->format->palette, raw->format->palette->colors, 0, raw->format->palette->ncolors);
+                    SDL_BlitScaled(raw.get(), nullptr, scaled.get(), nullptr);
+                    SDL_SetColorKey(scaled.get(), SDL_TRUE, 0);
+                    uiGraphic[penIds[i]][HOUSE_HARKONNEN] = std::move(scaled);
+                }
+            } else if (raw) {
+                SDL_SetColorKey(raw.get(), SDL_TRUE, 0);
+                uiGraphic[penIds[i]][HOUSE_HARKONNEN] = std::move(raw);
+            }
+        }
+    }
 
     // DuneCity: map-editor icons for SimCity-style buildings exposed when the
     // city mod is active. Zone atlases are a single 2x2-tile frame each, so
@@ -1968,8 +3080,19 @@ GFXManager::GFXManager() {
         }
     }
 
+    // Advanced Windtrap: use the custom icon PNG if available, otherwise crop
+    // frame 0 of the sprite atlas (all 8 frames are identical).
+    for (int h = 0; h < (int)NUM_HOUSES; ++h) {
+        if (objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0]) {
+            uiGraphic[UI_MapEditor_AdvancedWindTrap][h] = getSubPicture(objPic[ObjPic_AdvancedWindTrap][HOUSE_HARKONNEN][0].get(), 0, 0, 3*D2_TILESIZE, 3*D2_TILESIZE);
+        } else {
+            uiGraphic[UI_MapEditor_AdvancedWindTrap][h] = getSubPicture(objPic[ObjPic_Windtrap][HOUSE_HARKONNEN][0].get(), 2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 2*D2_TILESIZE);
+        }
+    }
+
 
     // load animations
+    SDL_Log("GFX INIT: starting animation load");
     animation[Anim_HarkonnenEyes] = menshph->getAnimation(0,4,true,true);
     animation[Anim_HarkonnenEyes]->setFrameRate(0.3);
     animation[Anim_HarkonnenMouth] = menshph->getAnimation(5,9,true,true,true);
@@ -1985,6 +3108,46 @@ GFXManager::GFXManager() {
     animation[Anim_AtreidesBook] = menshpa->getAnimation(11,12,true,true,true);
     animation[Anim_AtreidesBook]->setNumLoops(1);
     animation[Anim_AtreidesBook]->setFrameRate(0.2);
+
+    // Paul Atreides custom mentat animations (Tornie mod) — 5 frames, matching vanilla mentat eye/mouth count.
+    if (pFileManager->exists("PaulAtreidesEyes.png")) {
+        auto eyeStrip = LoadPNG_RW(pFileManager->openFile("PaulAtreidesEyes.png").get());
+        if (eyeStrip) {
+            if (eyeStrip->format->palette) { palette.applyToSurface(eyeStrip.get()); }
+            auto paulEyes = std::make_unique<Animation>();
+            constexpr int kMentatEyeFrames = 5;
+            const int fw = eyeStrip->w / kMentatEyeFrames;
+            for (int i = 0; i < kMentatEyeFrames; ++i) {
+                SDL_Rect src = { i * fw, 0, fw, eyeStrip->h };
+                sdl2::surface_ptr frame{ SDL_CreateRGBSurfaceWithFormat(0, fw, eyeStrip->h, 32, SDL_PIXELFORMAT_RGBA32) };
+                SDL_BlitSurface(eyeStrip.get(), &src, frame.get(), nullptr);
+                paulEyes->addFrame(std::move(frame));
+            }
+            paulEyes->setFrameRate(0.5);
+            animation[Anim_PaulEyes] = std::move(paulEyes);
+            SDL_Log("GFX INIT: Loaded Paul Atreides eyes animation (%d frames %dx%d)", kMentatEyeFrames, fw, eyeStrip->h);
+        }
+    }
+
+    if (pFileManager->exists("PaulAtreidesMouth.png")) {
+        auto mouthStrip = LoadPNG_RW(pFileManager->openFile("PaulAtreidesMouth.png").get());
+        if (mouthStrip) {
+            if (mouthStrip->format->palette) { palette.applyToSurface(mouthStrip.get()); }
+            auto paulMouth = std::make_unique<Animation>();
+            constexpr int kMentatMouthFrames = 5;
+            const int fw = mouthStrip->w / kMentatMouthFrames;
+            for (int i = 0; i < kMentatMouthFrames; ++i) {
+                SDL_Rect src = { i * fw, 0, fw, mouthStrip->h };
+                sdl2::surface_ptr frame{ SDL_CreateRGBSurfaceWithFormat(0, fw, mouthStrip->h, 32, SDL_PIXELFORMAT_RGBA32) };
+                SDL_BlitSurface(mouthStrip.get(), &src, frame.get(), nullptr);
+                paulMouth->addFrame(std::move(frame));
+            }
+            paulMouth->setFrameRate(5.0);
+            animation[Anim_PaulMouth] = std::move(paulMouth);
+            SDL_Log("GFX INIT: Loaded Paul Atreides mouth animation (%d frames %dx%d)", kMentatMouthFrames, fw, mouthStrip->h);
+        }
+    }
+
     animation[Anim_OrdosEyes] = menshpo->getAnimation(0,4,true,true);
     animation[Anim_OrdosEyes]->setFrameRate(0.5);
     animation[Anim_OrdosMouth] = menshpo->getAnimation(5,9,true,true,true);
@@ -1994,6 +3157,7 @@ GFXManager::GFXManager() {
     animation[Anim_OrdosRing] = menshpo->getAnimation(11,14,true,true,true);
     animation[Anim_OrdosRing]->setNumLoops(1);
     animation[Anim_OrdosRing]->setFrameRate(6.0);
+    SDL_Log("GFX INIT: base house animations done");
     animation[Anim_FremenEyes] = PictureFactory::mapMentatAnimationToFremen(animation[Anim_AtreidesEyes].get());
     animation[Anim_FremenMouth] = PictureFactory::mapMentatAnimationToFremen(animation[Anim_AtreidesMouth].get());
     animation[Anim_FremenShoulder] = PictureFactory::mapMentatAnimationToFremen(animation[Anim_AtreidesShoulder].get());
@@ -2005,6 +3169,53 @@ GFXManager::GFXManager() {
     animation[Anim_MercenaryMouth] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosMouth].get());
     animation[Anim_MercenaryShoulder] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosShoulder].get());
     animation[Anim_MercenaryRing] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosRing].get());
+    SDL_Log("GFX INIT: mentat remap animations done");
+    // Neutral mentat — always use vanilla palette-mapped Ordos frames
+    animation[Anim_NeutralEyes]  = PictureFactory::mapMentatAnimationToNeutral(animation[Anim_OrdosEyes].get());
+    animation[Anim_NeutralMouth] = PictureFactory::mapMentatAnimationToNeutral(animation[Anim_OrdosMouth].get());
+    animation[Anim_NeutralShoulder] = PictureFactory::mapMentatAnimationToNeutral(animation[Anim_OrdosShoulder].get());
+    animation[Anim_NeutralRing] = PictureFactory::mapMentatAnimationToNeutral(animation[Anim_OrdosRing].get());
+    SDL_Log("GFX INIT: Neutral mentat animations done");
+
+    // Tornie mod: Chani mentat eye/mouth strips override the Neutral animations.
+    // Both strips are 5 frames wide (matching vanilla mentat eye/mouth count).
+    // Files: ChaniEyes.png (5-frame horizontal strip) and ChaniMouth.png (5-frame horizontal strip).
+    if (pFileManager->exists("ChaniEyes.png")) {
+        auto eyeStrip = LoadPNG_RW(pFileManager->openFile("ChaniEyes.png").get());
+        if (eyeStrip) {
+            if (eyeStrip->format->palette) { palette.applyToSurface(eyeStrip.get()); }
+            auto chaniEyes = std::make_unique<Animation>();
+            constexpr int kMentatEyeFrames = 5;
+            const int fw = eyeStrip->w / kMentatEyeFrames;
+            for (int i = 0; i < kMentatEyeFrames; ++i) {
+                SDL_Rect src = { i * fw, 0, fw, eyeStrip->h };
+                sdl2::surface_ptr frame{ SDL_CreateRGBSurfaceWithFormat(0, fw, eyeStrip->h, 32, SDL_PIXELFORMAT_RGBA32) };
+                SDL_BlitSurface(eyeStrip.get(), &src, frame.get(), nullptr);
+                chaniEyes->addFrame(std::move(frame));
+            }
+            chaniEyes->setFrameRate(0.5);
+            animation[Anim_NeutralEyes] = std::move(chaniEyes);
+            SDL_Log("GFX INIT: Loaded Chani eyes animation (%d frames %dx%d) — overriding Neutral", kMentatEyeFrames, fw, eyeStrip->h);
+        }
+    }
+    if (pFileManager->exists("ChaniMouth.png")) {
+        auto mouthStrip = LoadPNG_RW(pFileManager->openFile("ChaniMouth.png").get());
+        if (mouthStrip) {
+            if (mouthStrip->format->palette) { palette.applyToSurface(mouthStrip.get()); }
+            auto chaniMouth = std::make_unique<Animation>();
+            constexpr int kMentatMouthFrames = 5;
+            const int fw = mouthStrip->w / kMentatMouthFrames;
+            for (int i = 0; i < kMentatMouthFrames; ++i) {
+                SDL_Rect src = { i * fw, 0, fw, mouthStrip->h };
+                sdl2::surface_ptr frame{ SDL_CreateRGBSurfaceWithFormat(0, fw, mouthStrip->h, 32, SDL_PIXELFORMAT_RGBA32) };
+                SDL_BlitSurface(mouthStrip.get(), &src, frame.get(), nullptr);
+                chaniMouth->addFrame(std::move(frame));
+            }
+            chaniMouth->setFrameRate(5.0);
+            animation[Anim_NeutralMouth] = std::move(chaniMouth);
+            SDL_Log("GFX INIT: Loaded Chani mouth animation (%d frames %dx%d) — overriding Neutral", kMentatMouthFrames, fw, mouthStrip->h);
+        }
+    }
 
     animation[Anim_BeneEyes] = menshpm->getAnimation(0,4,true,true);
     if(animation[Anim_BeneEyes] != nullptr) {
@@ -2016,6 +3227,7 @@ GFXManager::GFXManager() {
         animation[Anim_BeneMouth]->setPalette(benePalette);
         animation[Anim_BeneMouth]->setFrameRate(5.0);
     }
+    SDL_Log("GFX INIT: Bene Gesserit animations done");
     // the remaining animation are loaded on demand to save some loading time
 
     // load map choice pieces
@@ -2054,11 +3266,40 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                                        objPic[ObjPic_ConstructionYard][HOUSE_HARKONNEN][z]->format, 0)
                 };
             } else {
-                THROW(std::runtime_error, "GFXManager::getZoomedObjPic(): Unit Picture with ID %u is not loaded!", id);
+                // Tornie-exclusive unit sprites: fall back to vanilla closest-match
+                // (Deviator / Flame Tank / Sonic / Elite Siege don't have a vanilla
+                // equivalent, but we can render something rather than crash the whole
+                // scenario load. Siege tank is the closest generic heavy unit.)
+                static const unsigned int tornieUnitIds[] = {
+                    ObjPic_DeviatorCustom,
+                    ObjPic_FlameTank,
+                    ObjPic_Sonictank_Gun,
+                    ObjPic_EliteSiegeTankCustom,
+                };
+                bool isTornieUnit = false;
+                for(auto cid : tornieUnitIds) {
+                    if(id == cid) { isTornieUnit = true; break; }
+                }
+                if(isTornieUnit && objPic[ObjPic_Siegetank_Gun][HOUSE_HARKONNEN][z]) {
+                    SDL_Log("GFXManager::getZoomedObjPic(): Tornie unit sprite ID %u not loaded, falling back to Siegetank_Gun (placeholder)", id);
+                    objPic[id][HOUSE_HARKONNEN][z] = sdl2::surface_ptr{
+                        SDL_ConvertSurface(objPic[ObjPic_Siegetank_Gun][HOUSE_HARKONNEN][z].get(),
+                                           objPic[ObjPic_Siegetank_Gun][HOUSE_HARKONNEN][z]->format, 0)
+                    };
+                } else {
+                    THROW(std::runtime_error, "GFXManager::getZoomedObjPic(): Unit Picture with ID %u is not loaded!", id);
+                }
             }
         }
 
         objPic[id][house][z] = mapSurfaceColorRange(objPic[id][HOUSE_HARKONNEN][z].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[house]);
+
+        // For Fremen: palette[192] has been overridden with rebels grey by Custom_IBM.pal.
+        // Restore vanilla IBM.PAL colours at 192-207 in this surface's embedded palette so
+        // SDL renders Fremen units with their correct vanilla colour, not rebels grey.
+        if (house == HOUSE_FREMEN && objPic[id][house][z] && objPic[id][house][z]->format->palette) {
+            ibmPalette.applyToSurface(objPic[id][house][z].get(), PALCOLOR_FREMEN, PALCOLOR_FREMEN + 15);
+        }
     }
 
     if(objPicTex[id][house][z] == nullptr) {
@@ -2066,6 +3307,34 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
         if(id == ObjPic_Windtrap) {
             // Windtrap uses palette animation on PALCOLOR_WINDTRAP_COLORCYCLE; fake this
             objPicTex[id][house][z] = convertSurfaceToTexture(generateWindtrapAnimationFrames(objPic[id][house][z].get()));
+        } else if(id == ObjPic_AdvancedWindTrap) {
+            // Generate windtrap-style light animation for the RGBA AdvancedWindTrap sprite
+            SDL_Surface* base = objPic[id][house][z].get();
+            if (base) {
+                int fw = base->h; // square sprite: frame width = height
+                sdl2::surface_ptr singleFrame;
+                if (base->w > fw) {
+                    singleFrame = sdl2::surface_ptr{ SDL_CreateRGBSurface(0, fw, base->h, base->format->BitsPerPixel,
+                        base->format->Rmask, base->format->Gmask, base->format->Bmask, base->format->Amask) };
+                    if (singleFrame) {
+                        SDL_SetSurfaceBlendMode(base, SDL_BLENDMODE_NONE);
+                        SDL_Rect srcR{0, 0, fw, base->h};
+                        SDL_BlitSurface(base, &srcR, singleFrame.get(), nullptr);
+                    }
+                }
+                SDL_Surface* src = singleFrame ? singleFrame.get() : base;
+                sdl2::surface_ptr rgbaSrc;
+                if (src->format->BytesPerPixel != 4) {
+                    rgbaSrc = sdl2::surface_ptr{ SDL_ConvertSurfaceFormat(src, SDL_PIXELFORMAT_RGBA32, 0) };
+                    src = rgbaSrc.get();
+                }
+                objPicTex[id][house][z] = convertSurfaceToTexture(generateAdvancedWindtrapAnimationFrames(src).get());
+            } else {
+                objPicTex[id][house][z] = convertSurfaceToTexture(base);
+            }
+            if (objPicTex[id][house][z]) {
+                SDL_SetTextureBlendMode(objPicTex[id][house][z].get(), SDL_BLENDMODE_BLEND);
+            }
         } else if(id == ObjPic_Bullet_SonicTemp) {
             objPicTex[id][house][z] = sdl2::texture_ptr{ SDL_CreateTexture(renderer, SCREEN_FORMAT, SDL_TEXTUREACCESS_TARGET, objPic[id][house][z]->w, objPic[id][house][z]->h) };
         } else if(id == ObjPic_SandwormShimmerTemp) {
@@ -2082,7 +3351,11 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
            || id == ObjPic_NuclearPlant || id == ObjPic_PoliceStation
            || id == ObjPic_Stadium || id == ObjPic_Airport
            || id == ObjPic_Hospital || id == ObjPic_Church
-           || id == ObjPic_Star) {
+           || id == ObjPic_Star || id == ObjPic_AdvancedWindTrap
+           || id == ObjPic_CornerFlag
+           || id == ObjPic_TerrainRedSpice || id == ObjPic_TerrainGreenSpice
+           || (id == ObjPic_RocketTrike && objPic[id][house][z] != nullptr
+               && objPic[id][house][z]->format->BytesPerPixel >= 3)) {
             if(objPicTex[id][house][z]) {
                 SDL_SetTextureBlendMode(objPicTex[id][house][z].get(), SDL_BLENDMODE_BLEND);
             }
@@ -2135,6 +3408,10 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
         }
 
         uiGraphic[id][house] = mapSurfaceColorRange(uiGraphic[id][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[house]);
+        // Restore vanilla IBM.PAL at 192-207 for Fremen so rebels grey doesn't corrupt Fremen UI graphics
+        if (house == HOUSE_FREMEN && uiGraphic[id][house] && uiGraphic[id][house]->format->palette) {
+            ibmPalette.applyToSurface(uiGraphic[id][house].get(), PALCOLOR_FREMEN, PALCOLOR_FREMEN + 15);
+        }
     }
 
     return uiGraphic[id][house].get();
@@ -2170,6 +3447,10 @@ SDL_Surface* GFXManager::getMapChoicePieceSurface(unsigned int num, int house) {
         }
 
         mapChoicePieces[num][house] = mapSurfaceColorRange(mapChoicePieces[num][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[house]);
+        // Restore vanilla IBM.PAL at 192-207 for Fremen so rebels grey doesn't corrupt Fremen map pieces
+        if (house == HOUSE_FREMEN && mapChoicePieces[num][house] && mapChoicePieces[num][house]->format->palette) {
+            ibmPalette.applyToSurface(mapChoicePieces[num][house].get(), PALCOLOR_FREMEN, PALCOLOR_FREMEN + 15);
+        }
     }
 
     return mapChoicePieces[num][house].get();
@@ -2222,6 +3503,11 @@ Animation* GFXManager::getAnimation(unsigned int id) {
             case Anim_MercenaryPlanet: {
                 animation[Anim_MercenaryPlanet] = PictureFactory::createMercenaryPlanet(getAnimation(Anim_AtreidesPlanet), uiGraphic[UI_Herald_ColoredLarge][HOUSE_MERCENARY].get());
                 animation[Anim_MercenaryPlanet]->setFrameRate(10);
+            } break;
+
+            case Anim_NeutralPlanet: {
+                animation[Anim_NeutralPlanet] = PictureFactory::createNeutralPlanet(getAnimation(Anim_HarkonnenPlanet), uiGraphic[UI_Herald_ColoredLarge][HOUSE_NEUTRAL].get());
+                animation[Anim_NeutralPlanet]->setFrameRate(10);
             } break;
 
             case Anim_Win1:             animation[Anim_Win1] = loadAnimationFromWsa("WIN1.WSA");                 break;
@@ -2306,7 +3592,7 @@ std::unique_ptr<Wsafile> GFXManager::loadWsafile(const std::string& filename) co
     }
 }
 
-sdl2::texture_ptr GFXManager::extractSmallDetailPic(const std::string& filename) const
+sdl2::texture_ptr GFXManager::extractSmallDetailPic(const std::string& filename, bool tintRed) const
 {
     sdl2::surface_ptr pSurface{ SDL_CreateRGBSurface(0, 91, 55, 8, 0, 0, 0, 0) };
 
@@ -2341,6 +3627,10 @@ sdl2::texture_ptr GFXManager::extractSmallDetailPic(const std::string& filename)
                 out[y*pSurface->pitch + x] = in[((y * 2) + 1)*tmp->pitch + (x * 2) + 1];
             }
         }
+    }
+
+    if(tintRed) {
+        tintSurfaceRed(pSurface.get());
     }
 
     sdl2::texture_ptr texture = convertSurfaceToTexture(pSurface.get());
@@ -2410,14 +3700,104 @@ sdl2::surface_ptr GFXManager::generateWindtrapAnimationFrames(SDL_Surface* windt
 }
 
 
+sdl2::surface_ptr GFXManager::generateAdvancedWindtrapAnimationFrames(SDL_Surface* basePic) const {
+    int fw = basePic->w;
+    int fh = basePic->h;
+
+    int sizeX = NUM_WINDTRAP_ANIMATIONS_PER_ROW * fw;
+    int sizeY = ((2 + NUM_WINDTRAP_ANIMATIONS + NUM_WINDTRAP_ANIMATIONS_PER_ROW - 1) / NUM_WINDTRAP_ANIMATIONS_PER_ROW) * fh;
+    sdl2::surface_ptr returnPic{ SDL_CreateRGBSurface(0, sizeX, sizeY, SCREEN_BPP, RMASK, GMASK, BMASK, AMASK) };
+    if (!returnPic) return {};
+    SDL_FillRect(returnPic.get(), nullptr, 0);
+
+    // First 2 frames: copy base unmodified (for static display)
+    for (int i = 0; i < 2; i++) {
+        int destX = (i % NUM_WINDTRAP_ANIMATIONS_PER_ROW) * fw;
+        int destY = (i / NUM_WINDTRAP_ANIMATIONS_PER_ROW) * fh;
+        SDL_Rect destRect = { destX, destY, fw, fh };
+        SDL_BlitSurface(basePic, nullptr, returnPic.get(), &destRect);
+    }
+
+    // Artist-approved pixel coordinates for the light animation zones
+    // (derived from annotated reference image, 48x48 sprite)
+    static const std::pair<int,int> lightPixels[] = {
+        {18,4}, {19,4}, {37,4}, {38,4}, {17,5}, {18,5}, {19,5}, {36,5},
+        {37,5}, {38,5}, {16,6}, {17,6}, {18,6}, {19,6}, {35,6}, {36,6},
+        {37,6}, {38,6}, {18,7}, {19,7}, {37,7}, {38,7}, {20,8}, {39,8},
+        {19,9}, {38,9}, {18,10}, {37,10}, {17,11}, {36,11}, {16,12}, {35,12},
+        {15,13}, {34,13}, {9,20}, {10,20}, {26,20}, {27,20}, {43,20}, {44,20},
+        {8,21}, {9,21}, {10,21}, {25,21}, {26,21}, {27,21}, {42,21}, {43,21},
+        {44,21}, {7,22}, {8,22}, {9,22}, {10,22}, {24,22}, {25,22}, {26,22},
+        {27,22}, {41,22}, {42,22}, {43,22}, {44,22}, {9,23}, {10,23}, {26,23},
+        {27,23}, {43,23}, {44,23}, {11,24}, {28,24}, {45,24}, {10,25}, {27,25},
+        {44,25}, {9,26}, {26,26}, {43,26}, {8,27}, {25,27}, {42,27}, {7,28},
+        {24,28}, {41,28}, {6,29}, {23,29}, {40,29}, {18,36}, {19,36}, {37,36},
+        {38,36}, {17,37}, {18,37}, {19,37}, {36,37}, {37,37}, {38,37}, {16,38},
+        {17,38}, {18,38}, {19,38}, {35,38}, {36,38}, {37,38}, {38,38}, {18,39},
+        {19,39}, {37,39}, {38,39}, {20,40}, {39,40}, {19,41}, {38,41}, {18,42},
+        {37,42}, {17,43}, {36,43}, {16,44}, {35,44}, {15,45}, {34,45}
+    };
+    static const int NUM_LIGHT_PIXELS = sizeof(lightPixels) / sizeof(lightPixels[0]);
+
+    // Animation frames 2..2+NUM_WINDTRAP_ANIMATIONS
+    for (int i = 0; i < NUM_WINDTRAP_ANIMATIONS; i++) {
+        int frameIdx = 2 + i;
+        int destX = (frameIdx % NUM_WINDTRAP_ANIMATIONS_PER_ROW) * fw;
+        int destY = (frameIdx / NUM_WINDTRAP_ANIMATIONS_PER_ROW) * fh;
+        SDL_Rect destRect = { destX, destY, fw, fh };
+        SDL_BlitSurface(basePic, nullptr, returnPic.get(), &destRect);
+
+        // Darker blue color cycle (artist approved: peak R=15, G=40, B=220)
+        float t;
+        if (i < NUM_WINDTRAP_ANIMATIONS / 2) {
+            t = (float)i / (NUM_WINDTRAP_ANIMATIONS / 2);
+        } else {
+            t = 1.0f - (float)(i - NUM_WINDTRAP_ANIMATIONS / 2) / (NUM_WINDTRAP_ANIMATIONS / 2);
+        }
+        Uint8 wr = (Uint8)(15.0f * t);
+        Uint8 wg = (Uint8)(40.0f * t);
+        Uint8 wb = (Uint8)(40.0f + 180.0f * t);
+
+        // Pixel coords were annotated on the 48×48 reference sprite.
+        // Scale to match the current zoom level's frame size.
+        const int REFERENCE_SIZE = 48;
+        const float pixelScale = (float)fw / REFERENCE_SIZE;
+        const int block = std::max(1, (int)pixelScale);
+
+        SDL_LockSurface(returnPic.get());
+        for (int p = 0; p < NUM_LIGHT_PIXELS; p++) {
+            int baseX = (int)(lightPixels[p].first  * pixelScale);
+            int baseY = (int)(lightPixels[p].second * pixelScale);
+            for (int dy = 0; dy < block; dy++) {
+                for (int dx = 0; dx < block; dx++) {
+                    int px = destX + baseX + dx;
+                    int py = destY + baseY + dy;
+                    if (px >= 0 && px < sizeX && py >= 0 && py < sizeY) {
+                        Uint8* pixel = (Uint8*)returnPic->pixels + py * returnPic->pitch + px * returnPic->format->BytesPerPixel;
+                        *pixel++ = wr;
+                        *pixel++ = wg;
+                        *pixel++ = wb;
+                        *pixel   = 255;
+                    }
+                }
+            }
+        }
+        SDL_UnlockSurface(returnPic.get());
+    }
+
+    return returnPic;
+}
+
 sdl2::surface_ptr GFXManager::generateMapChoiceArrowFrames(SDL_Surface* arrowPic, int house) const {
     sdl2::surface_ptr returnPic{ SDL_CreateRGBSurface(0, arrowPic->w * 4, arrowPic->h, SCREEN_BPP, RMASK, GMASK, BMASK, AMASK) };
 
     SDL_Rect dest = {0, 0, arrowPic->w, arrowPic->h};
 
     for(int i = 0; i < 4; i++) {
-        for(int k = 0; k < 4; k++) {
-            SDL_SetPaletteColors(arrowPic->format->palette, &palette[houseToPaletteIndex[house]+((i+k)%4)], 251+k, 1);
+        if (arrowPic->format->palette) {
+            for(int k = 0; k < 4; k++) {
+                SDL_SetPaletteColors(arrowPic->format->palette, &palette[houseToPaletteIndex[house]+((i+k)%4)], 251+k, 1);
+            }
         }
 
         SDL_BlitSurface(arrowPic, nullptr, returnPic.get(), &dest);
@@ -2425,6 +3805,260 @@ sdl2::surface_ptr GFXManager::generateMapChoiceArrowFrames(SDL_Surface* arrowPic
     }
 
     return returnPic;
+}
+
+void GFXManager::loadCompactObjPicOverrides() {
+    if(!ModManager::instance().isInitialized()) {
+        return;
+    }
+
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    if(activeMod == "vanilla") {
+        return;
+    }
+
+    const std::filesystem::path overrideDir =
+        std::filesystem::path(ModManager::instance().getModPath(activeMod))
+        / "graphics_compact" / "objpics";
+
+    if(!std::filesystem::is_directory(overrideDir)) {
+        return;
+    }
+
+    for(unsigned int id = 0; id < NUM_OBJPICS; ++id) {
+        const std::filesystem::path preferredPath = overrideDir / ("ObjPic_" + ObjPicNames[id] + ".png");
+        const std::filesystem::path legacyPath = overrideDir / (ObjPicNames[id] + ".png");
+        std::filesystem::path overridePath;
+
+        if(std::filesystem::is_regular_file(preferredPath)) {
+            overridePath = preferredPath;
+        } else if(std::filesystem::is_regular_file(legacyPath)) {
+            overridePath = legacyPath;
+        } else {
+            continue;
+        }
+
+        auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(overridePath.string().c_str(), "rb") };
+        if(!rwops) {
+            SDL_Log("GFXManager: Failed to open compact override %s: %s",
+                    overridePath.string().c_str(), SDL_GetError());
+            continue;
+        }
+
+        auto raw = LoadPNG_RW(rwops.get());
+        if(!raw) {
+            SDL_Log("GFXManager: Failed to load compact override %s",
+                    overridePath.string().c_str());
+            continue;
+        }
+
+        const int expectedW = objPicTiles[id].x;
+        const int expectedH = objPicTiles[id].y;
+        if(expectedW <= 0 || expectedH <= 0 || raw->w % expectedW != 0 || raw->h % expectedH != 0) {
+            SDL_Log("GFXManager: Skipping compact override %s; size %dx%d does not match ObjPic_%s layout %dx%d",
+                    overridePath.string().c_str(), raw->w, raw->h,
+                    ObjPicNames[id].c_str(), expectedW, expectedH);
+            continue;
+        }
+
+        sdl2::surface_ptr surface;
+        if(raw->format->BytesPerPixel >= 3) {
+            surface = sdl2::surface_ptr{ SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+        } else {
+            surface = sdl2::surface_ptr{ SDL_ConvertSurface(raw.get(), raw->format, 0) };
+        }
+
+        if(!surface) {
+            SDL_Log("GFXManager: Failed to convert compact override %s: %s",
+                    overridePath.string().c_str(), SDL_GetError());
+            continue;
+        }
+
+        for(int h = 0; h < (int)NUM_HOUSES; ++h) {
+            objPic[id][h][0].reset();
+            objPic[id][h][1].reset();
+            objPic[id][h][2].reset();
+            objPicTex[id][h][0].reset();
+            objPicTex[id][h][1].reset();
+            objPicTex[id][h][2].reset();
+        }
+
+        objPic[id][HOUSE_HARKONNEN][0] = std::move(surface);
+
+        for(int h = 1; h < (int)NUM_HOUSES; ++h) {
+            objPic[id][h][0] = sdl2::surface_ptr{
+                SDL_ConvertSurface(objPic[id][HOUSE_HARKONNEN][0].get(),
+                                   objPic[id][HOUSE_HARKONNEN][0]->format, 0)
+            };
+        }
+
+        SDL_Log("GFXManager: Loaded compact override ObjPic_%s from %s",
+                ObjPicNames[id].c_str(), overridePath.string().c_str());
+    }
+}
+
+bool GFXManager::loadHDObjPicOverride(unsigned int id) {
+    if(id >= NUM_OBJPICS) {
+        return false;
+    }
+
+    auto& hd = hdObjPicOverrides[id];
+    if(hd.attempted) {
+        return hd.loaded;
+    }
+    hd.attempted = true;
+
+    if(!ModManager::instance().isInitialized()) {
+        return false;
+    }
+
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    if(activeMod == "vanilla") {
+        return false;
+    }
+
+    const std::filesystem::path overrideDir =
+        std::filesystem::path(ModManager::instance().getModPath(activeMod))
+        / "graphics_hd" / "objpics";
+
+    const std::filesystem::path preferredPng = overrideDir / ("ObjPic_" + ObjPicNames[id] + ".png");
+    const std::filesystem::path legacyPng = overrideDir / (ObjPicNames[id] + ".png");
+    std::filesystem::path pngPath;
+
+    if(std::filesystem::is_regular_file(preferredPng)) {
+        pngPath = preferredPng;
+    } else if(std::filesystem::is_regular_file(legacyPng)) {
+        pngPath = legacyPng;
+    } else {
+        return false;
+    }
+
+    std::filesystem::path metadataPath = pngPath;
+    metadataPath.replace_extension(".ini");
+    if(std::filesystem::is_regular_file(metadataPath)) {
+        try {
+            INIFile metadata(metadataPath.string());
+            hd.columns = std::max(1, metadata.getIntValue("Sprite", "Columns", 1));
+            hd.rows = std::max(1, metadata.getIntValue("Sprite", "Rows", 1));
+            hd.anchorX = metadata.getIntValue("Sprite", "AnchorX", -1);
+            hd.anchorY = metadata.getIntValue("Sprite", "AnchorY", -1);
+            hd.baseWidth = metadata.getIntValue("Render", "BaseWidth", 0);
+            hd.baseHeight = metadata.getIntValue("Render", "BaseHeight", 0);
+            hd.scale = metadata.getDoubleValue("Render", "Scale", 1.0);
+            if(hd.scale <= 0.0) {
+                hd.scale = 1.0;
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: Failed to read HD override metadata %s: %s",
+                    metadataPath.string().c_str(), e.what());
+        }
+    }
+
+    auto rwops = sdl2::RWops_ptr{ SDL_RWFromFile(pngPath.string().c_str(), "rb") };
+    if(!rwops) {
+        SDL_Log("GFXManager: Failed to open HD override %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    auto raw = LoadPNG_RW(rwops.get());
+    if(!raw) {
+        SDL_Log("GFXManager: Failed to load HD override %s",
+                pngPath.string().c_str());
+        return false;
+    }
+
+    auto surface = sdl2::surface_ptr{ SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0) };
+    if(!surface) {
+        SDL_Log("GFXManager: Failed to convert HD override %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    if(surface->w % hd.columns != 0 || surface->h % hd.rows != 0) {
+        SDL_Log("GFXManager: Skipping HD override %s; size %dx%d does not divide into %dx%d frames",
+                pngPath.string().c_str(), surface->w, surface->h, hd.columns, hd.rows);
+        return false;
+    }
+
+    hd.texture[HOUSE_HARKONNEN] = convertSurfaceToTexture(surface.get());
+    if(!hd.texture[HOUSE_HARKONNEN]) {
+        SDL_Log("GFXManager: Failed to create HD override texture %s: %s",
+                pngPath.string().c_str(), SDL_GetError());
+        return false;
+    }
+
+    for(int h = 1; h < (int)NUM_HOUSES; ++h) {
+        hd.texture[h] = convertSurfaceToTexture(surface.get());
+    }
+
+    hd.loaded = true;
+    SDL_Log("GFXManager: Loaded HD override ObjPic_%s from %s",
+            ObjPicNames[id].c_str(), pngPath.string().c_str());
+    return true;
+}
+
+bool GFXManager::drawHDObjPic(unsigned int id, int house, unsigned int z,
+                              int col, int numCols, int row, int numRows,
+                              int x, int y) {
+    if(id >= NUM_OBJPICS || z >= NUM_ZOOMLEVEL || house < 0 || house >= (int)NUM_HOUSES) {
+        return false;
+    }
+
+    if(!loadHDObjPicOverride(id)) {
+        return false;
+    }
+
+    auto& hd = hdObjPicOverrides[id];
+    SDL_Texture* texture = hd.texture[house] ? hd.texture[house].get() : hd.texture[HOUSE_HARKONNEN].get();
+    if(texture == nullptr) {
+        return false;
+    }
+
+    const int columns = std::max(1, hd.columns);
+    const int rows = std::max(1, hd.rows);
+    const int textureW = getWidth(texture);
+    const int textureH = getHeight(texture);
+    const int frameW = textureW / columns;
+    const int frameH = textureH / rows;
+    if(frameW <= 0 || frameH <= 0) {
+        return false;
+    }
+
+    const int srcCol = std::clamp(col, 0, columns - 1);
+    const int srcRow = std::clamp(row, 0, rows - 1);
+    SDL_Rect source = { srcCol * frameW, srcRow * frameH, frameW, frameH };
+
+    int destW = hd.baseWidth > 0 ? hd.baseWidth * (int)(z + 1) : 0;
+    int destH = hd.baseHeight > 0 ? hd.baseHeight * (int)(z + 1) : 0;
+    if(destW <= 0 || destH <= 0) {
+        SDL_Texture* classicTexture = objPicTex[id][house][z] ? objPicTex[id][house][z].get() : objPicTex[id][HOUSE_HARKONNEN][z].get();
+        if(classicTexture != nullptr) {
+            destW = getWidth(classicTexture) / std::max(1, numCols);
+            destH = getHeight(classicTexture) / std::max(1, numRows);
+        } else {
+            destW = frameW;
+            destH = frameH;
+        }
+    }
+
+    destW = std::max(1, static_cast<int>(lround(destW * hd.scale)));
+    destH = std::max(1, static_cast<int>(lround(destH * hd.scale)));
+
+    const int anchorX = hd.anchorX >= 0 ? hd.anchorX : frameW / 2;
+    const int anchorY = hd.anchorY >= 0 ? hd.anchorY : frameH / 2;
+    const double scaleX = static_cast<double>(destW) / static_cast<double>(frameW);
+    const double scaleY = static_cast<double>(destH) / static_cast<double>(frameH);
+
+    SDL_Rect dest = {
+        x - static_cast<int>(lround(anchorX * scaleX)),
+        y - static_cast<int>(lround(anchorY * scaleY)),
+        destW,
+        destH
+    };
+
+    SDL_RenderCopy(renderer, texture, &source, &dest);
+    return true;
 }
 
 sdl2::surface_ptr GFXManager::generateDoubledObjPic(unsigned int id, int h) const {
@@ -2438,11 +4072,15 @@ sdl2::surface_ptr GFXManager::generateDoubledObjPic(unsigned int id, int h) cons
             SDL_SetColorKey(pOverlay.get(), SDL_TRUE, PALCOLOR_UI_COLORCYCLE);
 
             // SDL_BlitSurface will silently map PALCOLOR_BLACK to PALCOLOR_TRANSPARENT as both are RGB(0,0,0,255), so make them temporarily different
-            pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 1;
-            pSurface->format->palette->colors[PALCOLOR_BLACK].g = 1;
-            SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
-            pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 0;
-            pSurface->format->palette->colors[PALCOLOR_BLACK].g = 0;
+            if (pOverlay->format->palette && pSurface->format->palette) {
+                pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 1;
+                pSurface->format->palette->colors[PALCOLOR_BLACK].g = 1;
+                SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
+                pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 0;
+                pSurface->format->palette->colors[PALCOLOR_BLACK].g = 0;
+            } else {
+                SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
+            }
         } else {
             SDL_Log("Warning: No HD sprite sheet for '%s' in zoom level 1!", ObjPicNames.at(id).c_str());
             pSurface = sdl2::surface_ptr{ Scaler::defaultDoubleTiledSurface(objPic[id][h][0].get(), objPicTiles[id].x, objPicTiles[id].y) };
@@ -2469,11 +4107,15 @@ sdl2::surface_ptr GFXManager::generateTripledObjPic(unsigned int id, int h) cons
             SDL_SetColorKey(pOverlay.get(), SDL_TRUE, PALCOLOR_UI_COLORCYCLE);
 
             // SDL_BlitSurface will silently map PALCOLOR_BLACK to PALCOLOR_TRANSPARENT as both are RGB(0,0,0,255), so make them temporarily different
-            pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 1;
-            pSurface->format->palette->colors[PALCOLOR_BLACK].g = 1;
-            SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
-            pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 0;
-            pSurface->format->palette->colors[PALCOLOR_BLACK].g = 0;
+            if (pOverlay->format->palette && pSurface->format->palette) {
+                pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 1;
+                pSurface->format->palette->colors[PALCOLOR_BLACK].g = 1;
+                SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
+                pOverlay->format->palette->colors[PALCOLOR_BLACK].g = 0;
+                pSurface->format->palette->colors[PALCOLOR_BLACK].g = 0;
+            } else {
+                SDL_BlitSurface(pOverlay.get(), NULL, pSurface.get(), NULL);
+            }
         } else {
             SDL_Log("Warning: No HD sprite sheet for '%s' in zoom level 2!", ObjPicNames.at(id).c_str());
             pSurface = sdl2::surface_ptr{ Scaler::defaultTripleTiledSurface(objPic[id][h][0].get(), objPicTiles[id].x, objPicTiles[id].y) };

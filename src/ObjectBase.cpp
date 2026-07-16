@@ -48,12 +48,15 @@
 #include <structures/StarPort.h>
 #include <structures/Wall.h>
 #include <structures/WindTrap.h>
+#include <structures/AdvancedWindTrap.h>
 #include <structures/NuclearPlant.h>
 #include <structures/PoliceStation.h>
 #include <structures/Stadium.h>
 #include <structures/Airport.h>
 #include <structures/WOR.h>
 #include <structures/ZoneStructure.h>
+
+#include <mod/ModManager.h>
 
 //units
 #include <units/Carryall.h>
@@ -62,6 +65,8 @@
 #include <units/Frigate.h>
 #include <units/Harvester.h>
 #include <units/Launcher.h>
+#include <units/EliteLauncher.h>
+#include <units/EliteSiegeTank.h>
 #include <units/MCV.h>
 #include <units/Ornithopter.h>
 #include <units/Quad.h>
@@ -76,6 +81,8 @@
 #include <units/Trooper.h>
 #include <units/AmbientAirplane.h>
 #include <units/AmbientHelicopter.h>
+#include <units/RocketTrike.h>
+#include <units/FlameTank.h>
 
 #include <array>
 #include <vector>
@@ -152,9 +159,11 @@ ObjectBase::ObjectBase(InputStream& stream) {
     targetFriendly = stream.readBool();
     attackMode = static_cast<ATTACKMODE>(stream.readUint32());
 
-    std::array<bool, 7> b{false, false, false, false, false, false, false};
+    // The packed save field contains 8 bits. Keep the ninth team-array slot
+    // initialized instead of indexing past the old seven-element temporary.
+    std::array<bool, NUM_TEAMS> b{};
 
-    stream.readBools(&b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6]);
+    stream.readBools(&b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7]);
 
     for (decltype(visible.size()) i = 0; i < visible.size(); ++i)
         visible[i] = b[i];
@@ -221,7 +230,7 @@ void ObjectBase::save(OutputStream& stream) const {
     stream.writeBool(targetFriendly);
     stream.writeUint32(attackMode);
 
-    stream.writeBools(visible[0], visible[1], visible[2], visible[3], visible[4], visible[5], visible[6]);
+    stream.writeBools(visible[0], visible[1], visible[2], visible[3], visible[4], visible[5], visible[6], visible[7]);
 }
 
 
@@ -361,7 +370,21 @@ void ObjectBase::setVisible(int teamID, bool status) {
 
 void ObjectBase::setTarget(const ObjectBase* newTarget) {
     target.pointTo(const_cast<ObjectBase*>(newTarget));
-    targetFriendly = (target && (target.getObjPointer()->getOwner()->getTeamID() == owner->getTeamID()) && (getItemID() != Unit_Sandworm) && (target.getObjPointer()->getItemID() != Unit_Sandworm));
+
+    // NB: ObjectPointer::operator bool() only reports whether an ID is set, NOT
+    // whether the object still exists. Only getObjPointer() resolves the ID
+    // against the object manager (and returns nullptr, clearing the ID, when the
+    // object has already been destroyed). The old code dereferenced
+    // target.getObjPointer() while only guarding with operator bool(), so passing
+    // a target that was destroyed earlier this cycle — e.g. a harvester killed
+    // while a carryall booking is still in flight, or a unit a saboteur just blew
+    // up — dereferenced nullptr and crashed (SIGSEGV). Resolve the pointer once
+    // and null-check it.
+    const ObjectBase* pTarget = target.getObjPointer();
+    targetFriendly = (pTarget != nullptr)
+                     && (pTarget->getOwner()->getTeamID() == owner->getTeamID())
+                     && (getItemID() != Unit_Sandworm)
+                     && (pTarget->getItemID() != Unit_Sandworm);
 }
 
 void ObjectBase::unassignFromMap(const Coord& location) const {
@@ -547,7 +570,7 @@ const ObjectBase* findTargetLegacy(const ObjectBase& seeker, int checkRange) {
             }
         }
 
-        if(closestTarget != nullptr) {
+        if(closestTarget != nullptr && !isDeprioritizedTarget(*closestTarget)) {
             break;
         }
     }
@@ -746,7 +769,7 @@ const ObjectBase* ObjectBase::findTarget() const {
 
         case AREAGUARD: {
             // Launchers get extended area guard range due to long weapon range
-            checkRange = (getItemID() == Unit_Launcher) ? 12 : 10;
+            checkRange = (getItemID() == Unit_Launcher || getItemID() == Unit_EliteLauncher) ? 12 : 10;
         } break;
 
         case AMBUSH: {
@@ -820,6 +843,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Structure_StarPort:            newObject = new StarPort(Owner); break;
         case Structure_Wall:                newObject = new Wall(Owner); break;
         case Structure_WindTrap:            newObject = new WindTrap(Owner); break;
+        case Structure_AdvancedWindTrap:    newObject = new AdvancedWindTrap(Owner); break;
         case Structure_WOR:                 newObject = new WOR(Owner); break;
         case Structure_NuclearPlant:        newObject = new NuclearPlant(Owner); break;
         case Structure_PoliceStation:       newObject = new PoliceStation(Owner); break;
@@ -836,6 +860,8 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Unit_Harvester:                newObject = new Harvester(Owner); break;
         case Unit_Soldier:                  newObject = new Soldier(Owner); break;
         case Unit_Launcher:                 newObject = new Launcher(Owner); break;
+        case Unit_EliteLauncher:            newObject = new EliteLauncher(Owner); break;
+        case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(Owner); break;
         case Unit_MCV:                      newObject = new MCV(Owner); break;
         case Unit_Ornithopter:              newObject = new Ornithopter(Owner); break;
         case Unit_Quad:                     newObject = new Quad(Owner); break;
@@ -849,20 +875,97 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Unit_Trooper:                  newObject = new Trooper(Owner); break;
         case Unit_AmbientAirplane:          newObject = new AmbientAirplane(Owner); break;
         case Unit_AmbientHelicopter:        newObject = new AmbientHelicopter(Owner); break;
+        case Unit_RocketTrike:              newObject = new RocketTrike(Owner); break;
+        case Unit_FlameTank:               newObject = new FlameTank(Owner); break;
         case Unit_Special: {
             switch(Owner->getHouseID()) {
-                case HOUSE_HARKONNEN:       newObject = new Devastator(Owner); break;
-                case HOUSE_ATREIDES:        newObject = new SonicTank(Owner); break;
-                case HOUSE_ORDOS:           newObject = new Deviator(Owner); break;
-                case HOUSE_FREMEN:
-                case HOUSE_SARDAUKAR:
-                case HOUSE_MERCENARY: {
-                    if(currentGame->randomGen.randBool()) {
-                         newObject = new SonicTank(Owner);
+                case HOUSE_HARKONNEN:
+                    if (ModManager::instance().getActiveModName() == "Tornie") {
+                        if (currentGame->randomGen.randBool()) {
+                            newObject = new Devastator(Owner);
+                        } else {
+                            newObject = new EliteSiegeTank(Owner);
+                        }
                     } else {
                         newObject = new Devastator(Owner);
                     }
+                    break;
+                case HOUSE_ATREIDES:
+                    if (ModManager::instance().getActiveModName() == "Tornie") {
+                        if (currentGame->randomGen.randBool()) {
+                            newObject = new SonicTank(Owner);
+                        } else {
+                            newObject = new EliteSiegeTank(Owner);
+                        }
+                    } else {
+                        newObject = new SonicTank(Owner);
+                    }
+                    break;
+                case HOUSE_ORDOS:
+                    if (ModManager::instance().getActiveModName() == "Tornie") {
+                        if (currentGame->randomGen.randBool()) {
+                            newObject = new Deviator(Owner);
+                        } else {
+                            newObject = new EliteSiegeTank(Owner);
+                        }
+                    } else {
+                        newObject = new Deviator(Owner);
+                    }
+                    break;
+                case HOUSE_SARDAUKAR:
+                    // Sardaukar: always random SonicTank or Devastator (default and Tornie mod)
+                    if(currentGame->randomGen.randBool()) {
+                        newObject = new SonicTank(Owner);
+                    } else {
+                        newObject = new Devastator(Owner);
+                    }
+                    break;
+                case HOUSE_FREMEN: {
+                    if (ModManager::instance().getActiveModName() == "Tornie") {
+                        // Tornie mod: Fremen special = random Deviator or Devastator
+                        if(currentGame->randomGen.randBool()) {
+                            newObject = new Deviator(Owner);
+                        } else {
+                            newObject = new Devastator(Owner);
+                        }
+                    } else {
+                        // Default: random SonicTank or Devastator
+                        if(currentGame->randomGen.randBool()) {
+                            newObject = new SonicTank(Owner);
+                        } else {
+                            newObject = new Devastator(Owner);
+                        }
+                    }
                 } break;
+                case HOUSE_MERCENARY: {
+                    if (ModManager::instance().getActiveModName() == "Tornie") {
+                        // Tornie mod: Mercenary special = random Deviator or SonicTank
+                        if(currentGame->randomGen.randBool()) {
+                            newObject = new Deviator(Owner);
+                        } else {
+                            newObject = new SonicTank(Owner);
+                        }
+                    } else {
+                        // Default: random SonicTank or Devastator
+                        if(currentGame->randomGen.randBool()) {
+                            newObject = new SonicTank(Owner);
+                        } else {
+                            newObject = new Devastator(Owner);
+                        }
+                    }
+                } break;
+                case HOUSE_NEUTRAL:
+                    // Neutral Unit_Special: randomly Deviator or Elite Launcher
+                    if(currentGame->randomGen.randBool()) {
+                        newObject = new Deviator(Owner);
+                    } else {
+                        newObject = new EliteLauncher(Owner);
+                    }
+                    break;
+                case HOUSE_REBELS:
+                    // Rebels Unit_Special: SonicTank (matches palace ability)
+                    newObject = new SonicTank(Owner);
+                    break;
                 default:    /* should never be reached */  break;
             }
         } break;
@@ -903,6 +1006,7 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Structure_StarPort:            newObject = new StarPort(stream); break;
         case Structure_Wall:                newObject = new Wall(stream); break;
         case Structure_WindTrap:            newObject = new WindTrap(stream); break;
+        case Structure_AdvancedWindTrap:    newObject = new AdvancedWindTrap(stream); break;
         case Structure_WOR:                 newObject = new WOR(stream); break;
         case Structure_NuclearPlant:        newObject = new NuclearPlant(stream); break;
         case Structure_PoliceStation:       newObject = new PoliceStation(stream); break;
@@ -919,6 +1023,8 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Unit_Harvester:                newObject = new Harvester(stream); break;
         case Unit_Soldier:                  newObject = new Soldier(stream); break;
         case Unit_Launcher:                 newObject = new Launcher(stream); break;
+        case Unit_EliteLauncher:            newObject = new EliteLauncher(stream); break;
+        case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(stream); break;
         case Unit_MCV:                      newObject = new MCV(stream); break;
         case Unit_Ornithopter:              newObject = new Ornithopter(stream); break;
         case Unit_Quad:                     newObject = new Quad(stream); break;
@@ -932,6 +1038,8 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Unit_Trooper:                  newObject = new Trooper(stream); break;
         case Unit_AmbientAirplane:          newObject = new AmbientAirplane(stream); break;
         case Unit_AmbientHelicopter:        newObject = new AmbientHelicopter(stream); break;
+        case Unit_RocketTrike:              newObject = new RocketTrike(stream); break;
+        case Unit_FlameTank:               newObject = new FlameTank(stream); break;
 
         default:                            newObject = nullptr;
                                             SDL_Log("ObjectBase::loadObject(): %d is no valid ItemID!",itemID);

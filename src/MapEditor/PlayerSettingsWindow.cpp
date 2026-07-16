@@ -34,7 +34,7 @@
 
 PlayerSettingsWindow::PlayerSettingsWindow(MapEditor* pMapEditor, HOUSETYPE currentHouse) : Window(0,0,0,0), pMapEditor(pMapEditor), house(currentHouse) {
 
-    color = SDL2RGB(palette[houseToPaletteIndex[house]+3]);
+    color = SDL2RGB(getHouseSDLColor(house));
 
     // set up window
     SDL_Texture *pBackground = pGFXManager->getUIGraphic(UI_NewMapWindow);
@@ -61,7 +61,7 @@ PlayerSettingsWindow::PlayerSettingsWindow(MapEditor* pMapEditor, HOUSETYPE curr
 
         MapEditor::Player& playerInfo = pMapEditor->getPlayers()[i];
 
-        Uint32 currentColor = SDL2RGB(palette[houseToPaletteIndex[playerInfo.colorOfHouse] + 3]);
+        Uint32 currentColor = SDL2RGB(getHouseSDLColor(playerInfo.colorOfHouse, 3));
 
         centralVBox.addWidget(VSpacer::create(15));
 
@@ -126,8 +126,10 @@ PlayerSettingsWindow::PlayerSettingsWindow(MapEditor* pMapEditor, HOUSETYPE curr
             playerWidgets[i].teamDropDownBox.addEntry("Team4", 3);
             playerWidgets[i].teamDropDownBox.addEntry("Team5", 4);
             playerWidgets[i].teamDropDownBox.addEntry("Team6", 5);
+            playerWidgets[i].teamDropDownBox.addEntry("Team7", 6);
+            playerWidgets[i].teamDropDownBox.addEntry("Team8", 7);
 
-            for(int j = 0; j < 6; j++) {
+            for(int j = 0; j < 8; j++) {
                 if(playerWidgets[i].teamDropDownBox.getEntry(j) == playerInfo.brain) {
                     playerWidgets[i].teamDropDownBox.setSelectedItem(j);
                     break;

@@ -142,6 +142,7 @@ void UnitBase::init() {
     turreted = false;
     numWeapons = 0;
     bulletType = Bullet_DRocket;
+    lastFiredBulletType = Bullet_DRocket;
 
     drawnFrame = 0;
 
@@ -248,12 +249,13 @@ bool UnitBase::attack() {
                 if(pObject != nullptr) {
                     currentGameMap->viewMap(pObject->getOwner()->getHouseID(), location, 2);
                 }
+                lastFiredBulletType = currentBulletType;
                 playAttackSound();
                 primaryWeaponTimer = getWeaponReloadTime();
 
                 secondaryWeaponTimer = 15;
 
-                if(attackPos && getItemID() != Unit_SonicTank && currentGameMap->getTile(attackPos)->isSpiceBloom()) {
+                if(attackPos && getItemID() != Unit_SonicTank && (currentGameMap->getTile(attackPos)->isSpiceBloom() || currentGameMap->getTile(attackPos)->isRedSpiceBloom() || currentGameMap->getTile(attackPos)->isGreenSpiceBloom())) {
                     setDestination(location);
                     forced = false;
                     attackPos.invalidate();
@@ -277,10 +279,11 @@ bool UnitBase::attack() {
                 if(pObject != nullptr) {
                     currentGameMap->viewMap(pObject->getOwner()->getHouseID(), location, 2);
                 }
+                lastFiredBulletType = currentBulletType;
                 playAttackSound();
                 secondaryWeaponTimer = -1;
 
-                if(attackPos && getItemID() != Unit_SonicTank && currentGameMap->getTile(attackPos)->isSpiceBloom()) {
+                if(attackPos && getItemID() != Unit_SonicTank && (currentGameMap->getTile(attackPos)->isSpiceBloom() || currentGameMap->getTile(attackPos)->isRedSpiceBloom() || currentGameMap->getTile(attackPos)->isGreenSpiceBloom())) {
                     setDestination(location);
                     forced = false;
                     attackPos.invalidate();
@@ -306,7 +309,10 @@ void UnitBase::blitToScreen() {
     SDL_Rect source = calcSpriteSourceRect(pUnitGraphic, drawnAngle, numImagesX, drawnFrame, numImagesY);
     SDL_Rect dest = calcSpriteDrawingRect( pUnitGraphic, x, y, numImagesX, numImagesY, HAlign::Center, VAlign::Center);
 
-    SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    if(!pGFXManager->drawHDObjPic(graphicID, getOwner()->getHouseID(), currentZoomlevel,
+                                  drawnAngle, numImagesX, drawnFrame, numImagesY, x, y)) {
+        SDL_RenderCopy(renderer, pUnitGraphic, &source, &dest);
+    }
 
     if(isBadlyDamaged()) {
         drawSmoke(x, y);
@@ -363,6 +369,10 @@ void UnitBase::deploy(const Coord& newLocation) {
                     setHealth(0);
                     setVisible(VIS_ALL, false);
                 }
+            } else if(currentGameMap->getTile(location)->isRedSpiceBloom()) {
+                currentGameMap->getTile(location)->triggerRedSpiceBloom(getOwner());
+            } else if(currentGameMap->getTile(location)->isGreenSpiceBloom()) {
+                currentGameMap->getTile(location)->triggerGreenSpiceBloom(getOwner());
             } else if(currentGameMap->getTile(location)->isSpecialBloom()){
                 currentGameMap->getTile(location)->triggerSpecialBloom(getOwner());
             }
@@ -1582,6 +1592,7 @@ UnitBase::PathRequestStats UnitBase::resolvePendingPathRequest() {
             if(getOwner()->hasCarryalls()
                && this->isAGroundUnit()
                && !static_cast<GroundUnit*>(this)->hasBookedCarrier()
+               && carryallRequestCooldown <= 0
                && (currentGame->getGameInitSettings().getGameOptions().manualCarryallDrops || getOwner()->isAI())
                && blockDistance(location, destination) >= MIN_CARRYALL_LIFT_DISTANCE) {
                 static_cast<GroundUnit*>(this)->requestCarryall();
