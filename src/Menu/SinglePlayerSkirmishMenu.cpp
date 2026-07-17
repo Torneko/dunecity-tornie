@@ -36,12 +36,19 @@ const int houseOrder[] = {
     HOUSE_FREMEN,
     HOUSE_SARDAUKAR,
     HOUSE_NEUTRAL,
-    HOUSE_REBELS
+    HOUSE_REBELS,
+    HOUSE_CUSTOM
 };
 
 constexpr int kVisibleHouseButtons = 3;
-constexpr int kHouseChoiceCount = sizeof(houseOrder) / sizeof(houseOrder[0]);
-constexpr int kMaxHouseScrollPos = kHouseChoiceCount - kVisibleHouseButtons;
+int getHouseChoiceCount() {
+    const int capacity = sizeof(houseOrder) / sizeof(houseOrder[0]);
+    return isHouseAvailable(HOUSE_CUSTOM) ? capacity : capacity - 1;
+}
+
+int getMaxHouseScrollPos() {
+    return getHouseChoiceCount() - kVisibleHouseButtons;
+}
 
 const char* const kSupportPlayerClasses[] = {
     "",
@@ -266,6 +273,9 @@ void SinglePlayerSkirmishMenu::onStart()
     }
 
     for(int houseID = 0; houseID < NUM_HOUSES; houseID++) {
+        if(!isHouseAvailable(static_cast<HOUSETYPE>(houseID))) {
+            continue;
+        }
         if(houseID == houseChoice) {
             GameInitSettings::HouseInfo humanHouseInfo(static_cast<HOUSETYPE>(houseID), 1);
             humanHouseInfo.addPlayerInfo(GameInitSettings::PlayerInfo(settings.general.playerName, HUMANPLAYERCLASS));
@@ -324,14 +334,14 @@ void SinglePlayerSkirmishMenu::onHouseLeft()
 
 void SinglePlayerSkirmishMenu::onHouseRight()
 {
-    if(currentHouseChoiceScrollPos < kMaxHouseScrollPos) {
+    if(currentHouseChoiceScrollPos < getMaxHouseScrollPos()) {
         currentHouseChoiceScrollPos++;
         selectedButton--;
         onSelectHouseButton(selectedButton);
         updateHouseChoice();
 
         houseLeftButton.setVisible(true);
-        houseRightButton.setVisible( (currentHouseChoiceScrollPos < kMaxHouseScrollPos) );
+        houseRightButton.setVisible( (currentHouseChoiceScrollPos < getMaxHouseScrollPos()) );
     }
 }
 

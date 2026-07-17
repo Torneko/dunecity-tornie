@@ -70,7 +70,10 @@ void CitySimulation::load(InputStream& stream) {
         lastBudgetTick_          = (lastProcessedDay_ * kCyclesPerCityDay) / kCyclesPerBudgetTick;
         economicVictoryThreshold_= stream.readSint32();
 
-        for (int h = 0; h < kMaxCityHouses; ++h) {
+        const int savedCityHouseCount = loadedVersion >= 9821
+            ? kMaxCityHouses
+            : NUM_LEGACY_HOUSES;
+        for (int h = 0; h < savedCityHouseCount; ++h) {
             houseState_[h].load(stream);
         }
     } else {

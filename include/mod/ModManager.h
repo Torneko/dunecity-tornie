@@ -67,6 +67,8 @@ public:
      * \return Mod name (e.g., "vanilla")
      */
     std::string getActiveModName() const;
+    const CustomHouseInfo& getActiveCustomHouseInfo() const;
+    bool isCustomHouseRegistered() const;
 
     /**
      * \return true if the active mod opts into DuneCity city-sim features
@@ -266,7 +268,8 @@ private:
     bool installedObjectDataDiffersFromDefaults(const std::string& modName) const;
     
     std::string modsBasePath;        ///< Base path for mods directory
-    std::string activeMod;           ///< Currently active mod name
+    std::string activeMod;
+    CustomHouseInfo activeCustomHouse;           ///< Currently active mod name
     mutable ModChecksums cachedChecksums;  ///< Cached checksums
     mutable bool checksumsDirty;     ///< Do checksums need recalculation?
     bool initialized;                ///< Has initialize() been called?

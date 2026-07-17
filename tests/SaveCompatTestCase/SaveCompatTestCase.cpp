@@ -14,6 +14,7 @@
 #include <DataTypes.h>
 #include <Definitions.h>
 #include <misc/SaveCompat.h>
+#include <mod/ModInfo.h>
 
 // ---------- constant checks ----------
 
@@ -35,14 +36,31 @@ TEST_CASE("Save compat: current Num_ItemID >= legacy",
 
 TEST_CASE("Save compat: SAVEGAMEVERSION is 9811 or higher",
           "[save-compat][regression]") {
-    REQUIRE(SAVEGAMEVERSION == 9820);
+    REQUIRE(SAVEGAMEVERSION == 9821);
     REQUIRE(SAVEGAMEVERSION >= 9818);
 }
 
-TEST_CASE("Save compat: tile house visibility fits its packed byte",
+TEST_CASE("Save compat: ninth house extends rather than reorders legacy IDs",
           "[save-compat][regression]") {
-    REQUIRE(NUM_HOUSES == 8);
-    REQUIRE(NUM_TEAMS >= NUM_HOUSES);
+    REQUIRE(NUM_LEGACY_HOUSES == 8);
+    REQUIRE(HOUSE_REBELS == 7);
+    REQUIRE(HOUSE_CUSTOM == 8);
+    REQUIRE(NUM_HOUSES == 9);
+    REQUIRE(NUM_TEAM_SLOTS == 10);
+}
+
+TEST_CASE("Save compat: old visual color slots retain their meaning",
+          "[save-compat][regression]") {
+    REQUIRE(migrateLegacyHouseColorSlot(7) == 7);
+    REQUIRE(migrateLegacyHouseColorSlot(8) == 9);
+    REQUIRE(migrateLegacyHouseColorSlot(13) == 14);
+}
+
+TEST_CASE("Save compat: generic custom house is disabled by default",
+          "[save-compat][regression]") {
+    const CustomHouseInfo info;
+    REQUIRE_FALSE(info.enabled);
+    REQUIRE(info.scenarioLetter == '?');
 }
 
 TEST_CASE("Save compat: new items are at indices >= LEGACY_NUM_ITEM_ID_9810",

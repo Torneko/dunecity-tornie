@@ -8,6 +8,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <Network/ENetHelper.h>
+#include <Network/NetworkManager.h>
 #include <Network/ENetPacketOStream.h>
 #include <Network/ENetPacketIStream.h>
 
@@ -18,7 +19,13 @@
 #define TEST_NETWORKPACKET_SENDGAMEINFO         1
 #define TEST_NETWORKPACKET_CLIENTSTATS          13
 #define TEST_NETWORKPACKET_KEEPALIVE            19
-#define TEST_NETWORK_PROTOCOL_VERSION           3
+#define TEST_NETWORK_PROTOCOL_VERSION           4
+
+TEST_CASE("NetworkManager: nine-house state requires protocol 4", "[network][protocol]") {
+    REQUIRE(NETWORK_PROTOCOL_VERSION == 4);
+    REQUIRE(TEST_NETWORK_PROTOCOL_VERSION != 3);
+    REQUIRE(NETWORKDISCONNECT_PROTOCOL_MISMATCH == 5);
+}
 
 // ENet initialization fixture
 struct ENetFixture {

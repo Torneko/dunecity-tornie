@@ -16,6 +16,7 @@
  */
 
 #include <globals.h>
+#include <mod/ModManager.h>
 
 #include <SoundPlayer.h>
 #include <FileClasses/music/MusicPlayer.h>
@@ -72,7 +73,8 @@ std::array<int, NUM_HOUSES> houseToVisualHouse = {
     HOUSE_SARDAUKAR,
     HOUSE_MERCENARY,
     HOUSE_NEUTRAL,
-    HOUSE_REBELS
+    HOUSE_REBELS,
+    HOUSE_CUSTOM
 };
 
 void loadCustomPalette() {
@@ -105,6 +107,52 @@ void applyCustomPaletteRuntimeHouseRamps() {
         color.b = rebelsGreyRamp[k];
         color.a = 255;
     }
+}
+
+bool isHouseAvailable(HOUSETYPE house) {
+    if(house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) return true;
+    return house == HOUSE_CUSTOM
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().isCustomHouseRegistered();
+}
+
+int getNumAvailableHouses() {
+    return NUM_LEGACY_HOUSES + (isHouseAvailable(HOUSE_CUSTOM) ? 1 : 0);
+}
+
+char getHouseScenarioLetter(HOUSETYPE house) {
+    if(house == HOUSE_CUSTOM) {
+        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
+        return isHouseAvailable(house) ? info.scenarioLetter : '?';
+    }
+    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) ? houseChar[house] : '?';
+}
+
+std::string getHouseRegionPrefix(HOUSETYPE house) {
+    if(house == HOUSE_CUSTOM) {
+        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
+        return isHouseAvailable(house) ? info.regionPrefix : std::string();
+    }
+    static const char* const prefixes[NUM_LEGACY_HOUSES] = {
+        "HAR", "ATR", "ORD", "FRE", "SAR", "MER", "NEU", "REB"
+    };
+    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) ? prefixes[house] : std::string();
+}
+
+int getHousePaletteIndex(HOUSETYPE house) {
+    if(house == HOUSE_CUSTOM) {
+        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
+        return isHouseAvailable(house) ? info.paletteIndex : PALCOLOR_HARKONNEN;
+    }
+    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES)
+        ? houseToPaletteIndex[house]
+        : PALCOLOR_HARKONNEN;
+}
+
+HOUSETYPE getHouseFallbackHouse(HOUSETYPE house) {
+    if(house != HOUSE_CUSTOM) return house;
+    const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
+    return isHouseAvailable(house) ? static_cast<HOUSETYPE>(info.fallbackHouse) : HOUSE_HARKONNEN;
 }
 
 void resetHouseVisualHouseMapping() {

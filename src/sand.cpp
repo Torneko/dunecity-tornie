@@ -18,6 +18,7 @@
 #include <sand.h>
 
 #include <globals.h>
+#include <mod/ModManager.h>
 
 #include <FileClasses/GFXManager.h>
 #include <FileClasses/TextManager.h>
@@ -492,6 +493,8 @@ HOUSETYPE getHouseByName(const std::string& name) {
     else if(lowerName == "mercenary")    return HOUSE_MERCENARY;
     else if(lowerName == "neutral")      return HOUSE_NEUTRAL;
     else if((lowerName == "rebel") || (lowerName == "rebels")) return HOUSE_REBELS;
+    else if(isHouseAvailable(HOUSE_CUSTOM)
+            && lowerName == strToLower(ModManager::instance().getActiveCustomHouseInfo().displayName)) return HOUSE_CUSTOM;
     else                                return HOUSE_INVALID;
 }
 
@@ -501,20 +504,18 @@ HOUSETYPE getHouseByName(const std::string& name) {
     \return the name of the house (e.g. "Atreides").
 */
 std::string getHouseNameByNumber(HOUSETYPE house) {
-    if(house >= 0 && house < NUM_HOUSES) {
-        static const char* const houseName[NUM_HOUSES] = {  "Harkonnen",
-                                                            "Atreides",
-                                                            "Ordos",
-                                                            "Fremen",
-                                                            "Sardaukar",
-                                                            "Mercenary",
-                                                            "Neutral",
-                                                            "Rebels"
-                                                   };
-        return houseName[house];
-    } else {
-        THROW(std::invalid_argument, "Invalid house number %d!", house);
+    if(house == HOUSE_CUSTOM) {
+        if(isHouseAvailable(house)) return ModManager::instance().getActiveCustomHouseInfo().displayName;
+        return "Custom";
     }
+    if(house >= 0 && house < NUM_LEGACY_HOUSES) {
+        static const char* const houseName[NUM_LEGACY_HOUSES] = {
+            "Harkonnen", "Atreides", "Ordos", "Fremen", "Sardaukar",
+            "Mercenary", "Neutral", "Rebels"
+        };
+        return houseName[house];
+    }
+    THROW(std::invalid_argument, "Invalid house number %d!", house);
 }
 
 ATTACKMODE getAttackModeByName(const std::string& name) {

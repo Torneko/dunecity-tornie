@@ -230,7 +230,7 @@ protected:
     ObjectPointer target;            ///< The target to attack or move to
     ATTACKMODE    attackMode;        ///< The attack mode of this unit/structure
 
-    std::bitset<NUM_TEAMS> visible;  ///< To which teams is this unit visible?
+    std::bitset<NUM_TEAM_SLOTS> visible;  ///< To which teams is this unit visible?
 
     // drawing information
     bool     badlyDamaged;           ///< Is the health below 50%?

@@ -167,9 +167,12 @@ ObjectBase::ObjectBase(InputStream& stream) {
 
     // The packed save field contains 8 bits. Keep the ninth team-array slot
     // initialized instead of indexing past the old seven-element temporary.
-    std::array<bool, NUM_TEAMS> b{};
+    std::array<bool, NUM_TEAM_SLOTS> b{};
 
     stream.readBools(&b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7]);
+    if(currentGame && currentGame->getLoadedSavegameVersion() >= 9821) {
+        stream.readBools(&b[8], &b[9]);
+    }
 
     for (decltype(visible.size()) i = 0; i < visible.size(); ++i)
         visible[i] = b[i];
@@ -237,6 +240,7 @@ void ObjectBase::save(OutputStream& stream) const {
     stream.writeUint32(attackMode);
 
     stream.writeBools(visible[0], visible[1], visible[2], visible[3], visible[4], visible[5], visible[6], visible[7]);
+    stream.writeBools(visible[8], visible[9]);
 }
 
 
@@ -369,7 +373,7 @@ void ObjectBase::setVisible(int teamID, bool status) {
             visible.set();
         else
             visible.reset();
-    } else if ((teamID >= 0) && (teamID < NUM_TEAMS)) {
+    } else if ((teamID >= 0) && (teamID < NUM_TEAM_SLOTS)) {
         visible[teamID] = status;
     }
 }
@@ -408,7 +412,7 @@ bool ObjectBase::isOnScreen() const {
 }
 
 bool ObjectBase::isVisible(int teamID) const {
-    if((teamID >= 0) && (teamID < NUM_TEAMS)) {
+    if((teamID >= 0) && (teamID < NUM_TEAM_SLOTS)) {
         return visible[teamID];
     } else {
         return false;

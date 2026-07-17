@@ -676,7 +676,7 @@ void MapEditor::saveMap(const std::string& filepath) {
     }
 
 
-    for(int i=1;i<=NUM_HOUSES;i++) {
+    for(int i=1;i<=getNumAvailableHouses();i++) {
         loadedINIFile->removeSection("player" + std::to_string(i));
     }
 
@@ -723,7 +723,7 @@ void MapEditor::saveMap(const std::string& filepath) {
     }
 
     // remove players that are leftovers
-    for(int i=currentAnyHouseNumber;i<NUM_HOUSES;i++) {
+    for(int i=currentAnyHouseNumber;i<getNumAvailableHouses();i++) {
         loadedINIFile->removeSection("Player" + std::to_string(i));
     }
 
@@ -909,8 +909,8 @@ void MapEditor::performMapEdit(int xpos, int ypos, bool bRepeated) {
                 for(int i=0;i<mapMirror->getSize();i++) {
 
                     int nextHouse = HOUSE_INVALID;
-                    for(int k = currentHouse; k < currentHouse+NUM_HOUSES;k++) {
-                        if(players[k%NUM_HOUSES].bActive == bHouseIsActive) {
+                    for(int k = currentHouse; k < currentHouse+getNumAvailableHouses();k++) {
+                        if(players[k%getNumAvailableHouses()].bActive == bHouseIsActive) {
                             nextHouse = k;
                             break;
                         }
@@ -919,7 +919,7 @@ void MapEditor::performMapEdit(int xpos, int ypos, bool bRepeated) {
                     if(nextHouse != HOUSE_INVALID) {
                         Coord position = mapMirror->getCoord( Coord(xpos, ypos), i, structureSize);
 
-                        MapEditorStructurePlaceOperation placeOperation(position, (HOUSETYPE) (nextHouse%NUM_HOUSES), currentEditorMode.itemID, currentEditorMode.health);
+                        MapEditorStructurePlaceOperation placeOperation(position, (HOUSETYPE) (nextHouse%getNumAvailableHouses()), currentEditorMode.itemID, currentEditorMode.health);
 
                         addUndoOperation(placeOperation.perform(this));
 
@@ -951,8 +951,8 @@ void MapEditor::performMapEdit(int xpos, int ypos, bool bRepeated) {
                 for(int i=0;i<mapMirror->getSize();i++) {
 
                     int nextHouse = HOUSE_INVALID;
-                    for(int k = currentHouse; k < currentHouse+NUM_HOUSES;k++) {
-                        if(players[k%NUM_HOUSES].bActive == bHouseIsActive) {
+                    for(int k = currentHouse; k < currentHouse+getNumAvailableHouses();k++) {
+                        if(players[k%getNumAvailableHouses()].bActive == bHouseIsActive) {
                             nextHouse = k;
                             break;
                         }
@@ -963,7 +963,7 @@ void MapEditor::performMapEdit(int xpos, int ypos, bool bRepeated) {
 
                         int angle =  mapMirror->getAngle(currentEditorMode.angle, i);
 
-                        MapEditorUnitPlaceOperation placeOperation(position, (HOUSETYPE) (nextHouse%NUM_HOUSES), currentEditorMode.itemID, currentEditorMode.health, angle, currentEditorMode.attackmode);
+                        MapEditorUnitPlaceOperation placeOperation(position, (HOUSETYPE) (nextHouse%getNumAvailableHouses()), currentEditorMode.itemID, currentEditorMode.health, angle, currentEditorMode.attackmode);
 
                         addUndoOperation(placeOperation.perform(this));
                         currentHouse = nextHouse + 1;

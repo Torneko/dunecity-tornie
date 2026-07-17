@@ -93,7 +93,7 @@ public:
                                count (e.g. LEGACY_NUM_ITEM_ID_9810 for v1.0.7).
         \see save
     */
-    void load(InputStream& stream, int savedItemCount = 0);
+    void load(InputStream& stream, int savedItemCount = 0, int savedHouseCount = NUM_HOUSES);
 
     /**
         Logs all loaded object data to SDL log for debugging.

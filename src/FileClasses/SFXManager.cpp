@@ -95,7 +95,8 @@ void SFXManager::loadEnglishVoice() {
 
         std::string HouseString;
         const int VoiceNum = house;
-        switch(house) {
+        const HOUSETYPE contentHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(house));
+        switch(contentHouse) {
             case HOUSE_HARKONNEN:
                 HouseString = "H";
                 HouseNameChunk = getChunkFromFile("HHARK.VOC", "HARK.VOC");
