@@ -34,7 +34,7 @@
     {
       "name": "generic-mod-scoped-mentat-api",
       "status": "fork-milestone",
-      "commit": "6ea6ec2736d840f67e079c83ef7b337998ab513c"
+      "commit": "1ad6a8a608a70c58353613e7d69152fb2a078fd4"
     }
   ],
   "isolation": {

@@ -16,3 +16,4 @@
 ## 1.0.523 presentation integration follow-up
 
 - Register the Tharpique herald and processed house-name voice through the generic mod-scoped custom-house hooks.
+- Require the generic custom-house palette routing and editor Team9 correction.
