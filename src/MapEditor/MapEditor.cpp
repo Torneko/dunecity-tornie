@@ -250,6 +250,9 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"CPU",25));
         players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"CPU",25));
         players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"CPU",25));
+        if(isHouseAvailable(HOUSE_CUSTOM)) {
+            players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"CPU",25));
+        }
     } else {
         players.push_back(Player(getHouseNameByNumber(HOUSE_HARKONNEN),HOUSE_HARKONNEN,HOUSE_HARKONNEN,true,true,"Team1"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_ATREIDES),HOUSE_ATREIDES,HOUSE_ATREIDES,true,true,"Team2"));
@@ -259,6 +262,12 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
+    if(isHouseAvailable(HOUSE_CUSTOM)) {
+        players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+    }
+        if(isHouseAvailable(HOUSE_CUSTOM)) {
+            players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+        }
     }
 
     // setup default choam
@@ -443,6 +452,9 @@ void MapEditor::loadMap(const std::string& filepath) {
     players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
     players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
     players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
+    if(isHouseAvailable(HOUSE_CUSTOM)) {
+        players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+    }
 
     // load map
     loadedINIFile = std::make_unique<INIFile>(filepath, false);
