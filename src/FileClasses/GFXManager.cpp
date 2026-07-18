@@ -3976,19 +3976,22 @@ static void normalizeTornieStructureTeamPaintToHarkonnen(SDL_Surface* surface, u
                 continue;
             }
 
+            // Choose the nearest Harkonnen ramp shade by brightness. The old
+            // upper-bound thresholds shifted every source colour one shade
+            // darker (for example 214 -> 182 and 182 -> 153).
             const int brightness = std::max(std::max(r, g), b);
             int shade = 6;
-            if(brightness >= 224) {
+            if(brightness >= 198) {
                 shade = 0;
-            } else if(brightness >= 192) {
+            } else if(brightness >= 168) {
                 shade = 1;
-            } else if(brightness >= 160) {
+            } else if(brightness >= 139) {
                 shade = 2;
-            } else if(brightness >= 128) {
+            } else if(brightness >= 107) {
                 shade = 3;
-            } else if(brightness >= 96) {
+            } else if(brightness >= 75) {
                 shade = 4;
-            } else if(brightness >= 64) {
+            } else if(brightness >= 46) {
                 shade = 5;
             }
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
