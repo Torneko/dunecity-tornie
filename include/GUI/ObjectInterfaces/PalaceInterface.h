@@ -97,7 +97,7 @@ protected:
         if(pPalace != nullptr) {
             int picID;
 
-            switch(pPalace->getOriginalHouseID()) {
+            switch(getHouseFallbackHouse(static_cast<HOUSETYPE>(pPalace->getOriginalHouseID()))) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR: {
                     picID = Picture_DeathHand;
@@ -151,7 +151,8 @@ private:
 
         Palace* pPalace = dynamic_cast<Palace*>(pObject);
         if(pPalace != nullptr) {
-            if((pPalace->getOriginalHouseID() == HOUSE_HARKONNEN) || (pPalace->getOriginalHouseID() == HOUSE_SARDAUKAR)) {
+            const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(pPalace->getOriginalHouseID()));
+            if((palaceHouse == HOUSE_HARKONNEN) || (palaceHouse == HOUSE_SARDAUKAR)) {
                 currentGame->setCursorMode(Game::CursorMode_Attack);
             } else {
                 pPalace->handleSpecialClick();

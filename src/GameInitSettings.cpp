@@ -202,8 +202,14 @@ void GameInitSettings::save(OutputStream& stream) const {
 
 
 
+void GameInitSettings::migrateLegacyHouseColorSlots() {
+    for(HouseInfo& houseInfo : houseInfoList) {
+        houseInfo.colorOfHouse = migrateLegacyHouseColorSlot(houseInfo.colorOfHouse);
+    }
+}
+
 std::string GameInitSettings::getScenarioFilename(HOUSETYPE newHouse, int mission) {
-    if( (newHouse < 0) || (newHouse >= NUM_HOUSES)) {
+    if((newHouse < 0) || (newHouse >= NUM_HOUSES) || !isHouseAvailable(newHouse)) {
         THROW(std::invalid_argument, "GameInitSettings::getScenarioFilename(): Invalid house id " + std::to_string(newHouse) + ".");
     }
 
@@ -212,7 +218,7 @@ std::string GameInitSettings::getScenarioFilename(HOUSETYPE newHouse, int missio
     }
 
     std::string name = "SCEN?0??.INI";
-    name[4] = houseChar[newHouse];
+    name[4] = getHouseScenarioLetter(newHouse);
 
     name[6] = '0' + (mission / 10);
     name[7] = '0' + (mission % 10);

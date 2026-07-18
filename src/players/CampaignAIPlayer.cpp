@@ -333,8 +333,8 @@ void CampaignAIPlayer::updateStructures() {
         if(pStructure->getItemID() == Structure_Palace) {
             const Palace* pPalace = static_cast<const Palace*>(pStructure);
             if(pPalace->isSpecialWeaponReady()) {
-                if(getHouse()->getHouseID() != HOUSE_HARKONNEN && 
-                   getHouse()->getHouseID() != HOUSE_SARDAUKAR) {
+                const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(getHouse()->getHouseID()));
+                if(palaceHouse != HOUSE_HARKONNEN && palaceHouse != HOUSE_SARDAUKAR) {
                     doSpecialWeapon(pPalace);
                 } else {
                     // Death Hand - target house with most structures

@@ -3437,6 +3437,9 @@ bool Game::loadSaveGame(InputStream& stream) {
     // read gameInitSettings
     logLoadStage("game settings");
     gameInitSettings = GameInitSettings(stream);
+    if(savegameVersion <= 9820) {
+        gameInitSettings.migrateLegacyHouseColorSlots();
+    }
 
     // read the actual house setup choosen at the beginning of the game
     logLoadStage("house setup");
@@ -3454,7 +3457,10 @@ bool Game::loadSaveGame(InputStream& stream) {
 
         const Uint32 numHouseColors = stream.readUint32();
         for(Uint32 i=0; i<numHouseColors; i++) {
-            const int colorOfHouse = stream.readSint32();
+            int colorOfHouse = stream.readSint32();
+            if(savegameVersion <= 9820) {
+                colorOfHouse = migrateLegacyHouseColorSlot(colorOfHouse);
+            }
             if(i < houseInfoListSetup.size()) {
                 houseInfoListSetup[i].colorOfHouse = colorOfHouse;
             }
@@ -3503,16 +3509,17 @@ bool Game::loadSaveGame(InputStream& stream) {
     //   "dunelegacy*"               → 41 items (original Dune Legacy 0.99.x)
     //   "dunecity1.0.0"–"1.0.7"    → 48 items
     //   "dunecity1.0.8"–"1.0.10"   → 52 items
+    const int savedHouseCount = (savegameVersion >= 9821) ? NUM_HOUSES : NUM_LEGACY_HOUSES;
     int savedItemCount = determineLegacySavedItemCount(savegameVersion, duneVersion);
     if(savedItemCount != 0) {
         SDL_Log("Game::loadSaveGame(): legacy save v%d (%s) — loading %d items (current: %d)",
                 savegameVersion, duneVersion.c_str(), savedItemCount, Num_ItemID);
     }
-    objectData.load(stream, savedItemCount);
+    objectData.load(stream, savedItemCount, savedHouseCount);
 
     //load the house(s) info
     logLoadStage("houses and players");
-    for(int i=0; i<NUM_HOUSES; i++) {
+    for(int i=0; i<savedHouseCount; i++) {
         if (stream.readBool() == true) {
             //house in game
             house[i] = std::make_unique<House>(stream);

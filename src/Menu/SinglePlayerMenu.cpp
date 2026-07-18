@@ -143,6 +143,9 @@ void SinglePlayerMenu::onCampaign() {
     }
 
     for(int houseID = 0; houseID < NUM_HOUSES; houseID++) {
+        if(!isHouseAvailable(static_cast<HOUSETYPE>(houseID))) {
+            continue;
+        }
         if(houseID == player) {
             GameInitSettings::HouseInfo humanHouseInfo((HOUSETYPE) player, 1);
             humanHouseInfo.addPlayerInfo( GameInitSettings::PlayerInfo(settings.general.playerName, HUMANPLAYERCLASS) );

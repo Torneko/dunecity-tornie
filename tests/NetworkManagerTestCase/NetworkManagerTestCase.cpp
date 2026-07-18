@@ -8,6 +8,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <Network/ENetHelper.h>
+#include <Network/NetworkManager.h>
 #include <Network/ENetPacketOStream.h>
 #include <Network/ENetPacketIStream.h>
 
@@ -18,7 +19,42 @@
 #define TEST_NETWORKPACKET_SENDGAMEINFO         1
 #define TEST_NETWORKPACKET_CLIENTSTATS          13
 #define TEST_NETWORKPACKET_KEEPALIVE            19
-#define TEST_NETWORK_PROTOCOL_VERSION           3
+#define TEST_NETWORK_PROTOCOL_VERSION           4
+
+TEST_CASE("NetworkManager: nine-house state requires protocol 4", "[network][protocol]") {
+    REQUIRE(NETWORK_PROTOCOL_VERSION == 4);
+    REQUIRE(TEST_NETWORK_PROTOCOL_VERSION != 3);
+    REQUIRE(NETWORKDISCONNECT_PROTOCOL_MISMATCH == 5);
+}
+
+TEST_CASE("NetworkManager: current protocol handshake does not disconnect",
+          "[network][protocol][handshake]") {
+    bool disconnectCalled = false;
+    const bool rejected = rejectIncompatibleNetworkProtocol(
+        NETWORK_PROTOCOL_VERSION,
+        [&disconnectCalled](int) {
+            disconnectCalled = true;
+        });
+
+    REQUIRE_FALSE(rejected);
+    REQUIRE_FALSE(disconnectCalled);
+}
+
+TEST_CASE("NetworkManager: mismatched protocol handshake dispatches rejection cause",
+          "[network][protocol][handshake][regression]") {
+    bool disconnectCalled = false;
+    int disconnectCause = -1;
+    const bool rejected = rejectIncompatibleNetworkProtocol(
+        NETWORK_PROTOCOL_VERSION - 1,
+        [&disconnectCalled, &disconnectCause](int cause) {
+            disconnectCalled = true;
+            disconnectCause = cause;
+        });
+
+    REQUIRE(rejected);
+    REQUIRE(disconnectCalled);
+    REQUIRE(disconnectCause == NETWORKDISCONNECT_PROTOCOL_MISMATCH);
+}
 
 // ENet initialization fixture
 struct ENetFixture {

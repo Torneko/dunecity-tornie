@@ -596,6 +596,10 @@ void MultiPlayerMenu::showDisconnectMessageBox(int cause) {
             openWindow(MsgBox::create(_("There is no free player slot in this game left!")));
         } break;
 
+        case NETWORKDISCONNECT_PROTOCOL_MISMATCH: {
+            openWindow(MsgBox::create(_("The game host uses an incompatible network protocol version. Please use the same Dune City version.")));
+        } break;
+
         default: {
             openWindow(MsgBox::create(_("The connection to the game host was lost!")));
         } break;

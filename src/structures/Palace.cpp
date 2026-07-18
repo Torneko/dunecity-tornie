@@ -103,7 +103,7 @@ void Palace::doSpecialWeapon() {
         return;
     }
 
-    switch (originalHouseID) {
+    switch (getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID))) {
         case HOUSE_HARKONNEN:
         case HOUSE_SARDAUKAR: {
             // wrong house (see DoLaunchDeathhand)
@@ -143,7 +143,8 @@ void Palace::doLaunchDeathhand(int x, int y) {
         return;
     }
 
-    if((originalHouseID != HOUSE_HARKONNEN) && (originalHouseID != HOUSE_SARDAUKAR)) {
+    const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID));
+    if((palaceHouse != HOUSE_HARKONNEN) && (palaceHouse != HOUSE_SARDAUKAR)) {
         // wrong house (see DoSpecialWeapon)
         return;
     }
@@ -187,7 +188,7 @@ void Palace::updateStructureSpecificStuff() {
                 currentGame->addToNewsTicker(_("Palace is ready"));
             } else if(getOwner()->isAI()) {
 
-                if((originalHouseID == HOUSE_HARKONNEN) || (originalHouseID == HOUSE_SARDAUKAR)) {
+                if((getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID)) == HOUSE_HARKONNEN) || (getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID)) == HOUSE_SARDAUKAR)) {
                     // Harkonnen and Sardaukar
 
                     //old tergetting logic used by default AI

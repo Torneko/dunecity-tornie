@@ -31,8 +31,9 @@ HouseChoiceInfoMenu::HouseChoiceInfoMenu(int newHouse) : MentatMenu(HOUSE_INVALI
     house = newHouse;
 
     Animation* anim = nullptr;
+    const HOUSETYPE displayHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(house));
 
-    switch(house) {
+    switch(displayHouse) {
         case HOUSE_HARKONNEN:   anim = pGFXManager->getAnimation(Anim_HarkonnenPlanet); break;
         case HOUSE_ATREIDES:    anim = pGFXManager->getAnimation(Anim_AtreidesPlanet);  break;
         case HOUSE_ORDOS:       anim = pGFXManager->getAnimation(Anim_OrdosPlanet);     break;

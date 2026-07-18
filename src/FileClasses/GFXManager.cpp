@@ -2772,7 +2772,7 @@ GFXManager::GFXManager() {
                     uiGraphic[UI_Herald_Colored][house] = copySurface(fallback);
                 } else {
                     uiGraphic[UI_Herald_Colored][house] =
-                        mapSurfaceColorRange(fallback, PALCOLOR_HARKONNEN, houseToPaletteIndex[house]);
+                        mapSurfaceColorRange(fallback, PALCOLOR_HARKONNEN, getHousePaletteIndex(static_cast<HOUSETYPE>(house)));
                 }
             }
 

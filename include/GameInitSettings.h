@@ -164,6 +164,7 @@ public:
     ~GameInitSettings();
 
     void save(OutputStream& stream) const;
+    void migrateLegacyHouseColorSlots();
 
     inline GameType getGameType() const { return gameType; };
     inline HOUSETYPE getHouseID() const { return houseID; };

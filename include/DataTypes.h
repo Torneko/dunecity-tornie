@@ -309,8 +309,11 @@ typedef enum
     HOUSE_MERCENARY =  5,
     HOUSE_NEUTRAL   =  6,
     HOUSE_REBELS    =  7,
+    HOUSE_CUSTOM     = 8,
     NUM_HOUSES
 } HOUSETYPE;
+
+constexpr int NUM_LEGACY_HOUSES = 8;
 
 constexpr int HOUSECOLOR_CUSTOM_DARK_VIOLET   = NUM_HOUSES;
 constexpr int HOUSECOLOR_CUSTOM_FUCHSIA       = NUM_HOUSES + 1;
@@ -319,6 +322,13 @@ constexpr int HOUSECOLOR_CUSTOM_BRIGHT_YELLOW = NUM_HOUSES + 3;
 constexpr int HOUSECOLOR_CUSTOM_APPLE_GREEN   = NUM_HOUSES + 4;
 constexpr int HOUSECOLOR_CUSTOM_LIGHT_PINK    = NUM_HOUSES + 5;
 constexpr int NUM_CUSTOM_HOUSE_COLORS         = 6;
+
+constexpr int migrateLegacyHouseColorSlot(int colorSlot) noexcept {
+    return (colorSlot >= NUM_LEGACY_HOUSES
+            && colorSlot < NUM_LEGACY_HOUSES + NUM_CUSTOM_HOUSE_COLORS)
+        ? colorSlot + 1
+        : colorSlot;
+}
 constexpr int NUM_HOUSE_COLOR_SLOTS           = NUM_HOUSES + NUM_CUSTOM_HOUSE_COLORS;
 
 typedef enum {

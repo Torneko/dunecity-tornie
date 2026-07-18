@@ -41,6 +41,7 @@
 #define NETWORKDISCONNECT_TIMEOUT           2
 #define NETWORKDISCONNECT_PLAYER_EXISTS     3
 #define NETWORKDISCONNECT_GAME_FULL         4
+#define NETWORKDISCONNECT_PROTOCOL_MISMATCH 5
 
 #define NETWORKPACKET_UNKNOWN               0
 #define NETWORKPACKET_CONNECT               1
@@ -66,7 +67,19 @@
 // Network protocol version - increment when packet formats change
 // Version 2: Added simMsAvg to NETWORKPACKET_CLIENTSTATS (5 fields instead of 4)
 // Version 3: Added mod transfer packets (MOD_INFO, MOD_REQUEST, MOD_CHUNK, MOD_COMPLETE)
-#define NETWORK_PROTOCOL_VERSION            3
+// Version 4: Fixed nine-house deterministic state and versioned visibility storage
+#define NETWORK_PROTOCOL_VERSION            4
+
+/**
+ * Reject an incompatible config-hash handshake and dispatch its disconnect cause.
+ * Returns true when the peer must be rejected.
+ */
+template<typename DisconnectFunction>
+inline bool rejectIncompatibleNetworkProtocol(Uint32 peerProtocolVersion, DisconnectFunction&& disconnect) {
+    if(peerProtocolVersion == NETWORK_PROTOCOL_VERSION) return false;
+    disconnect(NETWORKDISCONNECT_PROTOCOL_MISMATCH);
+    return true;
+}
 
 // Mod transfer limits
 #define MAX_MOD_TRANSFER_SIZE   (10 * 1024 * 1024)  // 10MB max mod size

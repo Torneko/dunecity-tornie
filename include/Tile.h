@@ -399,8 +399,10 @@ public:
         \param  cycle   the cycle this happens (normally the current game cycle)
     */
     void setExplored(int houseID, Uint32 cycle) {
-        lastAccess[houseID] = cycle;
-        explored[houseID] = true;
+        if(houseID >= 0 && houseID < NUM_HOUSES) {
+            lastAccess[houseID] = cycle;
+            explored[houseID] = true;
+        }
     }
 
     void setOwner(int newOwner) noexcept { owner = newOwner; }
@@ -418,7 +420,7 @@ public:
     bool hasSpice() const noexcept { return (spice > 0); }
     bool infantryNotFull() const noexcept { return (assignedInfantryList.size() < NUM_INFANTRY_PER_TILE); }
     bool isConcrete() const noexcept { return (type == Terrain_Slab); }
-    bool isExploredByHouse(int houseID) const { return explored[houseID]; }
+    bool isExploredByHouse(int houseID) const { return houseID >= 0 && houseID < NUM_HOUSES && explored[houseID]; }
     bool isExploredByTeam(int teamID) const;
 
     bool isFoggedByHouse(int houseID) const noexcept;
@@ -512,8 +514,8 @@ private:
     std::list<Uint32>   assignedUndergroundUnitList;              ///< all underground units on this tile
     std::list<Uint32>   assignedNonInfantryGroundObjectList;      ///< all structures/vehicles on this tile
 
-    Uint32      lastAccess[NUM_TEAMS];    ///< contains for every team when this tile was seen last by this house
-    bool        explored[NUM_TEAMS];      ///< contains for every team if this tile is explored
+    Uint32      lastAccess[NUM_HOUSES];    ///< contains for every team when this tile was seen last by this house
+    bool        explored[NUM_HOUSES];      ///< contains for every team if this tile is explored
 
     // --- DuneCity overlay fields ---
     DuneCity::ZoneType  cityZoneType_ = DuneCity::ZoneType::None;

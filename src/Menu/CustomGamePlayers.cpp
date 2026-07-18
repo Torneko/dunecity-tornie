@@ -41,6 +41,7 @@
 #include <misc/IMemoryStream.h>
 
 #include <INIMap/INIMapPreviewCreator.h>
+#include <INIMap/MapPlayerSectionUtils.h>
 
 #include <misc/DiscordManager.h>
 
@@ -86,7 +87,7 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
             colorDropDown.addEntry(getCustomColorName(h), h);
         }
     } else {
-        for(int h = 0; h < NUM_HOUSES; h++) {
+        for(int h = 0; h < getNumAvailableHouses(); h++) {
             colorDropDown.addEntry(getHouseNameByNumber(static_cast<HOUSETYPE>(h)), h);
         }
     }
@@ -275,7 +276,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
 
     bool thisPlayerPlaced = false;
 
-    for(int i=0;i<NUM_HOUSES;i++) {
+    for(int i=0;i<numHouses;i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
 
         // set up header row with Label "House", DropDown for house selection and DropDown for team selection
@@ -317,7 +318,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
             curHouseInfo.teamDropDown.setEnabled(false);
             curHouseInfo.teamDropDown.setOnClickEnabled(false);
         } else {
-            for(int team = 0 ; team < NUM_TEAMS ; team++) {
+            for(int team = 0 ; team < getNumAvailableHouses() ; team++) {
                 curHouseInfo.teamDropDown.addEntry(_("Team") + " " + std::to_string(team+1), team+1);
             }
             curHouseInfo.teamDropDown.setSelectedItem(slotToTeam[i]);
@@ -729,7 +730,7 @@ ChangeEventList CustomGamePlayers::getChangeEventList()
 {
     ChangeEventList changeEventList;
 
-    for(int i=0;i<NUM_HOUSES;i++) {
+    for(int i=0;i<numHouses;i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
 
         int houseID = curHouseInfo.houseDropDown.getSelectedEntryIntData();
@@ -1129,7 +1130,7 @@ void CustomGamePlayers::updateDiscordGameStarting() {
     std::string playerDetails;
     int playerCount = 0;
     
-    for(int i = 0; i < NUM_HOUSES; i++) {
+    for(int i = 0; i < numHouses; i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
         
         int houseID = curHouseInfo.houseDropDown.getSelectedEntryIntData();
@@ -1205,7 +1206,7 @@ void CustomGamePlayers::onNext()
     bool bDuplicateHouse = false;
     bool bDuplicateColor = false;
 
-    for(int i=0;i<NUM_HOUSES;i++) {
+    for(int i=0;i<numHouses;i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
 
         int currentPlayer1 = curHouseInfo.player1DropDown.getSelectedEntryIntData();
@@ -1222,7 +1223,7 @@ void CustomGamePlayers::onNext()
             }
 
             const int selectedHouse = curHouseInfo.houseDropDown.getSelectedEntryIntData();
-            if(selectedHouse >= 0 && selectedHouse < NUM_HOUSES) {
+            if(selectedHouse >= 0 && isHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
                 if(houseAlreadyUsed[selectedHouse]) {
                     bDuplicateHouse = true;
                 } else {
@@ -1329,7 +1330,7 @@ void CustomGamePlayers::addAllPlayersToGameInitSettings()
 {
     gameInitSettings.clearHouseInfo();
 
-    for(int i=0;i<NUM_HOUSES;i++) {
+    for(int i=0;i<numHouses;i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
 
         int houseID = curHouseInfo.houseDropDown.getSelectedEntryIntData();
@@ -1480,19 +1481,20 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 
 
     boundHousesOnMap.clear();
-    for(int h = 0; h < NUM_HOUSES; h++) {
+    for(int h = 0; h < getNumAvailableHouses(); h++) {
         const HOUSETYPE house = static_cast<HOUSETYPE>(h);
         if(pMap->hasSection(getHouseNameByNumber(house))) {
             boundHousesOnMap.push_back(house);
         }
     }
 
-    numHouses = boundHousesOnMap.size();
-    for(int p = 1; p <= NUM_HOUSES; p++) {
-        if(pMap->hasSection("Player" + std::to_string(p))) {
-            numHouses++;
-        }
-    }
+    const int boundHouseCount = static_cast<int>(boundHousesOnMap.size());
+    const int numberedPlayerCount = MapPlayerSectionUtils::countNumberedPlayerSections(
+        getNumAvailableHouses(),
+        [&pMap](int playerNumber) {
+            return pMap->hasSection("Player" + std::to_string(playerNumber));
+        });
+    numHouses = boundHouseCount + numberedPlayerCount;
 
     mapPropertyPlayers.setText(std::to_string(numHouses));
 
@@ -1535,7 +1537,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
         currentIndex++;
     }
 
-    for(int p = 0; (p < NUM_HOUSES) && (currentIndex < NUM_HOUSES); p++) {
+    for(int p = 0; (p < numHouses) && (currentIndex < numHouses); p++) {
         if(pMap->hasSection("Player" + std::to_string(p+1))) {
             std::string teamName = strToUpper(pMap->getStringValue("Player" + std::to_string(p+1),"Brain","Team " + std::to_string(currentIndex+p+1)));
             teamNames.push_back(teamName);
@@ -1555,7 +1557,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
         }
     }
 
-    for(;currentIndex < NUM_HOUSES; currentIndex++) {
+    for(;currentIndex < numHouses; currentIndex++) {
         slotToTeam[currentIndex] = -1;
     }
 }
@@ -1619,7 +1621,7 @@ void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int house
 
         addToHouseDropDown(curHouseInfo.houseDropDown, HOUSE_INVALID);
 
-        for(int h=0;h<NUM_HOUSES;h++) {
+        for(int h=0;h<getNumAvailableHouses();h++) {
             bool bAddHouse;
 
             bool bCheck;
@@ -1704,7 +1706,7 @@ void CustomGamePlayers::onChangeColorDropDownBoxes(bool bInteractive, int houseI
 }
 
 void CustomGamePlayers::onBonusColorCheckbox(int houseInfoNum) {
-    if(houseInfoNum < 0 || houseInfoNum >= NUM_HOUSES) {
+    if(houseInfoNum < 0 || houseInfoNum >= numHouses) {
         return;
     }
 
@@ -1998,7 +2000,7 @@ void CustomGamePlayers::addToHouseDropDown(DropDownBox& houseDropDownBox, int ho
 
             int currentItemIndex = (houseDropDownBox.getEntryIntData(0) == HOUSE_INVALID) ? 1 : 0;
 
-            for(int h = 0; h < NUM_HOUSES; h++) {
+            for(int h = 0; h < getNumAvailableHouses(); h++) {
                 if(currentItemIndex < houseDropDownBox.getNumEntries() && houseDropDownBox.getEntryIntData(currentItemIndex) == h) {
                     if(h == house) {
                         if(bSelect) {
@@ -2040,7 +2042,7 @@ bool CustomGamePlayers::isBoundedHouseOnMap(HOUSETYPE houseID) {
 }
 
 void CustomGamePlayers::disableAllDropDownBoxes() {
-    for(int i=0;i<NUM_HOUSES;i++) {
+    for(int i=0;i<numHouses;i++) {
         HouseInfo& curHouseInfo = houseInfo[i];
 
         curHouseInfo.houseDropDown.setEnabled(false);

@@ -104,14 +104,16 @@ EXTERN std::array<int, NUM_HOUSES> houseToVisualHouse;  ///< runtime visual colo
 
 
 // constants
-static const int houseToPaletteIndex[NUM_HOUSES] = { PALCOLOR_HARKONNEN, PALCOLOR_ATREIDES, PALCOLOR_ORDOS, PALCOLOR_FREMEN, PALCOLOR_SARDAUKAR, PALCOLOR_MERCENARY, PALCOLOR_NEUTRAL, PALCOLOR_REBELS };    ///< the base colors for the different houses
+static const int houseToPaletteIndex[NUM_HOUSES] = { PALCOLOR_HARKONNEN, PALCOLOR_ATREIDES, PALCOLOR_ORDOS, PALCOLOR_FREMEN, PALCOLOR_SARDAUKAR, PALCOLOR_MERCENARY, PALCOLOR_NEUTRAL, PALCOLOR_REBELS, PALCOLOR_HARKONNEN };    ///< the base colors for the different houses
 static const int houseColorToPaletteIndex[NUM_HOUSE_COLOR_SLOTS] = {
     PALCOLOR_HARKONNEN, PALCOLOR_ATREIDES, PALCOLOR_ORDOS, PALCOLOR_FREMEN,
-    PALCOLOR_SARDAUKAR, PALCOLOR_MERCENARY, PALCOLOR_NEUTRAL, PALCOLOR_REBELS,
+    PALCOLOR_SARDAUKAR, PALCOLOR_MERCENARY, PALCOLOR_NEUTRAL, PALCOLOR_REBELS, PALCOLOR_HARKONNEN,
     PALCOLOR_HARKONNEN, PALCOLOR_ATREIDES, PALCOLOR_ORDOS, PALCOLOR_FREMEN,
     PALCOLOR_SARDAUKAR, PALCOLOR_MERCENARY
 };    ///< palette ramp used by house colors, including custom visual-only colors
-static const char houseChar[] = { 'H', 'A', 'O', 'F', 'S', 'M', 'N', 'R' };   ///< character for each house
+static const char houseChar[] = { 'H', 'A', 'O', 'F', 'S', 'M', 'N', 'R', '?' };   ///< character for each house
+
+int getHousePaletteIndex(HOUSETYPE house);
 
 inline bool isValidHouseColorSlot(int colorSlot) {
     return colorSlot >= 0 && colorSlot < NUM_HOUSE_COLOR_SLOTS;
@@ -135,7 +137,7 @@ inline int getHouseVisualHouse(int house) {
 inline int getHouseColorPaletteIndex(int house) {
     const int visualHouse = getHouseVisualHouse(house);
     if(isValidHouseColorSlot(visualHouse)) {
-        return houseColorToPaletteIndex[visualHouse];
+        return visualHouse == HOUSE_CUSTOM ? getHousePaletteIndex(HOUSE_CUSTOM) : houseColorToPaletteIndex[visualHouse];
     }
 
     return PALCOLOR_HARKONNEN;
@@ -143,7 +145,7 @@ inline int getHouseColorPaletteIndex(int house) {
 
 inline int getHouseColorPaletteIndexFromSlot(int colorSlot) {
     if(isValidHouseColorSlot(colorSlot)) {
-        return houseColorToPaletteIndex[colorSlot];
+        return colorSlot == HOUSE_CUSTOM ? getHousePaletteIndex(HOUSE_CUSTOM) : houseColorToPaletteIndex[colorSlot];
     }
 
     return PALCOLOR_HARKONNEN;
@@ -169,6 +171,12 @@ inline Uint32 getHouseColorRGB(int colorSlot, int shadeOffset = 3) {
 
 void loadCustomPalette();
 void applyCustomPaletteRuntimeHouseRamps();
+bool isHouseAvailable(HOUSETYPE house);
+int getNumAvailableHouses();
+char getHouseScenarioLetter(HOUSETYPE house);
+std::string getHouseRegionPrefix(HOUSETYPE house);
+HOUSETYPE getHouseFallbackHouse(HOUSETYPE house);
+
 void resetHouseVisualHouseMapping();
 void setHouseVisualHouse(HOUSETYPE house, int visualHouse);
 

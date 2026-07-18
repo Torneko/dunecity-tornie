@@ -16,6 +16,7 @@
  */
 
 #include <mod/ModManager.h>
+#include <mod/CustomHouseConfig.h>
 #include <FileClasses/GFXManager.h>
 #include <FileClasses/TextManager.h>
 #include <misc/fnkdat.h>
@@ -49,6 +50,7 @@ static const char* DUNE2R_MOD_NAME = "Dune2R";
 // Install config file names (with .default suffix)
 static const char* OBJECT_DATA_DEFAULT = "ObjectData.ini.default";
 static const char* QUANTBOT_CONFIG_DEFAULT = "QuantBot Config.ini.default";
+static const char* CUSTOM_HOUSE_CONFIG = "CustomHouse.ini";
 
 ModManager& ModManager::instance() {
     static ModManager instance;
@@ -116,12 +118,21 @@ void ModManager::initialize() {
         saveActiveMod();
     }
     
+    activeCustomHouse = readModIni(getModPath(activeMod)).customHouse;
     initialized = true;
     SDL_Log("ModManager: Initialized with active mod '%s'", activeMod.c_str());
 }
 
 std::string ModManager::getActiveModName() const {
     return activeMod;
+}
+
+const CustomHouseInfo& ModManager::getActiveCustomHouseInfo() const {
+    return activeCustomHouse;
+}
+
+bool ModManager::isCustomHouseRegistered() const {
+    return initialized && activeCustomHouse.enabled;
 }
 
 bool ModManager::isCityModeActive() const {
@@ -141,6 +152,7 @@ bool ModManager::setActiveMod(const std::string& name) {
     }
     
     activeMod = name;
+    activeCustomHouse = readModIni(getModPath(activeMod)).customHouse;
     checksumsDirty = true;
     saveActiveMod();
     if(pTextManager != nullptr) {
@@ -452,8 +464,14 @@ void ModManager::updateChecksums() {
         cachedChecksums.gameOptions = "0000000000000000";
     }
     
-    // Combined hash
-    std::string combined = cachedChecksums.objectData + cachedChecksums.quantBotConfig + cachedChecksums.gameOptions;
+    const std::string customHousePath = getModPath(activeMod) + "/" + CUSTOM_HOUSE_CONFIG;
+    cachedChecksums.customHouse = existsFile(customHousePath)
+        ? hashFileCanonical(customHousePath)
+        : std::string();
+
+    // Appending an empty optional hash preserves the exact legacy checksum.
+    std::string combined = cachedChecksums.objectData + cachedChecksums.quantBotConfig
+        + cachedChecksums.gameOptions + cachedChecksums.customHouse;
     uint64_t hash = 14695981039346656037ULL;
     const uint64_t prime = 1099511628211ULL;
     for (char c : combined) {
@@ -1123,6 +1141,11 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
     }
     
     // Simple INI parsing (key = value format)
+    auto trim = [](std::string& s) {
+        while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) s.erase(0, 1);
+        while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\n' || s.back() == '\r')) s.pop_back();
+    };
+
     std::string line;
     while (std::getline(file, line)) {
         // Skip empty lines and comments
@@ -1133,12 +1156,6 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
         
         std::string key = line.substr(0, equalsPos);
         std::string value = line.substr(equalsPos + 1);
-        
-        // Trim whitespace
-        auto trim = [](std::string& s) {
-            while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) s.erase(0, 1);
-            while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\n' || s.back() == '\r')) s.pop_back();
-        };
         
         trim(key);
         trim(value);
@@ -1154,6 +1171,64 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
     }
     
     file.close();
+
+    std::ifstream customFile(modPath + "/" + CUSTOM_HOUSE_CONFIG);
+    if(customFile.is_open()) {
+        std::string section;
+        bool requestedEnabled = false;
+        bool numericFieldsValid = true;
+        while(std::getline(customFile, line)) {
+            trim(line);
+            if(line.empty() || line[0] == '#' || line[0] == ';') continue;
+            if(line.front() == '[' && line.back() == ']') {
+                section = line.substr(1, line.size() - 2);
+                trim(section);
+                continue;
+            }
+            if(section != "House") continue;
+
+            const size_t customEqualsPos = line.find('=');
+            if(customEqualsPos == std::string::npos) continue;
+            std::string customKey = line.substr(0, customEqualsPos);
+            std::string customValue = line.substr(customEqualsPos + 1);
+            trim(customKey);
+            trim(customValue);
+
+            if(customKey == "Enabled") {
+                requestedEnabled = (customValue == "true" || customValue == "1" || customValue == "yes");
+            } else if(customKey == "Display Name") {
+                info.customHouse.displayName = customValue;
+            } else if(customKey == "Scenario Letter" && customValue.size() == 1) {
+                char value = customValue[0];
+                info.customHouse.scenarioLetter = (value >= 'a' && value <= 'z') ? static_cast<char>(value - 'a' + 'A') : value;
+            } else if(customKey == "Region Prefix") {
+                info.customHouse.regionPrefix = customValue;
+                for(char& value : info.customHouse.regionPrefix) {
+                    if(value >= 'a' && value <= 'z') value = static_cast<char>(value - 'a' + 'A');
+                }
+            } else if(customKey == "Palette Index") {
+                if(!CustomHouseConfig::parseInteger(customValue, info.customHouse.paletteIndex)) {
+                    numericFieldsValid = false;
+                }
+            } else if(customKey == "Fallback House") {
+                if(!CustomHouseConfig::parseInteger(customValue, info.customHouse.fallbackHouse)) {
+                    numericFieldsValid = false;
+                }
+            }
+        }
+
+        const bool letterValid = info.customHouse.scenarioLetter >= 'A' && info.customHouse.scenarioLetter <= 'Z';
+        const bool prefixValid = info.customHouse.regionPrefix.size() == 3
+            && info.customHouse.regionPrefix.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ") == std::string::npos;
+        const bool paletteValid = info.customHouse.paletteIndex >= 0 && info.customHouse.paletteIndex <= 248;
+        const bool fallbackValid = info.customHouse.fallbackHouse >= 0
+            && info.customHouse.fallbackHouse < NUM_LEGACY_HOUSES;
+        info.customHouse.enabled = requestedEnabled && !info.customHouse.displayName.empty()
+            && numericFieldsValid && letterValid && prefixValid && paletteValid && fallbackValid;
+        if(requestedEnabled && !info.customHouse.enabled) {
+            SDL_Log("ModManager: Ignoring invalid generic custom-house registration in %s", modPath.c_str());
+        }
+    }
     return info;
 }
 

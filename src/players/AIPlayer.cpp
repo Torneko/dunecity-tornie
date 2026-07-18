@@ -356,7 +356,7 @@ void AIPlayer::build() {
             if(pStructure->getItemID() == Structure_Palace) {
                 const Palace* pPalace = static_cast<const Palace*>(pStructure);
                 if(pPalace->isSpecialWeaponReady()) {
-                    const HOUSETYPE palaceHouse = static_cast<HOUSETYPE>(pPalace->getOriginalHouseID());
+                    const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(pPalace->getOriginalHouseID()));
                     if(palaceHouse == HOUSE_HARKONNEN || palaceHouse == HOUSE_SARDAUKAR) {
                         const House* pBestHouse = nullptr;
                         for(int i = 0; i < NUM_HOUSES; i++) {
@@ -759,9 +759,9 @@ void AIPlayer::checkAllUnits() {
 }
 
 bool AIPlayer::isAllowedToArm() const {
-    int teamScore[NUM_TEAMS];
+    int teamScore[NUM_TEAM_SLOTS];
 
-    for(int i = 0; i < NUM_TEAMS; i++) {
+    for(int i = 0; i < NUM_TEAM_SLOTS; i++) {
         teamScore[i] = 0;
     }
 

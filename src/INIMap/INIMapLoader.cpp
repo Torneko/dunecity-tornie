@@ -43,7 +43,7 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
 
     const bool tornieActive = ModManager::instance().isInitialized()
         && ModManager::instance().getActiveModName() == "Tornie";
-    const auto pool = getSpecialVehiclePoolForHouse(houseID, tornieActive);
+    const auto pool = getSpecialVehiclePoolForHouse(getHouseFallbackHouse(static_cast<HOUSETYPE>(houseID)), tornieActive);
 
     std::vector<int> enabledPool;
     enabledPool.reserve(pool.size());
@@ -423,7 +423,7 @@ void INIMapLoader::loadHouses()
 
     // find "player?" sections
     std::vector<std::string> playerSectionsOnMap;
-    for(int i=1;i<=NUM_HOUSES;i++) {
+    for(int i=1;i<=getNumAvailableHouses();i++) {
         std::string sectionname = "player" + std::to_string(i);
         if(inifile->hasSection(sectionname)) {
             playerSectionsOnMap.push_back(sectionname);
@@ -434,6 +434,7 @@ void INIMapLoader::loadHouses()
     std::vector<HOUSETYPE> unboundedHouses;
 
     for(int h=0;h<NUM_HOUSES;h++) {
+        if(!isHouseAvailable(static_cast<HOUSETYPE>(h))) continue;
         bool bFound = false;
         for(const GameInitSettings::HouseInfo& houseInfo : houseInfoList) {
             if(houseInfo.houseID == (HOUSETYPE) h) {
@@ -450,6 +451,7 @@ void INIMapLoader::loadHouses()
 
     // init housename2house mapping with every house section marked as unused
     for(int i=0;i<NUM_HOUSES;i++) {
+        if(!isHouseAvailable(static_cast<HOUSETYPE>(i))) continue;
         std::string houseName = getHouseNameByNumber((HOUSETYPE) i);
         convertToLower(houseName);
 
