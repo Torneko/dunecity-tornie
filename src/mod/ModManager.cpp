@@ -16,6 +16,7 @@
  */
 
 #include <mod/ModManager.h>
+#include <mod/CustomHouseConfig.h>
 #include <FileClasses/GFXManager.h>
 #include <FileClasses/TextManager.h>
 #include <misc/fnkdat.h>
@@ -1175,6 +1176,7 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
     if(customFile.is_open()) {
         std::string section;
         bool requestedEnabled = false;
+        bool numericFieldsValid = true;
         while(std::getline(customFile, line)) {
             trim(line);
             if(line.empty() || line[0] == '#' || line[0] == ';') continue;
@@ -1205,9 +1207,13 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
                     if(value >= 'a' && value <= 'z') value = static_cast<char>(value - 'a' + 'A');
                 }
             } else if(customKey == "Palette Index") {
-                info.customHouse.paletteIndex = std::stoi(customValue);
+                if(!CustomHouseConfig::parseInteger(customValue, info.customHouse.paletteIndex)) {
+                    numericFieldsValid = false;
+                }
             } else if(customKey == "Fallback House") {
-                info.customHouse.fallbackHouse = std::stoi(customValue);
+                if(!CustomHouseConfig::parseInteger(customValue, info.customHouse.fallbackHouse)) {
+                    numericFieldsValid = false;
+                }
             }
         }
 
@@ -1218,7 +1224,7 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
         const bool fallbackValid = info.customHouse.fallbackHouse >= 0
             && info.customHouse.fallbackHouse < NUM_LEGACY_HOUSES;
         info.customHouse.enabled = requestedEnabled && !info.customHouse.displayName.empty()
-            && letterValid && prefixValid && paletteValid && fallbackValid;
+            && numericFieldsValid && letterValid && prefixValid && paletteValid && fallbackValid;
         if(requestedEnabled && !info.customHouse.enabled) {
             SDL_Log("ModManager: Ignoring invalid generic custom-house registration in %s", modPath.c_str());
         }

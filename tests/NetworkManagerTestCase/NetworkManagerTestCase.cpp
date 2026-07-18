@@ -27,6 +27,35 @@ TEST_CASE("NetworkManager: nine-house state requires protocol 4", "[network][pro
     REQUIRE(NETWORKDISCONNECT_PROTOCOL_MISMATCH == 5);
 }
 
+TEST_CASE("NetworkManager: current protocol handshake does not disconnect",
+          "[network][protocol][handshake]") {
+    bool disconnectCalled = false;
+    const bool rejected = rejectIncompatibleNetworkProtocol(
+        NETWORK_PROTOCOL_VERSION,
+        [&disconnectCalled](int) {
+            disconnectCalled = true;
+        });
+
+    REQUIRE_FALSE(rejected);
+    REQUIRE_FALSE(disconnectCalled);
+}
+
+TEST_CASE("NetworkManager: mismatched protocol handshake dispatches rejection cause",
+          "[network][protocol][handshake][regression]") {
+    bool disconnectCalled = false;
+    int disconnectCause = -1;
+    const bool rejected = rejectIncompatibleNetworkProtocol(
+        NETWORK_PROTOCOL_VERSION - 1,
+        [&disconnectCalled, &disconnectCause](int cause) {
+            disconnectCalled = true;
+            disconnectCause = cause;
+        });
+
+    REQUIRE(rejected);
+    REQUIRE(disconnectCalled);
+    REQUIRE(disconnectCause == NETWORKDISCONNECT_PROTOCOL_MISMATCH);
+}
+
 // ENet initialization fixture
 struct ENetFixture {
     ENetFixture() {

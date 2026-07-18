@@ -41,6 +41,7 @@
 #include <misc/IMemoryStream.h>
 
 #include <INIMap/INIMapPreviewCreator.h>
+#include <INIMap/MapPlayerSectionUtils.h>
 
 #include <misc/DiscordManager.h>
 
@@ -1487,12 +1488,13 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
         }
     }
 
-    numHouses = boundHousesOnMap.size();
-    for(int p = 1; p <= numHouses; p++) {
-        if(pMap->hasSection("Player" + std::to_string(p))) {
-            numHouses++;
-        }
-    }
+    const int boundHouseCount = static_cast<int>(boundHousesOnMap.size());
+    const int numberedPlayerCount = MapPlayerSectionUtils::countNumberedPlayerSections(
+        getNumAvailableHouses(),
+        [&pMap](int playerNumber) {
+            return pMap->hasSection("Player" + std::to_string(playerNumber));
+        });
+    numHouses = boundHouseCount + numberedPlayerCount;
 
     mapPropertyPlayers.setText(std::to_string(numHouses));
 

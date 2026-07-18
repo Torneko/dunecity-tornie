@@ -982,11 +982,15 @@ void NetworkManager::handlePacket(ENetPeer* peer, ENetPacketIStream& packetStrea
                     std::string localQuantBotHash = getQuantBotConfig().getConfigHash();
                     std::string localObjectDataHash = getObjectDataHash();
 
-                    if(peerProtocolVersion != NETWORK_PROTOCOL_VERSION) {
+                    const bool protocolRejected = rejectIncompatibleNetworkProtocol(
+                        peerProtocolVersion,
+                        [peer](int cause) {
+                            enet_peer_disconnect_later(peer, static_cast<enet_uint32>(cause));
+                        });
+                    if(protocolRejected) {
                         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                                      "NetworkManager: rejecting incompatible protocol from %s (peer=%u, local=%u)",
                                      peerData->name.c_str(), peerProtocolVersion, NETWORK_PROTOCOL_VERSION);
-                        enet_peer_disconnect_later(peer, NETWORKDISCONNECT_PROTOCOL_MISMATCH);
                         break;
                     }
                     

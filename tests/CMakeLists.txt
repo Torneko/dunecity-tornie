@@ -12,6 +12,7 @@ target_sources(dunelegacy_tests
     PRIVATE
         PathBudgetTestCase/PathBudgetTestCase.cpp
         NetworkManagerTestCase/NetworkManagerTestCase.cpp
+        GenericNinthHouseRegressionTestCase/GenericNinthHouseRegressionTestCase.cpp
         ZoneStructureTestCase/ZoneStructureTestCase.cpp
         RoadPlacementTestCase/RoadPlacementTestCase.cpp
         CityBudgetIntegrationTestCase/CityBudgetIntegrationTestCase.cpp
