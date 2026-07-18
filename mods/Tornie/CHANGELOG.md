@@ -13,3 +13,6 @@
 - Added mod-scoped Mentat declarations for Atreides, Neutral, Rebels, and Tharpique.
 - Added machine-readable manifest, SHA-256 checksums, provenance notes, and exact-case filenames.
 - No DuneCity application version, save format, or multiplayer protocol change is included in this content milestone.
+## 1.0.523 presentation integration follow-up
+
+- Register the Tharpique herald and processed house-name voice through the generic mod-scoped custom-house hooks.
