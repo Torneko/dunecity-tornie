@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "mod": {
+    "id": "Tornie",
+    "displayName": "Tornie",
+    "version": "1.0.523",
+    "gameVersion": "1.0.522",
+    "author": "Tornie_Panther"
+  },
+  "source": {
+    "upstream": "VR48/dunecity",
+    "baseCommit": "b94a948e864f08ffff881d0d8db21e9c2830d95e"
+  },
+  "customHouse": {
+    "slot": 8,
+    "displayName": "Tharpique",
+    "scenarioLetter": "T",
+    "regionPrefix": "THA",
+    "paletteIndex": 128,
+    "fallbackHouse": 5
+  },
+  "contentRoots": [
+    "campaign",
+    "data",
+    "source-audio",
+    "source-sprites"
+  ],
+  "engineDependencies": [
+    {
+      "name": "generic-ninth-house",
+      "status": "merged",
+      "baseCommit": "b94a948e864f08ffff881d0d8db21e9c2830d95e"
+    },
+    {
+      "name": "generic-mod-scoped-mentat-api",
+      "status": "fork-milestone",
+      "commit": "4f71d90478a217d0dba721e190a0891658f6fd4a"
+    }
+  ],
+  "isolation": {
+    "contentOnly": true,
+    "root": "mods/Tornie",
+    "externalOverrides": [],
+    "switchingAwayRemovesTornieSearchPath": true
+  },
+  "compatibility": {
+    "saveFormatChangedByThisContent": false,
+    "networkProtocolChangedByThisContent": false
+  },
+  "filenameCase": "exact",
+  "checksums": "checksums.sha256",
+  "provenance": "PROVENANCE.md",
+  "changelog": "CHANGELOG.md",
+  "integrationStatus": "content milestone; combined engine integration validation pending"
+}
