@@ -1272,6 +1272,7 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
             }
             else if(mentatKey == "Identity House") parseIntegerField(mentat.identityHouse);
             else if(mentatKey == "Background") mentat.backgroundAsset = mentatValue;
+            else if(mentatKey == "Foreground") mentat.foregroundAsset = mentatValue;
             else if(mentatKey == "Eyes") mentat.eyesAsset = mentatValue;
             else if(mentatKey == "Eyes Frames") parseIntegerField(mentat.eyesFrames);
             else if(mentatKey == "Eyes Frame Rate") parseDoubleField(mentat.eyesFrameRate);

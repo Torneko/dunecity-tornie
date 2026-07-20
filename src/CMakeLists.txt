@@ -624,6 +624,12 @@ if(WIN32)
         FILES "${DATA_DIR}/Dune2-Versions.txt"
         DESTINATION .
     )
+
+    # Neutral's herald is a loose runtime graphic rather than a PAK entry.
+    install(
+        FILES "${DATA_DIR}/HeraldNeu.png"
+        DESTINATION data
+    )
     
     # Install config files from config directory to root installation directory
     install(

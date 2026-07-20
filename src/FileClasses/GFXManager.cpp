@@ -4613,6 +4613,8 @@ void GFXManager::loadMentatGraphics() {
     for(int house = 0; house < NUM_HOUSE_COLOR_SLOTS; house++) {
         uiGraphic[UI_MentatBackground][house].reset();
         uiGraphicTex[UI_MentatBackground][house].reset();
+        modMentatForeground[house].reset();
+        modMentatForegroundTex[house].reset();
         modMentatEyes[house].reset();
         modMentatMouth[house].reset();
     }
@@ -4671,6 +4673,15 @@ void GFXManager::loadMentatGraphics() {
             } else {
                 SDL_Log("GFXManager: Mentat %d background '%s' unavailable; using fallback",
                         house, info.backgroundAsset.c_str());
+            }
+        }
+        if(!info.foregroundAsset.empty()) {
+            auto foreground = loadMentatBackgroundPng(info.foregroundAsset);
+            if(foreground != nullptr) {
+                modMentatForeground[house] = std::move(foreground);
+            } else {
+                SDL_Log("GFXManager: Mentat %d foreground '%s' unavailable; using fallback",
+                        house, info.foregroundAsset.c_str());
             }
         }
         if(!info.eyesAsset.empty()) {
@@ -4781,6 +4792,17 @@ Animation* GFXManager::getMentatMouthAnimation(int house) {
         case HOUSE_MERCENARY: return getAnimation(Anim_MercenaryMouth);
         default: return getAnimation(Anim_HarkonnenMouth);
     }
+}
+
+SDL_Texture* GFXManager::getMentatForeground(int house) {
+    if(house < 0 || house >= NUM_HOUSE_COLOR_SLOTS || modMentatForeground[house] == nullptr) {
+        return nullptr;
+    }
+
+    if(modMentatForegroundTex[house] == nullptr) {
+        modMentatForegroundTex[house] = convertSurfaceToTexture(modMentatForeground[house].get());
+    }
+    return modMentatForegroundTex[house].get();
 }
 
 bool GFXManager::hasObjPic(unsigned int id, int house, unsigned int z) const {

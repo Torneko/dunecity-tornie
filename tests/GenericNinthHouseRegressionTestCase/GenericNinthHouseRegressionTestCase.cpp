@@ -89,6 +89,7 @@ TEST_CASE("Invalid optional Mentat fields disable the override safely",
     valid.enabled = true;
     valid.identityHouse = 1;
     valid.backgroundAsset = "mentat/background.png";
+    valid.foregroundAsset = "mentat/foreground.png";
     valid.eyesAsset = "mentat/eyes.png";
     valid.mouthAsset = "mentat/mouth.png";
     REQUIRE(ModMentatConfig::isValid(valid));
@@ -104,6 +105,10 @@ TEST_CASE("Invalid optional Mentat fields disable the override safely",
     ModMentatInfo invalidPath = valid;
     invalidPath.backgroundAsset = "../leaked.png";
     REQUIRE_FALSE(ModMentatConfig::isValid(invalidPath));
+
+    ModMentatInfo invalidForegroundPath = valid;
+    invalidForegroundPath.foregroundAsset = "../other-mod/foreground.png";
+    REQUIRE_FALSE(ModMentatConfig::isValid(invalidForegroundPath));
 }
 
 TEST_CASE("Custom-house presentation numbers parse safely and remain bounded",

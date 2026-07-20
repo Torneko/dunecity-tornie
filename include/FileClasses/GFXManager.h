@@ -603,6 +603,7 @@ public:
     void reloadModDependentUiGraphics();
     Animation* getMentatEyesAnimation(int house);
     Animation* getMentatMouthAnimation(int house);
+    SDL_Texture* getMentatForeground(int house);
 
     SDL_Texture*     getSmallDetailPic(unsigned int id);
     SDL_Texture*     getTinyPicture(unsigned int id);
@@ -652,6 +653,7 @@ private:
     std::array<std::array<sdl2::surface_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_UIGRAPHICS> uiGraphic;
     std::array<std::array<sdl2::surface_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_MAPCHOICEPIECES> mapChoicePieces;
     std::array<std::unique_ptr<Animation>, NUM_ANIMATION> animation{};
+    std::array<sdl2::surface_ptr, NUM_HOUSE_COLOR_SLOTS> modMentatForeground{};
     std::array<std::unique_ptr<Animation>, NUM_HOUSE_COLOR_SLOTS> modMentatEyes{};
     std::array<std::unique_ptr<Animation>, NUM_HOUSE_COLOR_SLOTS> modMentatMouth{};
 
@@ -665,6 +667,7 @@ private:
     std::array<sdl2::texture_ptr, NUM_TINYPICTURE> tinyPictureTex;
     std::array<std::array<sdl2::texture_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_UIGRAPHICS> uiGraphicTex;
     std::array<std::array<sdl2::texture_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_MAPCHOICEPIECES> mapChoicePiecesTex;
+    std::array<sdl2::texture_ptr, NUM_HOUSE_COLOR_SLOTS> modMentatForegroundTex{};
 };
 
 #endif // GFXMANAGER_H

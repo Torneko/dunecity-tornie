@@ -262,7 +262,15 @@ void MentatMenu::drawSpecificStuff() {
         } break;
     }
 
-    shoulderAnim.draw(shoulderPos);
+    SDL_Texture* foreground = pGFXManager->getMentatForeground(house);
+    if(foreground != nullptr) {
+        SDL_Rect destination{ getPosition().x, getPosition().y, 0, 0 };
+        if(SDL_QueryTexture(foreground, nullptr, nullptr, &destination.w, &destination.h) == 0) {
+            SDL_RenderCopy(renderer, foreground, nullptr, &destination);
+        }
+    } else {
+        shoulderAnim.draw(shoulderPos);
+    }
     textLabel.draw(Point(10,5) + getPosition());
 }
 
