@@ -4092,6 +4092,33 @@ static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const
     return remapped;
 }
 
+static int getNearestHarkonnenShade(const SDL_Palette* palette, int brightness) {
+    if(!palette) {
+        return 0;
+    }
+
+    int bestShade = 0;
+    int bestDistance = 256;
+    for(int shade = 0; shade < 7; ++shade) {
+        const int paletteIndex = PALCOLOR_HARKONNEN + shade;
+        if(paletteIndex >= palette->ncolors) {
+            break;
+        }
+
+        const SDL_Color rampColor = palette->colors[paletteIndex];
+        const int rampBrightness = std::max(std::max(static_cast<int>(rampColor.r),
+                                                     static_cast<int>(rampColor.g)),
+                                            static_cast<int>(rampColor.b));
+        const int distance = std::abs(brightness - rampBrightness);
+        if(distance < bestDistance) {
+            bestDistance = distance;
+            bestShade = shade;
+        }
+    }
+
+    return bestShade;
+}
+
 static void normalizeTornieStructureTeamPaintToHarkonnen(SDL_Surface* surface, unsigned int objPicID) {
     if(!surface || !surface->format || !surface->format->palette || surface->format->BytesPerPixel != 1) {
         return;
@@ -4151,24 +4178,8 @@ static void normalizeTornieStructureTeamPaintToHarkonnen(SDL_Surface* surface, u
                 continue;
             }
 
-            // Choose the nearest Harkonnen ramp shade by brightness. The old
-            // upper-bound thresholds shifted every source colour one shade
-            // darker (for example 214 -> 182 and 182 -> 153).
             const int brightness = std::max(std::max(r, g), b);
-            int shade = 6;
-            if(brightness >= 198) {
-                shade = 0;
-            } else if(brightness >= 168) {
-                shade = 1;
-            } else if(brightness >= 139) {
-                shade = 2;
-            } else if(brightness >= 107) {
-                shade = 3;
-            } else if(brightness >= 75) {
-                shade = 4;
-            } else if(brightness >= 46) {
-                shade = 5;
-            }
+            const int shade = getNearestHarkonnenShade(palette, brightness);
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
         }
     }
@@ -4179,14 +4190,7 @@ static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface) {
         return;
     }
 
-    static const int houseColorBases[] = {
-        PALCOLOR_HARKONNEN,
-        PALCOLOR_ATREIDES,
-        PALCOLOR_ORDOS,
-        PALCOLOR_FREMEN,
-        PALCOLOR_SARDAUKAR,
-        PALCOLOR_MERCENARY
-    };
+    static const int houseColorBases[] = { PALCOLOR_HARKONNEN };
 
     SDL_Palette* palette = surface->format->palette;
     sdl2::surface_lock lock{ surface };
@@ -4200,7 +4204,7 @@ static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface) {
 
             for(const int colorBase : houseColorBases) {
                 if(index >= colorBase && index < colorBase + 7) {
-                    const int shade = std::clamp((index - colorBase) + 2, 0, 6);
+                    const int shade = index - colorBase;
                     index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
                     break;
                 }
@@ -4223,6 +4227,9 @@ static void normalizeHarkonnenTeamRed(SDL_Surface* surface) {
             if(index == PALCOLOR_TRANSPARENT || index >= palette->ncolors) {
                 continue;
             }
+            if(index >= PALCOLOR_HARKONNEN && index < PALCOLOR_HARKONNEN + 7) {
+                continue;
+            }
 
             const SDL_Color color = palette->colors[index];
             const int r = static_cast<int>(color.r);
@@ -4236,16 +4243,7 @@ static void normalizeHarkonnenTeamRed(SDL_Surface* surface) {
             }
 
             const int brightness = std::max(std::max(r, g), b);
-            int shade = 2;
-            if(brightness >= 210) {
-                shade = 6;
-            } else if(brightness >= 180) {
-                shade = 5;
-            } else if(brightness >= 150) {
-                shade = 4;
-            } else if(brightness >= 120) {
-                shade = 3;
-            }
+            const int shade = getNearestHarkonnenShade(palette, brightness);
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
         }
     }
@@ -4265,6 +4263,9 @@ static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface) {
             if(index == PALCOLOR_TRANSPARENT || index >= palette->ncolors) {
                 continue;
             }
+            if(index >= PALCOLOR_HARKONNEN && index < PALCOLOR_HARKONNEN + 7) {
+                continue;
+            }
 
             const SDL_Color color = palette->colors[index];
             const int r = static_cast<int>(color.r);
@@ -4277,16 +4278,7 @@ static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface) {
             }
 
             const int brightness = std::max(std::max(r, g), b);
-            int shade = 2;
-            if(brightness >= 210) {
-                shade = 6;
-            } else if(brightness >= 180) {
-                shade = 5;
-            } else if(brightness >= 150) {
-                shade = 4;
-            } else if(brightness >= 120) {
-                shade = 3;
-            }
+            const int shade = getNearestHarkonnenShade(palette, brightness);
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
         }
     }
