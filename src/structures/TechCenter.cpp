@@ -144,10 +144,22 @@ int TechCenter::spawnRandomVehicles(int count) {
     // Keep Tech Center spawns aligned with Unit_Special scenario entries.
     const bool tornieActive = ModManager::instance().isInitialized()
         && ModManager::instance().getActiveModName() == "Tornie";
+    const auto specialVehiclePool = getSpecialVehiclePoolForHouse(originalHouseID, tornieActive);
     std::vector<int> vehiclePool;
-    for(const auto candidate : getSpecialVehiclePoolForHouse(originalHouseID, tornieActive)) {
+    for(const auto candidate : specialVehiclePool) {
         if(isTechCenterSpawnCandidate(candidate, originalHouseID)) {
             vehiclePool.push_back(candidate);
+        }
+    }
+
+    // A registered custom house owns its IX choices through ObjectData rather
+    // than a hard-coded engine table. This also provides a safe generic
+    // fallback for future mods whose special-vehicle pool is not registered.
+    if(specialVehiclePool.empty()) {
+        for(int candidate = ItemID_FirstID; candidate <= ItemID_LastID; ++candidate) {
+            if(isTechCenterSpawnCandidate(candidate, originalHouseID)) {
+                vehiclePool.push_back(candidate);
+            }
         }
     }
 

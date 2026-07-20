@@ -43,7 +43,7 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
 
     const bool tornieActive = ModManager::instance().isInitialized()
         && ModManager::instance().getActiveModName() == "Tornie";
-    const auto pool = getSpecialVehiclePoolForHouse(getHouseFallbackHouse(static_cast<HOUSETYPE>(houseID)), tornieActive);
+    const auto pool = getSpecialVehiclePoolForHouse(houseID, tornieActive);
 
     std::vector<int> enabledPool;
     enabledPool.reserve(pool.size());
@@ -51,6 +51,23 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     for(const int candidate : pool) {
         if(isUnit(candidate) && pGame->objectData.data[candidate][houseID].enabled) {
             enabledPool.push_back(candidate);
+        }
+    }
+
+    // Generic custom houses declare their IX vehicles in ObjectData. Discover
+    // those entries when no explicit engine pool exists so Unit_Special and
+    // Tech Center spawning use the same mod-owned choices.
+    if(pool.empty()) {
+        for(int candidate = ItemID_FirstID; candidate <= ItemID_LastID; ++candidate) {
+            if(!isUnit(candidate)) {
+                continue;
+            }
+            const auto& data = pGame->objectData.data[candidate][houseID];
+            if(data.enabled
+               && data.builder != ItemID_Invalid
+               && data.prerequisiteStructuresSet[Structure_IX]) {
+                enabledPool.push_back(candidate);
+            }
         }
     }
 

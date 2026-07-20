@@ -25,6 +25,7 @@ inline std::vector<int> getSpecialVehiclePoolForHouse(int house, bool tornieActi
             case HOUSE_MERCENARY:  return { Unit_Devastator, Unit_Deviator };
             case HOUSE_NEUTRAL:    return { Unit_EliteLauncher, Unit_EliteSiegeTank };
             case HOUSE_REBELS:     return { Unit_SonicTank, Unit_FlameTank };
+            case HOUSE_CUSTOM:     return { Unit_Deviator, Unit_EliteLauncher };
             default:               return {};
         }
     }
@@ -37,7 +38,8 @@ inline std::vector<int> getSpecialVehiclePoolForHouse(int house, bool tornieActi
         case HOUSE_SARDAUKAR:
         case HOUSE_MERCENARY:
         case HOUSE_NEUTRAL:
-        case HOUSE_REBELS:     return { Unit_SonicTank, Unit_Devastator };
+        case HOUSE_REBELS:
+        case HOUSE_CUSTOM:     return { Unit_SonicTank, Unit_Devastator };
         default:               return {};
     }
 }

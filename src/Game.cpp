@@ -135,14 +135,16 @@ struct StructurePlacementPreview {
 constexpr int TornieStructureFrame_BuildSite = 0;
 constexpr int TornieStructureFrame_Destroyed = 1;
 constexpr int TornieStructureFrame_Active = 2;
+constexpr int TornieWindtrapPreviewFramesX = 10;
+constexpr int TornieWindtrapPreviewFramesY = 7;
 
 bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& preview) {
     switch(itemID) {
         case Structure_AdvancedWindTrap:
             preview = {
                 ObjPic_AdvancedWindTrap,
-                4,
-                1,
+                TornieWindtrapPreviewFramesX,
+                TornieWindtrapPreviewFramesY,
                 TornieStructureFrame_BuildSite,
                 -1
             };
@@ -151,8 +153,8 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
         case Structure_AdvancedWindTrapMK2:
             preview = {
                 ObjPic_AdvancedWindTrap2x3,
-                4,
-                1,
+                TornieWindtrapPreviewFramesX,
+                TornieWindtrapPreviewFramesY,
                 TornieStructureFrame_BuildSite,
                 -1
             };
@@ -161,8 +163,8 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
         case Structure_AdvancedWindTrapMK3:
             preview = {
                 ObjPic_AdvancedWindTrap3x2,
-                4,
-                1,
+                TornieWindtrapPreviewFramesX,
+                TornieWindtrapPreviewFramesY,
                 TornieStructureFrame_BuildSite,
                 -1
             };

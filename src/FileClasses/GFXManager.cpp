@@ -80,9 +80,9 @@ static const Coord objPicTiles[] {
     { 1, 9 },   // ObjPic_Sandworm
     { 4, 1 },   // ObjPic_ConstructionYard
     { 4, 1 },   // ObjPic_Windtrap
-    { 4, 1 },   // ObjPic_AdvancedWindTrap
-    { 4, 1 },   // ObjPic_AdvancedWindTrap2x3
-    { 4, 1 },   // ObjPic_AdvancedWindTrap3x2
+    { 10, 7 },  // ObjPic_AdvancedWindTrap (2 build frames + 66 animated frames)
+    { 10, 7 },  // ObjPic_AdvancedWindTrap2x3 (2 build frames + 66 animated frames)
+    { 10, 7 },  // ObjPic_AdvancedWindTrap3x2 (2 build frames + 66 animated frames)
     { 10, 1 },  // ObjPic_Refinery
     { 4, 1 },   // ObjPic_Barracks
     { 4, 1 },   // ObjPic_WOR
@@ -169,7 +169,11 @@ static void logTornieStructureSurfaceDiagnostics(const char* stage, const char* 
 static bool isTornieStructureObjPic(unsigned int id);
 static const char* getTornieStructureObjPicName(unsigned int id);
 static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette);
-static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette);
+static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source,
+                                                         const SDL_Palette* targetPalette,
+                                                         int reservedIndex = -1,
+                                                         SDL_Color reservedColor = SDL_Color{});
+static sdl2::surface_ptr generateTornieWindtrapAnimationFrames(SDL_Surface* windtrapPic);
 static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface);
 static void normalizeHarkonnenTeamRed(SDL_Surface* surface);
 static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface);
@@ -1512,17 +1516,55 @@ GFXManager::GFXManager() {
                 return false;
             }
 
-            normalizeTornieStructureTeamPaintToHarkonnen(atlas.get(), static_cast<unsigned int>(objPicEnum));
+            normalizeTornieStructureTeamPaintToHarkonnen(
+                atlas.get(), static_cast<unsigned int>(objPicEnum));
             normalizeTransparentPaletteIndexes(atlas.get());
-            objPic[objPicEnum][HOUSE_HARKONNEN][0] = std::move(atlas);
-            objPic[objPicEnum][HOUSE_HARKONNEN][1] =
-                scaleSurfaceNearest(objPic[objPicEnum][HOUSE_HARKONNEN][0].get(), 2);
-            if(objPic[objPicEnum][HOUSE_HARKONNEN][1]) {
-                objPic[objPicEnum][HOUSE_HARKONNEN][2] =
-                    scaleSurfaceNearest(objPic[objPicEnum][HOUSE_HARKONNEN][0].get(), 3);
+
+            bool installedHarkonnen = false;
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                sdl2::surface_ptr indexed;
+                if(colorSlot == HOUSE_HARKONNEN) {
+                    indexed = copySurface(atlas.get());
+                } else {
+                    indexed = mapSurfaceColorRange(
+                        atlas.get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
+                    if(indexed) {
+                        applyCustomVisualColorRamp(indexed.get(), colorSlot);
+                        if(colorSlot == HOUSE_REBELS) {
+                            applyRebelsTint(indexed.get());
+                        }
+                    }
+                }
+
+                if(!indexed) {
+                    SDL_Log("GFXManager: Advanced Windtrap %s color slot %d remap failed",
+                            label, colorSlot);
+                    continue;
+                }
+
+                normalizeTransparentPaletteIndexes(indexed.get());
+                auto animatedAtlas = generateTornieWindtrapAnimationFrames(indexed.get());
+                if(!animatedAtlas) {
+                    SDL_Log("GFXManager: Advanced Windtrap %s color slot %d animation atlas generation failed",
+                            label, colorSlot);
+                    continue;
+                }
+
+                objPic[objPicEnum][colorSlot][0] = std::move(animatedAtlas);
+                objPic[objPicEnum][colorSlot][1] =
+                    scaleSurfaceNearest(objPic[objPicEnum][colorSlot][0].get(), 2);
+                if(objPic[objPicEnum][colorSlot][1]) {
+                    objPic[objPicEnum][colorSlot][2] =
+                        scaleSurfaceNearest(objPic[objPicEnum][colorSlot][0].get(), 3);
+                }
+                installedHarkonnen = installedHarkonnen || colorSlot == HOUSE_HARKONNEN;
             }
-            SDL_Log("GFXManager: Advanced Windtrap %s sprite loaded", label);
-            return true;
+
+            if(installedHarkonnen) {
+                SDL_Log("GFXManager: Advanced Windtrap %s sprite loaded for %d visual colour slots",
+                        label, NUM_HOUSE_COLOR_SLOTS);
+            }
+            return installedHarkonnen;
         };
 
         auto loadIndexedTornieAtlasSource = [&](const char* pngName, const char* label, bool useAssetSpecificTeamPaint = false) -> sdl2::surface_ptr {
@@ -1533,19 +1575,38 @@ GFXManager::GFXManager() {
             }
 
             auto raw = LoadPNG_RW(rwop.get());
-            if(!raw || raw->format->BitsPerPixel != 8 || !raw->format->palette) {
-                SDL_Log("GFXManager: %s sprite '%s' is not 8-bit indexed, refusing it", label, pngName);
+            if(!raw) {
+                SDL_Log("GFXManager: %s sprite '%s' could not be decoded", label, pngName);
                 return nullptr;
+            }
+
+            if(raw->format->BytesPerPixel != 1 || !raw->format->palette) {
+                SDL_Surface* paletteReference = objPic[ObjPic_Windtrap][HOUSE_HARKONNEN][0].get();
+                const SDL_Palette* targetPalette =
+                    (paletteReference && paletteReference->format)
+                        ? paletteReference->format->palette
+                        : nullptr;
+                auto indexed = convertTruecolorSurfaceToPalette(
+                    raw.get(),
+                    targetPalette,
+                    PALCOLOR_WINDTRAP_COLORCYCLE,
+                    SDL_Color{251, 108, 245, SDL_ALPHA_OPAQUE});
+                if(!indexed) {
+                    SDL_Log("GFXManager: %s sprite '%s' could not be converted to the indexed Windtrap palette",
+                            label, pngName);
+                    return nullptr;
+                }
+                raw = std::move(indexed);
+                SDL_Log("GFXManager: %s sprite '%s' converted from truecolor to the indexed Windtrap palette",
+                        label, pngName);
             }
 
             preserveOpaqueBlackIndex(raw.get());
             normalizeTransparentPaletteIndexes(raw.get());
             if(ibmPaletteLoaded) {
-                if(auto remapped = remapIndexedSurfaceToPalette(raw.get(), ibmPalette.getSDLPalette())) {
-                    raw = std::move(remapped);
-                } else {
-                    ibmPalette.applyToSurface(raw.get());
-                }
+                // Tornie structure PNGs encode team-paint brightness in their original
+                // palette indices. Apply IBM.PAL without reassigning those indices.
+                ibmPalette.applyToSurface(raw.get());
                 normalizeTransparentPaletteIndexes(raw.get());
             }
             normalizeHouseColorRangesToHarkonnen(raw.get());
@@ -2109,14 +2170,11 @@ GFXManager::GFXManager() {
     loadTornieStructureSprite(ObjPic_TechCenter, "TechCenter.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "TechCenter", true);
     loadTornieStructureSprite(ObjPic_Scoutpost,  "Scoutpost.png",  Coord(1,1), "BUILDING_1x1_prebuild.png", "Scoutpost", true);
 
-    // v1.0.173-compatible Tornie structure rendering path.
-    //
-    // The older working implementation converted custom building atlases to
-    // truecolor RGBA surfaces before SDL texture creation and populated every
-    // house slot up front. Keep that behavior here for all Tornie structures.
-    // This avoids renderer/backend differences when an 8-bit indexed PNG atlas
-    // is converted lazily after house remapping (the object remains selectable
-    // but its final texture can render as fully transparent on Direct3D11).
+    // Advanced Windtraps are installed per colour slot before their indexed
+    // source atlases are expanded into the 10x7 RGBA animation sheets.
+    // v1.0.173-compatible rendering for the remaining Tornie structures.
+    // Resolve every house palette while indexed, then freeze the final colors
+    // into RGBA before SDL texture creation.
     auto installTornieStructureTruecolorSlots = [&](unsigned int objPicEnum, const char* label) {
         SDL_Surface* base = objPic[objPicEnum][HOUSE_HARKONNEN][0].get();
         if(base == nullptr || base->format == nullptr || base->format->BytesPerPixel != 1
@@ -2183,9 +2241,6 @@ GFXManager::GFXManager() {
                 label, NUM_HOUSE_COLOR_SLOTS);
     };
 
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap,     "AdvancedWindTrap3x3");
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap2x3, "AdvancedWindTrap2x3");
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap3x2, "AdvancedWindTrap3x2");
     installTornieStructureTruecolorSlots(ObjPic_Worfinery,           "Worfinery");
     installTornieStructureTruecolorSlots(ObjPic_TechCenter,          "TechCenter");
     installTornieStructureTruecolorSlots(ObjPic_Scoutpost,           "Scoutpost");
@@ -3822,7 +3877,7 @@ static int findNearestPaletteIndex(const SDL_Palette* palette, const SDL_Color c
     return bestIndex;
 }
 
-static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette) {
+static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette, int reservedIndex, SDL_Color reservedColor) {
     if(!source || !source->format || source->format->BytesPerPixel == 1 || !targetPalette) {
         return nullptr;
     }
@@ -3850,15 +3905,135 @@ static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, c
                 const Uint32 pixel = readSurfacePixelUnchecked(source, x, y);
                 SDL_Color color{};
                 SDL_GetRGBA(pixel, source->format, &color.r, &color.g, &color.b, &color.a);
-                destination[x] = (color.a < 128)
-                    ? static_cast<Uint8>(PALCOLOR_TRANSPARENT)
-                    : static_cast<Uint8>(findNearestPaletteIndex(targetPalette, color));
+                if(color.a < 128) {
+                    destination[x] = static_cast<Uint8>(PALCOLOR_TRANSPARENT);
+                } else if(reservedIndex > PALCOLOR_TRANSPARENT
+                          && reservedIndex < targetPalette->ncolors
+                          && color.r == reservedColor.r
+                          && color.g == reservedColor.g
+                          && color.b == reservedColor.b) {
+                    destination[x] = static_cast<Uint8>(reservedIndex);
+                } else {
+                    destination[x] = static_cast<Uint8>(findNearestPaletteIndex(targetPalette, color));
+                }
             }
         }
     }
 
     SDL_SetColorKey(indexed.get(), SDL_TRUE, PALCOLOR_TRANSPARENT);
     return indexed;
+}
+static sdl2::surface_ptr generateTornieWindtrapAnimationFrames(SDL_Surface* windtrapPic) {
+    constexpr int sourceFrameCount = 4;
+    if(!windtrapPic || !windtrapPic->format || !windtrapPic->format->palette
+       || windtrapPic->format->BytesPerPixel != 1
+       || windtrapPic->w <= 0 || windtrapPic->h <= 0
+       || (windtrapPic->w % sourceFrameCount) != 0) {
+        SDL_Log("TornieGFX: cannot generate Advanced Windtrap animation from an invalid indexed atlas");
+        return nullptr;
+    }
+
+    const int frameWidth = windtrapPic->w / sourceFrameCount;
+    const int frameHeight = windtrapPic->h;
+    const int frameColumns = NUM_WINDTRAP_ANIMATIONS_PER_ROW;
+    const int totalFrames = 2 + NUM_WINDTRAP_ANIMATIONS;
+    const int frameRows = (totalFrames + frameColumns - 1) / frameColumns;
+    const int sizeX = frameColumns * frameWidth;
+    const int sizeY = frameRows * frameHeight;
+
+    sdl2::surface_ptr animation{
+        SDL_CreateRGBSurface(0, sizeX, sizeY, SCREEN_BPP, RMASK, GMASK, BMASK, AMASK)
+    };
+    if(!animation || animation->format->BytesPerPixel < 3) {
+        SDL_Log("TornieGFX: cannot allocate Advanced Windtrap animation atlas");
+        return nullptr;
+    }
+
+    SDL_SetSurfaceBlendMode(animation.get(), SDL_BLENDMODE_NONE);
+    SDL_FillRect(animation.get(), nullptr, SDL_MapRGBA(animation->format, 0, 0, 0, 0));
+
+    sdl2::surface_lock sourceLock{windtrapPic};
+    sdl2::surface_lock destinationLock{animation.get()};
+    const auto* sourcePixels = static_cast<const Uint8*>(sourceLock.pixels());
+    auto* destinationPixels = static_cast<Uint8*>(destinationLock.pixels());
+
+    const auto writePixel = [&](int x, int y, Uint32 pixel) {
+        Uint8* address = destinationPixels
+                       + y * animation->pitch
+                       + x * animation->format->BytesPerPixel;
+        switch(animation->format->BytesPerPixel) {
+            case 2:
+                *reinterpret_cast<Uint16*>(address) = static_cast<Uint16>(pixel);
+                break;
+            case 3:
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+                address[0] = static_cast<Uint8>((pixel >> 16) & 0xFF);
+                address[1] = static_cast<Uint8>((pixel >> 8) & 0xFF);
+                address[2] = static_cast<Uint8>(pixel & 0xFF);
+#else
+                address[0] = static_cast<Uint8>(pixel & 0xFF);
+                address[1] = static_cast<Uint8>((pixel >> 8) & 0xFF);
+                address[2] = static_cast<Uint8>((pixel >> 16) & 0xFF);
+#endif
+                break;
+            case 4:
+                *reinterpret_cast<Uint32*>(address) = pixel;
+                break;
+            default:
+                break;
+        }
+    };
+
+    const auto copyFrame = [&](int sourceFrame, int destinationFrame, const SDL_Color* cycleColor) {
+        const int sourceX = sourceFrame * frameWidth;
+        const int destinationX = (destinationFrame % frameColumns) * frameWidth;
+        const int destinationY = (destinationFrame / frameColumns) * frameHeight;
+
+        for(int y = 0; y < frameHeight; ++y) {
+            const Uint8* sourceRow = sourcePixels + y * windtrapPic->pitch + sourceX;
+            for(int x = 0; x < frameWidth; ++x) {
+                const Uint8 paletteIndex = sourceRow[x];
+                if(paletteIndex == PALCOLOR_TRANSPARENT
+                   || paletteIndex >= windtrapPic->format->palette->ncolors) {
+                    continue;
+                }
+
+                SDL_Color color = windtrapPic->format->palette->colors[paletteIndex];
+                if(cycleColor != nullptr && paletteIndex == PALCOLOR_WINDTRAP_COLORCYCLE) {
+                    color = *cycleColor;
+                }
+                const Uint32 pixel = SDL_MapRGBA(
+                    animation->format, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
+                writePixel(destinationX + x, destinationY + y, pixel);
+            }
+        }
+    };
+
+    copyFrame(0, 0, nullptr);
+    copyFrame(1, 1, nullptr);
+
+    const int colorQuantizer = 255 / std::max(1, (NUM_WINDTRAP_ANIMATIONS / 2) - 2);
+    for(int i = 0; i < NUM_WINDTRAP_ANIMATIONS; ++i) {
+        SDL_Color cycleColor{};
+        if(i < NUM_WINDTRAP_ANIMATIONS / 2) {
+            const int value = i * colorQuantizer;
+            cycleColor.r = static_cast<Uint8>(std::min(80, value));
+            cycleColor.g = static_cast<Uint8>(std::min(80, value));
+            cycleColor.b = static_cast<Uint8>(std::min(255, value));
+        } else {
+            const int value = (i - NUM_WINDTRAP_ANIMATIONS / 2) * colorQuantizer;
+            cycleColor.r = static_cast<Uint8>(std::max(0, 80 - value));
+            cycleColor.g = static_cast<Uint8>(std::max(0, 80 - value));
+            cycleColor.b = static_cast<Uint8>(std::max(0, 255 - value));
+        }
+        cycleColor.a = SDL_ALPHA_OPAQUE;
+
+        const int sourceFrame = ((i / 3) % 2 == 0) ? 2 : 3;
+        copyFrame(sourceFrame, 2 + i, &cycleColor);
+    }
+
+    SDL_SetSurfaceBlendMode(animation.get(), SDL_BLENDMODE_BLEND);
+    return animation;
 }
 
 static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette) {

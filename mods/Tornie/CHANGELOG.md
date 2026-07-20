@@ -22,3 +22,10 @@
 
 - Removed all CPU-owned structures from the nine Tornie opening scenarios while preserving enemy units, player Construction Yard and WOR, credits, objectives, seeds, start screens, and unit placement.
 - Require the generic HOUSE_CUSTOM sprite-palette correction so only the Harkonnen colour ramp is remapped to the active mod palette on units and buildings.
+
+## 1.0.523 Advanced Windtrap and special-unit follow-up
+
+- Added vanilla-style animated atlases and bounded 10x7 placement previews for all three Advanced Windtraps.
+- Preserved per-house team colours while cycling only the intended Windtrap energy index.
+- Aligned Tornie Unit_Special and Tech Center pools with the approved nine-house IX plan.
+- Added a safe ObjectData fallback only when a house has no explicit special-vehicle pool.
