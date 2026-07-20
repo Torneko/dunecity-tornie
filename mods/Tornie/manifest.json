@@ -4,12 +4,12 @@
     "id": "Tornie",
     "displayName": "Tornie",
     "version": "1.0.523",
-    "gameVersion": "1.0.522",
+    "gameVersion": "1.0.524",
     "author": "Tornie_Panther"
   },
   "source": {
     "upstream": "VR48/dunecity",
-    "baseCommit": "b94a948e864f08ffff881d0d8db21e9c2830d95e"
+    "baseCommit": "5b547c5d1d38a4fd3666f97875951a6fba83da0c"
   },
   "customHouse": {
     "slot": 8,
@@ -35,6 +35,11 @@
       "name": "generic-mod-scoped-mentat-api",
       "status": "fork-milestone",
       "commit": "54d396e2ae9ba70a4ea65edae5a631e1b9523b2d"
+    },
+    {
+      "name": "generic-optional-mentat-foreground",
+      "status": "fork-follow-up",
+      "commit": "e11ab71866ff7b33abb25472f8968edd32debe88"
     }
   ],
   "isolation": {
@@ -51,5 +56,5 @@
   "checksums": "checksums.sha256",
   "provenance": "PROVENANCE.md",
   "changelog": "CHANGELOG.md",
-  "integrationStatus": "content milestone; combined engine integration validation pending"
+  "integrationStatus": "v1.0.524 content follow-up; generic foreground integration required"
 }

@@ -8,6 +8,7 @@ This milestone changes content only under mods/Tornie/**. It does not add or rep
 
 - Tornie configuration, campaign rewrites, scenario balancing, Tharpique design, custom graphics direction, and custom audio direction were contributed by Tornie_Panther.
 - HeraldTharpique.png, the Tharpique voice files, palette ramp, and revised Tornie graphics are mod-specific user contributions or adaptations supplied for Tornie.
+- PaulAtreidesForeground.png is a mod-specific foreground extraction and cleanup supplied by Tornie_Panther for the layered Atreides Mentat presentation.
 - Campaign INI files are gameplay configuration adaptations for this mod.
 - Files inherited unchanged from VR48/dunecity retain their existing provenance and licensing status.
 

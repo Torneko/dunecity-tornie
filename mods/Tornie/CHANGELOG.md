@@ -1,5 +1,10 @@
 # Tornie changelog
 
+## 1.0.523 - v1.0.524 presentation follow-up
+
+- Added the optional Paul Atreides foreground layer so his shoulder is rendered above the briefing presentation frame.
+- Declared the generic optional-Mentat-foreground dependency and updated the source base to Dune City v1.0.524.
+
 ## 1.0.523 - 2026-07-18
 
 - Added generic ninth-house content registration for Tharpique: slot 8, letter T, region prefix THA, cyan palette ramp, and Mercenary fallback.
