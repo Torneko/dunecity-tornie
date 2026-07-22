@@ -40,6 +40,11 @@
       "name": "generic-optional-mentat-foreground",
       "status": "fork-follow-up",
       "commit": "e11ab71866ff7b33abb25472f8968edd32debe88"
+    },
+    {
+      "name": "generic-worm-warning-throttle",
+      "status": "fork-follow-up",
+      "commit": "7e77db52373cff69792deeac398ca3329bcdd14c"
     }
   ],
   "isolation": {
@@ -56,5 +61,5 @@
   "checksums": "checksums.sha256",
   "provenance": "PROVENANCE.md",
   "changelog": "CHANGELOG.md",
-  "integrationStatus": "v1.0.524 content follow-up; generic foreground integration required"
+  "integrationStatus": "v1.0.524 content follow-up; generic foreground and worm-warning integrations required"
 }

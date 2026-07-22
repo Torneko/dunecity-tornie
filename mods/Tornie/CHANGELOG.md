@@ -1,5 +1,13 @@
 # Tornie changelog
 
+## 1.0.523 - campaign and intro restoration follow-up
+
+- Restored the approved 207-file Tornie campaign set for all nine houses.
+- Kept the campaign and data scenario mirrors identical so the active mod cannot load stale campaign copies.
+- Restored the tested opening balance, including the strengthened Sardaukar, Neutral, and Rebels starting forces.
+- Preserved the approved regions, opponents, seeds, starting screens, player Construction Yard and WOR, and CPU-base removal.
+- No DuneCity application version, save format, or multiplayer protocol change is included in this content follow-up.
+
 ## 1.0.523 - v1.0.524 presentation follow-up
 
 - Added the optional Paul Atreides foreground layer so his shoulder is rendered above the briefing presentation frame.
