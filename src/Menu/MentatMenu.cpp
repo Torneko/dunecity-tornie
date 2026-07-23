@@ -36,6 +36,7 @@ MentatMenu::MentatMenu(int newHouse)
 
     disableQuiting(true);
     house = newHouse;
+    mentatPresentationHouse = newHouse;
 
     // set up window
     SDL_Texture *pBackground;
@@ -262,7 +263,7 @@ void MentatMenu::drawSpecificStuff() {
         } break;
     }
 
-    SDL_Texture* foreground = pGFXManager->getMentatForeground(house);
+    SDL_Texture* foreground = pGFXManager->getMentatForeground(mentatPresentationHouse);
     if(foreground != nullptr) {
         SDL_Rect destination{ getPosition().x, getPosition().y, 0, 0 };
         if(SDL_QueryTexture(foreground, nullptr, nullptr, &destination.w, &destination.h) == 0) {

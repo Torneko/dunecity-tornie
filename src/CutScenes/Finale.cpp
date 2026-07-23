@@ -78,6 +78,18 @@ Finale::Finale(int house) {
         THROW(std::runtime_error, "Finale::Finale(): Cannot open MAPPLAN.CPS!");
     }
     pPlanetDuneInHouseColorSurface = mapSurfaceColorRange(pPlanetDuneInHouseColorSurface.get(), houseToPaletteIndex[HOUSE_HARKONNEN], getHousePaletteIndex(static_cast<HOUSETYPE>(house)));
+    if(house == HOUSE_CUSTOM && customPaletteLoaded
+        && pPlanetDuneInHouseColorSurface->format != nullptr
+        && pPlanetDuneInHouseColorSurface->format->palette != nullptr) {
+        const int customPaletteBase = getHousePaletteIndex(HOUSE_CUSTOM);
+        if(customPaletteBase >= 0 && customPaletteBase + 7 < customPalette.getNumColors()) {
+            for(int shade = 0; shade < 8; ++shade) {
+                const SDL_Color customColor = customPalette[customPaletteBase + shade];
+                SDL_SetPaletteColors(pPlanetDuneInHouseColorSurface->format->palette,
+                                     &customColor, customPaletteBase + shade, 1);
+            }
+        }
+    }
 
     if(house == HOUSE_HARKONNEN || house == HOUSE_ATREIDES || house == HOUSE_ORDOS) {
         lizard = getChunkFromFile("LIZARD1.VOC");
@@ -89,7 +101,7 @@ Finale::Finale(int house) {
 
     const auto pIntroText = std::make_unique<IndexedTextFile>(pFileManager->openFile("INTRO." + _("LanguageFileExtension")).get());
 
-    const Uint32 color = SDL2RGB(palette[getHousePaletteIndex(static_cast<HOUSETYPE>(house))+1]);
+    const Uint32 color = getHouseColorRGB(getHouseVisualHouse(house), 1);
     const Uint32 sardaukarColor = SDL2RGB(palette[PALCOLOR_SARDAUKAR+1]);
 
     switch(house) {
