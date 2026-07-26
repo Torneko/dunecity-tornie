@@ -151,6 +151,7 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_EliteLauncherGunTornie
     { 8, 1 },   // ObjPic_RebelSonicTankGun
     { 8, 1 },   // ObjPic_HarvestankGunTornie
+    { 10, 1 },  // ObjPic_LoveFactory
 };
 static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
               "objPicTiles must have one entry per ObjPic enum value");
@@ -2091,7 +2092,9 @@ GFXManager::GFXManager() {
             SDL_Surface* buildSource = buildSite ? buildSite.get() : raw.get();
             const int buildFrameCount = getTornieFrameCount(buildSource, frameWidth, frameHeight);
 
-            const int atlasFrameCount = objPicEnum == ObjPic_Worfinery ? 10 : 4;
+            const bool usesStarportStateLayout =
+                objPicEnum == ObjPic_Worfinery || objPicEnum == ObjPic_LoveFactory;
+            const int atlasFrameCount = usesStarportStateLayout ? 10 : 4;
             sdl2::surface_ptr atlas{
                 SDL_CreateRGBSurface(0, atlasFrameCount * frameWidth, frameHeight, 8, 0, 0, 0, 0)
             };
@@ -2140,16 +2143,18 @@ GFXManager::GFXManager() {
 
             blitFrame(buildSource, &buildTop, 0);
             blitFrame(buildSource, &buildBottom, 1);
-            if(objPicEnum == ObjPic_Worfinery) {
-                // Expand the seven vertical source frames into the vanilla
-                // Refinery state layout: 2-3 idle, 4-6 approaching, and
-                // 8-9 occupied. Frame 7 safely repeats the final approach.
+            if(usesStarportStateLayout) {
+                // Expand vertical source frames into the vanilla delivery
+                // layout: 2-3 idle, 4-7 approaching, and 8-9 occupied.
                 const int sevenFrameMap[8] = { 0, 1, 2, 3, 4, 4, 5, 6 };
+                const int sixFrameMap[8] = { 0, 1, 2, 3, 4, 5, 4, 5 };
                 for(int atlasFrame = 2; atlasFrame <= 9; ++atlasFrame) {
                     const int activeIndex = atlasFrame - 2;
                     const int sourceIndex = rawFrameCount >= 8
                         ? activeIndex
-                        : (rawFrameCount == 7 ? sevenFrameMap[activeIndex] : activeIndex % rawFrameCount);
+                        : (rawFrameCount == 7
+                            ? sevenFrameMap[activeIndex]
+                            : (rawFrameCount == 6 ? sixFrameMap[activeIndex] : activeIndex % rawFrameCount));
                     SDL_Rect activeFrame =
                         getTornieFrameRect(raw.get(), frameWidth, frameHeight, sourceIndex);
                     blitFrame(raw.get(), &activeFrame, atlasFrame);
@@ -2188,6 +2193,7 @@ GFXManager::GFXManager() {
     loadTornieStructureSprite(ObjPic_Worfinery,  "BUILDING_3x2_worfinery.png",  Coord(3,2), "BUILDING_3x2_prebuild.png", "Worfinery", true, true);
     loadTornieStructureSprite(ObjPic_TechCenter, "TechCenter.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "TechCenter", true);
     loadTornieStructureSprite(ObjPic_Scoutpost,  "Scoutpost.png",  Coord(1,1), "BUILDING_1x1_prebuild.png", "Scoutpost", true);
+    loadTornieStructureSprite(ObjPic_LoveFactory, "LoveFactory.png", Coord(2,3), nullptr, "Love Factory", true);
 
     // Advanced Windtraps are installed per colour slot before their indexed
     // source atlases are expanded into the 10x7 RGBA animation sheets.
@@ -2263,6 +2269,7 @@ GFXManager::GFXManager() {
     installTornieStructureTruecolorSlots(ObjPic_Worfinery,           "Worfinery");
     installTornieStructureTruecolorSlots(ObjPic_TechCenter,          "TechCenter");
     installTornieStructureTruecolorSlots(ObjPic_Scoutpost,           "Scoutpost");
+    installTornieStructureTruecolorSlots(ObjPic_LoveFactory,          "LoveFactory");
 
     SDL_Color fogTransparent = { 0, 0, 0, 96};
     SDL_SetPaletteColors(objPic[ObjPic_Terrain_HiddenFog][HOUSE_HARKONNEN][0]->format->palette, &fogTransparent, PALCOLOR_BLACK, 1);
@@ -3118,7 +3125,8 @@ GFXManager::GFXManager() {
         { UI_MapEditor_AdvancedWindTrapMK3, ObjPic_AdvancedWindTrap3x2, 2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_Worfinery,           ObjPic_Worfinery,           2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_TechCenter,          ObjPic_TechCenter,          2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
-        { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE   }
+        { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE   },
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
     for(const auto& preview : tornieEditorStructures) {
         for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
@@ -3786,7 +3794,8 @@ static bool isTornieStructureObjPic(unsigned int id) {
         || id == ObjPic_AdvancedWindTrap3x2
         || id == ObjPic_Worfinery
         || id == ObjPic_TechCenter
-        || id == ObjPic_Scoutpost;
+        || id == ObjPic_Scoutpost
+        || id == ObjPic_LoveFactory;
 }
 
 static const char* getTornieStructureObjPicName(unsigned int id) {
@@ -3797,6 +3806,7 @@ static const char* getTornieStructureObjPicName(unsigned int id) {
         case ObjPic_Worfinery:           return "Worfinery";
         case ObjPic_TechCenter:          return "TechCenter";
         case ObjPic_Scoutpost:           return "Scoutpost";
+        case ObjPic_LoveFactory:         return "LoveFactory";
         default:                         return "Unknown";
     }
 }
@@ -4614,7 +4624,8 @@ void GFXManager::invalidateAllSpriteTextures() {
                || id == ObjPic_AdvancedWindTrap3x2
                || id == ObjPic_Worfinery
                || id == ObjPic_TechCenter
-               || id == ObjPic_Scoutpost;
+               || id == ObjPic_Scoutpost
+               || id == ObjPic_LoveFactory;
     };
     for(int id = 0; id < NUM_OBJPICS; id++) {
         for(int h = 0; h < NUM_HOUSE_COLOR_SLOTS; h++) {
@@ -4967,6 +4978,7 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
            || id == ObjPic_Windtrap || id == ObjPic_AdvancedWindTrap
            || id == ObjPic_AdvancedWindTrap2x3 || id == ObjPic_AdvancedWindTrap3x2
            || id == ObjPic_Worfinery || id == ObjPic_TechCenter || id == ObjPic_Scoutpost
+           || id == ObjPic_LoveFactory
            || id == ObjPic_Star) {
             if(objPicTex[id][house][z]) {
                 SDL_SetTextureBlendMode(objPicTex[id][house][z].get(), SDL_BLENDMODE_BLEND);

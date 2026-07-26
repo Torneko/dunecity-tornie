@@ -140,6 +140,7 @@ typedef enum {
     ObjPic_EliteLauncherGunTornie, ///< Tornie: elite Launcher turret overlay
     ObjPic_RebelSonicTankGun,      ///< Tornie: Rebels-only violet Sonic Tank turret
     ObjPic_HarvestankGunTornie,     ///< Tornie: Harvestank turret overlay
+    ObjPic_LoveFactory,             ///< Tornie: 2x3 Love Factory delivery building
     NUM_OBJPICS
 } ObjPic_enum;
 
@@ -156,7 +157,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
-    "HarvestankGunTornie" } };
+    "HarvestankGunTornie", "LoveFactory" } };
 
 #define GROUNDUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+3)|TILE_FLIPV, (i+4)|TILE_NORMAL,(i+3)|TILE_NORMAL
 #define AIRUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+1)|TILE_ROTATE, i|TILE_FLIPH,(i+1)|TILE_FLIPH
@@ -459,6 +460,7 @@ typedef enum {
     UI_MapEditor_Palace,
     UI_MapEditor_TechCenter,               ///< Tornie: Palace-equivalent that spawns vehicles
     UI_MapEditor_Scoutpost,                ///< Tornie: power/defense/recon post
+    UI_MapEditor_LoveFactory,              ///< Tornie: 2x3 category delivery building
     UI_MapEditor_Soldier,
     UI_MapEditor_Trooper,
     UI_MapEditor_Harvester,

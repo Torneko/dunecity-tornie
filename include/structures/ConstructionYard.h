@@ -35,6 +35,9 @@ public:
         \return true if placement was successful, false otherwise
     */
     bool doPlaceStructure(int x, int y);
+
+protected:
+    void updateStructureSpecificStuff() override;
 };
 
 

@@ -20,7 +20,7 @@
 
 #include <structures/BuilderBase.h>
 
-class StarPort final : public BuilderBase
+class StarPort : public BuilderBase
 {
 public:
     explicit StarPort(House* newOwner);
@@ -86,6 +86,14 @@ public:
     inline int getArrivalTimer() const { return arrivalTimer; }
 
 protected:
+    StarPort(House* newOwner, Uint32 structureItemID, Uint32 structureGraphicID, Coord newStructureSize);
+    StarPort(InputStream& stream, Uint32 structureItemID, Uint32 structureGraphicID, Coord newStructureSize);
+
+    void initDeliveryBuilding(Uint32 structureItemID, Uint32 structureGraphicID, Coord newStructureSize);
+
+    virtual void deployOrderedItem(Uint32 orderedItemID);
+    bool deploySingleUnit(Uint32 unitItemID, bool announce);
+
     /**
         Used for updating things that are specific to that particular structure. Is called from
         StructureBase::update() before the check if this structure is still alive.

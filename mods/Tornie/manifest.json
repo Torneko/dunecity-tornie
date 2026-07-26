@@ -3,8 +3,8 @@
   "mod": {
     "id": "Tornie",
     "displayName": "Tornie",
-    "version": "1.0.523",
-    "gameVersion": "1.0.522",
+    "version": "1.0.524-2",
+    "gameVersion": "1.0.524",
     "author": "Tornie_Panther"
   },
   "source": {
@@ -35,6 +35,10 @@
       "name": "generic-mod-scoped-mentat-api",
       "status": "fork-milestone",
       "commit": "54d396e2ae9ba70a4ea65edae5a631e1b9523b2d"
+    },
+    {
+      "name": "love-factory-delivery-building",
+      "status": "fork-milestone"
     }
   ],
   "isolation": {
@@ -44,12 +48,12 @@
     "switchingAwayRemovesTornieSearchPath": true
   },
   "compatibility": {
-    "saveFormatChangedByThisContent": false,
+    "saveFormatChangedByThisContent": true,
     "networkProtocolChangedByThisContent": false
   },
   "filenameCase": "exact",
   "checksums": "checksums.sha256",
   "provenance": "PROVENANCE.md",
   "changelog": "CHANGELOG.md",
-  "integrationStatus": "content milestone; combined engine integration validation pending"
+  "integrationStatus": "independent Tornie 1.0.524-2 integration"
 }

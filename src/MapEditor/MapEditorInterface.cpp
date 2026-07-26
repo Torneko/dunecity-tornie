@@ -555,6 +555,10 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_TechCenter.setTooltipText(resolveItemName(Structure_TechCenter));
     editorModeStructs_TechCenter.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_TechCenter));
 
+    editorModeStructs_LoveFactory.setToggleButton(true);
+    editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
+    editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
+
     editorModeStructs_Scoutpost.setToggleButton(true);
     editorModeStructs_Scoutpost.setTooltipText(resolveItemName(Structure_Scoutpost));
     editorModeStructs_Scoutpost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Scoutpost));
@@ -619,7 +623,10 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 2*D2_TILESIZE + 4);
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_TechCenter);
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_LoveFactory);
+
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, D2_TILESIZE + 4);
+        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
     }
 
     // setup units mode
@@ -1252,6 +1259,7 @@ void MapEditorInterface::onStructButton(int structType) {
     editorModeStructs_Palace.setToggleState( (structType == Structure_Palace) );
     editorModeStructs_TechCenter.setToggleState( (structType == Structure_TechCenter) );
     editorModeStructs_Scoutpost.setToggleState( (structType == Structure_Scoutpost) );
+    editorModeStructs_LoveFactory.setToggleState( (structType == Structure_LoveFactory) );
 
     editorModeStructs_ZoneResidential.setToggleState( (structType == Structure_ZoneResidential) );
     editorModeStructs_ZoneCommercial.setToggleState( (structType == Structure_ZoneCommercial) );
@@ -1516,6 +1524,7 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeStructs_Palace.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Palace, newHouse));
     editorModeStructs_TechCenter.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_TechCenter, newHouse));
     editorModeStructs_Scoutpost.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Scoutpost, newHouse));
+    editorModeStructs_LoveFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_LoveFactory, newHouse));
 
     editorModeStructs_ZoneResidential.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneResidential, newHouse));
     editorModeStructs_ZoneCommercial.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneCommercial, newHouse));

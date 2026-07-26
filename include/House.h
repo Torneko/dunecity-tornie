@@ -61,6 +61,7 @@ public:
     inline bool hasRefinery() const { return (numItem[Structure_Refinery] + numItem[Structure_Worfinery] > 0); }
     inline bool hasRepairYard() const { return (numItem[Structure_RepairYard] > 0); }
     inline bool hasStarPort() const { return (numItem[Structure_StarPort] > 0); }
+    inline bool hasLoveFactory() const { return (numItem[Structure_LoveFactory] > 0); }
     inline bool hasWindTrap() const { return (numItem[Structure_WindTrap] > 0); }
     inline bool hasSandworm() const { return (numItem[Unit_Sandworm] > 0); }
     inline bool hasRadar() const { return (numItem[Structure_Radar] > 0); }

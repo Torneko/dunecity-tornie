@@ -254,6 +254,7 @@ target_sources(dunecity
         structures/RocketTurret.cpp
         structures/Silo.cpp
         structures/StarPort.cpp
+        structures/LoveFactory.cpp
         structures/Wall.cpp
         structures/WindTrap.cpp
         structures/AdvancedWindTrap.cpp

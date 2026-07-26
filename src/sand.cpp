@@ -79,6 +79,7 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Structure_Worfinery:          newPicID = Picture_Worfinery;           break;
         case Structure_TechCenter:         newPicID = Picture_TechCenter;          break;
         case Structure_Scoutpost:          newPicID = Picture_Scoutpost;           break;
+        case Structure_LoveFactory:        newPicID = Picture_StarPort;            break;
         case Structure_ZoneResidential:    newPicID = Picture_ZoneResidential;    break;
         case Structure_ZoneCommercial:     newPicID = Picture_ZoneCommercial;     break;
         case Structure_ZoneIndustrial:     newPicID = Picture_ZoneIndustrial;     break;
@@ -109,6 +110,10 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Unit_EliteLauncher:            newPicID = Picture_EliteLauncher;       break;
         case Unit_EliteSiegeTank:           newPicID = Picture_EliteSiegeTank;      break;
         case Unit_RebelHarvester:           newPicID = Picture_Harvestank;          break;
+        case Delivery_Small:                newPicID = Picture_Trooper;             break;
+        case Delivery_Medium:               newPicID = Picture_Quad;                break;
+        case Delivery_Heavy:                newPicID = Picture_Tank;                break;
+        case Delivery_Support:              newPicID = Picture_Carryall;            break;
         case Unit_Soldier:                  newPicID = Picture_Soldier;             break;
         case Unit_Trooper: {
             switch(house) {
@@ -236,6 +241,7 @@ Coord getStructureSize(int itemID) {
         case Structure_Worfinery:           return Coord(3,2); break;
         case Structure_TechCenter:          return Coord(3,2); break;
         case Structure_Scoutpost:           return Coord(1,1); break;
+        case Structure_LoveFactory:         return Coord(2,3); break;
         default:                            return Coord(0,0); break;
     }
 }
@@ -283,6 +289,11 @@ Uint32  getItemIDByName(const std::string& name) {
     else if(lowerName == "worfinery")                                             return Structure_Worfinery;
     else if((lowerName == "tech center") || (lowerName == "techcenter"))          return Structure_TechCenter;
     else if((lowerName == "scoutpost") || (lowerName == "scout post") || (lowerName == "green post") || (lowerName == "sentinel post") || (lowerName == "avant-poste") || (lowerName == "avant poste")) return Structure_Scoutpost;
+    else if((lowerName == "love factory") || (lowerName == "love-factory"))        return Structure_LoveFactory;
+    else if(lowerName == "small delivery")                                         return Delivery_Small;
+    else if(lowerName == "medium delivery")                                        return Delivery_Medium;
+    else if(lowerName == "heavy delivery")                                         return Delivery_Heavy;
+    else if(lowerName == "support delivery")                                       return Delivery_Support;
     else if((lowerName == "carryall") || (lowerName == "carry-all"))            return Unit_Carryall;
     else if((lowerName == "devastator") || (lowerName == "devistator"))         return Unit_Devastator;
     else if(lowerName == "deviator")                                            return Unit_Deviator;
@@ -359,6 +370,11 @@ std::string getItemNameByID(Uint32 itemID) {
         case Structure_Worfinery:           return "Worfinery";         break;
         case Structure_TechCenter:          return "Tech Center";       break;
         case Structure_Scoutpost:           return "Scoutpost";         break;
+        case Structure_LoveFactory:         return "Love Factory";      break;
+        case Delivery_Small:                return "Small Delivery";    break;
+        case Delivery_Medium:               return "Medium Delivery";   break;
+        case Delivery_Heavy:                return "Heavy Delivery";    break;
+        case Delivery_Support:              return "Support Delivery";  break;
 
         case Unit_Carryall:                 return "Carryall";          break;
         case Unit_Devastator:               return "Devastator";        break;
@@ -438,6 +454,11 @@ std::string resolveItemName(int itemID) {
         case Structure_Worfinery:           return _("Worfinery");                         break;
         case Structure_TechCenter:          return _("Tech Center");                       break;
         case Structure_Scoutpost:           return _("Scoutpost");                         break;
+        case Structure_LoveFactory:         return _("Love Factory");                      break;
+        case Delivery_Small:                return _("Small Delivery");                    break;
+        case Delivery_Medium:               return _("Medium Delivery");                   break;
+        case Delivery_Heavy:                return _("Heavy Delivery");                    break;
+        case Delivery_Support:              return _("Support Delivery");                  break;
 
         case Unit_Carryall:                 return _("@DUNE.ENG|195#Carryall");            break;
         case Unit_Devastator:               return _("@DUNE.ENG|217#Devastator");          break;

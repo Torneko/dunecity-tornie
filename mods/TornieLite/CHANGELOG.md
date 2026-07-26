@@ -1,5 +1,12 @@
 # Tornie changelog
 
+## 1.0.524-2 - 2026-07-26
+
+- Added the 2x3 Love Factory at tech level 9 for every house.
+- Added Small, Medium, Heavy, and Support deliveries with configurable base prices and Starport-style price variation.
+- Added Frigate delivery animation, house colors, editor placement, save support, AI construction, and AI ordering.
+- Added the Love Factory asset to both Tornie editions.
+
 ## 1.0.523 - 2026-07-18
 
 - Added generic ninth-house content registration for Tharpique: slot 8, letter T, region prefix THA, cyan palette ramp, and Mercenary fallback.

@@ -182,6 +182,10 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             preview = { ObjPic_Scoutpost, 4, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
+        case Structure_LoveFactory:
+            preview = { ObjPic_LoveFactory, 10, 1, TornieStructureFrame_BuildSite, -1 };
+            return true;
+
         default:
             return false;
     }
@@ -436,6 +440,16 @@ void Game::initGame(const GameInitSettings& newGameInitSettings) {
                     objectData.data[Structure_ZoneResidential][h].enabled = false;
                     objectData.data[Structure_ZoneCommercial][h].enabled  = false;
                     objectData.data[Structure_ZoneIndustrial][h].enabled  = false;
+                }
+            }
+
+            if(!ModManager::instance().isTornieContentActive()) {
+                for(int h = 0; h < NUM_HOUSES; h++) {
+                    objectData.data[Structure_LoveFactory][h].enabled = false;
+                    objectData.data[Delivery_Small][h].enabled = false;
+                    objectData.data[Delivery_Medium][h].enabled = false;
+                    objectData.data[Delivery_Heavy][h].enabled = false;
+                    objectData.data[Delivery_Support][h].enabled = false;
                 }
             }
 

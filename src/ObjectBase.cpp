@@ -55,6 +55,7 @@
 #include <structures/Worfinery.h>
 #include <structures/TechCenter.h>
 #include <structures/Scoutpost.h>
+#include <structures/LoveFactory.h>
 #include <structures/NuclearPlant.h>
 #include <structures/PoliceStation.h>
 #include <structures/Stadium.h>
@@ -852,6 +853,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Structure_Worfinery:           newObject = new Worfinery(Owner); break;
         case Structure_TechCenter:          newObject = new TechCenter(Owner); break;
         case Structure_Scoutpost:           newObject = new Scoutpost(Owner); break;
+        case Structure_LoveFactory:         newObject = new LoveFactory(Owner); break;
         case Structure_WOR:                 newObject = new WOR(Owner); break;
         case Structure_NuclearPlant:        newObject = new NuclearPlant(Owner); break;
         case Structure_PoliceStation:       newObject = new PoliceStation(Owner); break;
@@ -971,6 +973,7 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Structure_Worfinery:           newObject = new Worfinery(stream); break;
         case Structure_TechCenter:          newObject = new TechCenter(stream); break;
         case Structure_Scoutpost:           newObject = new Scoutpost(stream); break;
+        case Structure_LoveFactory:         newObject = new LoveFactory(stream); break;
         case Structure_WOR:                 newObject = new WOR(stream); break;
         case Structure_NuclearPlant:        newObject = new NuclearPlant(stream); break;
         case Structure_PoliceStation:       newObject = new PoliceStation(stream); break;

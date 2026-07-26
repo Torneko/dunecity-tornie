@@ -102,6 +102,7 @@ unsigned int getMapEditorStructureUIGraphic(int itemID) noexcept {
         case Structure_Worfinery:           return UI_MapEditor_Worfinery;
         case Structure_TechCenter:          return UI_MapEditor_TechCenter;
         case Structure_Scoutpost:           return UI_MapEditor_Scoutpost;
+        case Structure_LoveFactory:         return UI_MapEditor_LoveFactory;
         default:                            return NUM_UIGRAPHICS;
     }
 }
@@ -1744,6 +1745,7 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                 case Structure_Worfinery:           objectPic = ObjPic_Worfinery;           break;
                 case Structure_TechCenter:          objectPic = ObjPic_TechCenter;          break;
                 case Structure_Scoutpost:           objectPic = ObjPic_Scoutpost;           break;
+                case Structure_LoveFactory:         objectPic = ObjPic_LoveFactory;         break;
                 default:                            objectPic = 0;                          break;
             }
 
