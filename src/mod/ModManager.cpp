@@ -47,6 +47,7 @@ static const char* GAME_OPTIONS_FILE = "GameOptions.ini";
 static const char* VANILLA_MOD_NAME = "vanilla";
 static const char* DUNECITY_MOD_NAME = "dunecity";
 static const char* TORNIE_MOD_NAME = "Tornie";
+static const char* TORNIE_LITE_MOD_NAME = "TornieLite";
 static const char* DUNE2R_MOD_NAME = "Dune2R";
 
 // Install config file names (with .default suffix)
@@ -101,8 +102,11 @@ void ModManager::initialize() {
     // Sonic Tank/Elite Siege Tank), custom buildings
     // (Advanced Windtrap), palettes (Custom_IBM.PAL),
     // and VOC files.
-    if (!modExists(TORNIE_MOD_NAME) || tornieNeedsReseed()) {
-        seedTornieFromDefaults();
+    if (!modExists(TORNIE_MOD_NAME) || tornieFamilyModNeedsReseed(TORNIE_MOD_NAME)) {
+        seedTornieFamilyModFromDefaults(TORNIE_MOD_NAME);
+    }
+    if (!modExists(TORNIE_LITE_MOD_NAME) || tornieFamilyModNeedsReseed(TORNIE_LITE_MOD_NAME)) {
+        seedTornieFamilyModFromDefaults(TORNIE_LITE_MOD_NAME);
     }
 
     // Seed Dune2R graphics mod if not present
@@ -907,10 +911,10 @@ void ModManager::seedDunecityFromDefaults() {
 // (mod.ini, ObjectData.ini, campaign/) are shipped in the
 // install at mods/Tornie/. We register this directory as
 // a mod so it appears in the Mods menu and can be activated.
-void ModManager::seedTornieFromDefaults() {
-    SDL_Log("ModManager: Seeding Tornie mod from install defaults...");
+void ModManager::seedTornieFamilyModFromDefaults(const std::string& modName) {
+    SDL_Log("ModManager: Seeding %s mod from install defaults...", modName.c_str());
 
-    std::string torniePath = getModPath(TORNIE_MOD_NAME);
+    std::string torniePath = getModPath(modName);
     // Source: the mods directory itself. Try multiple paths:
     // 1. <data_dir>/mods/Tornie/ (newer install layout)
     // 2. <data_dir>/../mods/Tornie/ (older install layout)
@@ -918,10 +922,10 @@ void ModManager::seedTornieFromDefaults() {
     // by the CMake install step.
     std::string installModsPath;
     const std::string candidatePaths[] = {
-        getDuneLegacyDataDir() + "/mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../../mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../../../mods/" + TORNIE_MOD_NAME
+        getDuneLegacyDataDir() + "/mods/" + modName,
+        getDuneLegacyDataDir() + "/../mods/" + modName,
+        getDuneLegacyDataDir() + "/../../mods/" + modName,
+        getDuneLegacyDataDir() + "/../../../mods/" + modName
     };
     for(const std::string& candidatePath : candidatePaths) {
         if(std::filesystem::is_directory(candidatePath)) {
@@ -932,10 +936,11 @@ void ModManager::seedTornieFromDefaults() {
     if(installModsPath.empty()) {
         installModsPath = candidatePaths[0];
     }
-    SDL_Log("ModManager: Tornie install source: %s", installModsPath.c_str());
+    SDL_Log("ModManager: %s install source: %s", modName.c_str(), installModsPath.c_str());
 
     if(!std::filesystem::is_directory(installModsPath)) {
-        SDL_Log("ModManager: Warning - bundled Tornie mod not found at %s", installModsPath.c_str());
+        SDL_Log("ModManager: Warning - bundled %s mod not found at %s",
+                modName.c_str(), installModsPath.c_str());
         return;
     }
 
@@ -948,9 +953,10 @@ void ModManager::seedTornieFromDefaults() {
         std::filesystem::copy(installModsPath, torniePath,
             std::filesystem::copy_options::recursive |
             std::filesystem::copy_options::overwrite_existing);
-        SDL_Log("ModManager: Tornie mod seeded successfully from %s", installModsPath.c_str());
+        SDL_Log("ModManager: %s mod seeded successfully from %s",
+                modName.c_str(), installModsPath.c_str());
     } catch(const std::exception& e) {
-        SDL_Log("ModManager: Warning - Tornie mod seed failed: %s", e.what());
+        SDL_Log("ModManager: Warning - %s mod seed failed: %s", modName.c_str(), e.what());
     }
 }
 
@@ -1022,14 +1028,14 @@ bool ModManager::dunecityNeedsReseed() const {
     return false;
 }
 
-bool ModManager::tornieNeedsReseed() const {
+bool ModManager::tornieFamilyModNeedsReseed(const std::string& modName) const {
     // DuneCity 1.0.494: re-seed on version mismatch (same
     // pattern as dunecityNeedsReseed). Without this, the
     // Tornie mod files seeded by an older version (e.g.
     // v1.0.492 which had the wrong install path) would
     // persist in the user mods dir even after a new version
     // is installed.
-    std::string torniePath = getModPath(TORNIE_MOD_NAME);
+    std::string torniePath = getModPath(modName);
 
     std::string modIniPath = torniePath + "/" + MOD_INI_FILE;
     std::string objectDataPath = torniePath + "/" + OBJECT_DATA_FILE;
@@ -1039,35 +1045,35 @@ bool ModManager::tornieNeedsReseed() const {
     std::string checksumsPath = torniePath + "/checksums.sha256";
 
     if (!existsFile(modIniPath)) {
-        SDL_Log("ModManager: Tornie missing %s, needs reseed", MOD_INI_FILE);
+        SDL_Log("ModManager: %s missing %s, needs reseed", modName.c_str(), MOD_INI_FILE);
         return true;
     }
     if (!existsFile(objectDataPath)) {
-        SDL_Log("ModManager: Tornie missing %s, needs reseed", OBJECT_DATA_FILE);
+        SDL_Log("ModManager: %s missing %s, needs reseed", modName.c_str(), OBJECT_DATA_FILE);
         return true;
     }
     if (!existsFile(gameOptionsPath)) {
-        SDL_Log("ModManager: Tornie missing %s, needs reseed", GAME_OPTIONS_FILE);
+        SDL_Log("ModManager: %s missing %s, needs reseed", modName.c_str(), GAME_OPTIONS_FILE);
         return true;
     }
     if (!existsFile(customHousePath) || !existsFile(manifestPath) || !existsFile(checksumsPath)
         || !std::filesystem::is_directory(std::filesystem::path(torniePath) / "campaign")
         || !std::filesystem::is_directory(std::filesystem::path(torniePath) / "data")) {
-        SDL_Log("ModManager: Tornie payload is incomplete, needs reseed");
+        SDL_Log("ModManager: %s payload is incomplete, needs reseed", modName.c_str());
         return true;
     }
 
     const std::string candidatePaths[] = {
-        getDuneLegacyDataDir() + "/mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../../mods/" + TORNIE_MOD_NAME,
-        getDuneLegacyDataDir() + "/../../../mods/" + TORNIE_MOD_NAME
+        getDuneLegacyDataDir() + "/mods/" + modName,
+        getDuneLegacyDataDir() + "/../mods/" + modName,
+        getDuneLegacyDataDir() + "/../../mods/" + modName,
+        getDuneLegacyDataDir() + "/../../../mods/" + modName
     };
     for(const std::string& candidatePath : candidatePaths) {
         const std::string bundledChecksums = candidatePath + "/checksums.sha256";
         if(existsFile(bundledChecksums)
            && hashFileCanonical(checksumsPath) != hashFileCanonical(bundledChecksums)) {
-            SDL_Log("ModManager: Tornie bundled payload changed, needs reseed");
+            SDL_Log("ModManager: %s bundled payload changed, needs reseed", modName.c_str());
             return true;
         }
         if(existsFile(bundledChecksums)) {
@@ -1075,9 +1081,10 @@ bool ModManager::tornieNeedsReseed() const {
         }
     }
 
-    // Check if installed Tornie ObjectData.ini differs from defaults
-    if (installedObjectDataDiffersFromDefaults(TORNIE_MOD_NAME)) {
-        SDL_Log("ModManager: Tornie %s drifted from defaults, needs reseed", OBJECT_DATA_FILE);
+    // Check if installed ObjectData.ini differs from defaults.
+    if (installedObjectDataDiffersFromDefaults(modName)) {
+        SDL_Log("ModManager: %s %s drifted from defaults, needs reseed",
+                modName.c_str(), OBJECT_DATA_FILE);
         return true;
     }
 

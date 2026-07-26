@@ -1308,9 +1308,16 @@ GFXManager::GFXManager() {
         SDL_Log("GFXManager: ibmPalette load failed (%s) — Tornie sprite tinting disabled", e.what());
     }
 
+    auto isTornieFamilyActive = []() {
+        if(!ModManager::instance().isInitialized()) {
+            return false;
+        }
+        const auto activeModName = ModManager::instance().getActiveModName();
+        return activeModName == "Tornie" || activeModName == "TornieLite";
+    };
+
     auto openTornieAsset = [&](const char* filename, const char* label) -> sdl2::RWops_ptr {
-        const bool tornieActive = ModManager::instance().isInitialized()
-            && ModManager::instance().getActiveModName() == "Tornie";
+        const bool tornieActive = isTornieFamilyActive();
         if(!tornieActive) {
             return nullptr;
         }
@@ -2567,6 +2574,7 @@ GFXManager::GFXManager() {
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
         loadIcon(Picture_Harvestank,     "HarvestankIcon.png",     "HARVEST.WSA");
+        loadIcon(Picture_LoveFactory,    "LoveFactoryIcon.png",    "STARPORT.WSA");
     }
 
     // unused: FARTR.WSA, FHARK.WSA, FORDOS.WSA
@@ -2767,8 +2775,7 @@ GFXManager::GFXManager() {
 
     PicFactory->drawFrame(uiGraphic[UI_DuneLegacy][HOUSE_HARKONNEN].get(),PictureFactory::SimpleFrame);
 
-    const bool tornieActive = ModManager::instance().isInitialized()
-        && (ModManager::instance().getActiveModName() == "Tornie");
+    const bool tornieActive = isTornieFamilyActive();
     loadMentatGraphics();
 
     uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATM.CPS").get()).get());

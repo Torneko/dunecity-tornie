@@ -57,7 +57,7 @@ PlayerSettingsWindow::PlayerSettingsWindow(MapEditor* pMapEditor, HOUSETYPE curr
 
     mainVBox.addWidget(&centralVBox, 360);
 
-    for(int i=0;i<getNumAvailableHouses();i++) {
+    for(int i=0;i<static_cast<int>(pMapEditor->getPlayers().size());i++) {
 
         MapEditor::Player& playerInfo = pMapEditor->getPlayers()[i];
 
@@ -120,11 +120,11 @@ PlayerSettingsWindow::PlayerSettingsWindow(MapEditor* pMapEditor, HOUSETYPE curr
                 playerWidgets[i].teamDropDownBox.setSelectedItem(1);
             }
         } else {
-            for(int team = 0; team < getNumAvailableHouses(); team++) {
+            for(int team = 0; team < static_cast<int>(pMapEditor->getPlayers().size()); team++) {
                 playerWidgets[i].teamDropDownBox.addEntry("Team" + std::to_string(team + 1), team);
             }
 
-            for(int j = 0; j < getNumAvailableHouses(); j++) {
+            for(int j = 0; j < static_cast<int>(pMapEditor->getPlayers().size()); j++) {
                 if(playerWidgets[i].teamDropDownBox.getEntry(j) == playerInfo.brain) {
                     playerWidgets[i].teamDropDownBox.setSelectedItem(j);
                     break;
@@ -202,7 +202,7 @@ void PlayerSettingsWindow::onAdvancedBasicToggle() {
     if(advancedBasicToggle.getText() == _("Advanced...")) {
         advancedBasicToggle.setText(_("Basic..."));
 
-        for(int i=0;i<getNumAvailableHouses();i++) {
+        for(int i=0;i<static_cast<int>(pMapEditor->getPlayers().size());i++) {
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].creditsLabel);
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].creditsTextBox);
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].spacer);
@@ -220,7 +220,7 @@ void PlayerSettingsWindow::onAdvancedBasicToggle() {
     } else {
         advancedBasicToggle.setText(_("Advanced..."));
 
-        for(int i=0;i<getNumAvailableHouses();i++) {
+        for(int i=0;i<static_cast<int>(pMapEditor->getPlayers().size());i++) {
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].spiceQuotaLabel);
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].spiceQuotaTextBox);
             playerWidgets[i].playerHBox.removeChildWidget(&playerWidgets[i].spacer);
@@ -241,7 +241,7 @@ void PlayerSettingsWindow::onOK() {
 
     pMapEditor->startOperation();
 
-    for(int i=0;i<getNumAvailableHouses();i++) {
+    for(int i=0;i<static_cast<int>(pMapEditor->getPlayers().size());i++) {
         bool bActive = playerWidgets[i].playerCheckbox.isChecked();
         bool bAnyHouse = pMapEditor->getMapVersion() < 2 ? false : playerWidgets[i].anyHouseRadioButton.isChecked();
         int credits = playerWidgets[i].creditsTextBox.getValue();

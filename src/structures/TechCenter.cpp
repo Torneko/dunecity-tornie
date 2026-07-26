@@ -148,7 +148,7 @@ bool TechCenter::houseHasIxUnlocked() const {
 int TechCenter::spawnRandomVehicles(int count) {
     // Keep Tech Center spawns aligned with Unit_Special scenario entries.
     const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
+        && ModManager::instance().isTornieContentActive();
     std::vector<int> objectDataIxCandidates;
     if(originalHouseID == HOUSE_CUSTOM) {
         objectDataIxCandidates = discoverCustomHouseSpecialVehicleCandidates([&](int candidate) {

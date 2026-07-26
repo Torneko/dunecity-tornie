@@ -26,6 +26,7 @@ namespace {
 constexpr Uint32 LOVE_FACTORY_PRICE_CHANGE_TIME = MILLI2CYCLES(60*1000);
 constexpr Uint32 LOVE_FACTORY_AI_ORDER_INTERVAL = MILLI2CYCLES(3*1000);
 constexpr int LOVE_FACTORY_AI_CREDIT_RESERVE = 1500;
+constexpr int LOVE_FACTORY_MAX_STOCK = 5;
 
 constexpr std::array<Uint32, 4> DeliveryChoices = {
     Delivery_Small,
@@ -64,6 +65,19 @@ void LoveFactory::save(OutputStream& stream) const {
     stream.writeUint32(lastPriceUpdateCycle);
 }
 
+void LoveFactory::ensureDeliveryStock() {
+    if(getOwner() == nullptr) {
+        return;
+    }
+
+    auto& choam = getOwner()->getChoam();
+    for(const Uint32 deliveryID : DeliveryChoices) {
+        if(choam.getNumAvailable(deliveryID) == INVALID) {
+            choam.addItem(deliveryID, 1);
+        }
+    }
+}
+
 bool LoveFactory::isDeliveryChoice(Uint32 deliveryID) const {
     return std::find(DeliveryChoices.begin(), DeliveryChoices.end(), deliveryID)
         != DeliveryChoices.end();
@@ -94,6 +108,8 @@ void LoveFactory::updateBuildList() {
     if(currentGame == nullptr) {
         return;
     }
+
+    ensureDeliveryStock();
 
     const Uint32 now = currentGame->getGameCycleCount();
     const bool initialList = buildList.empty();
@@ -136,23 +152,27 @@ void LoveFactory::handleProduceItemClick(Uint32 deliveryID, bool multipleMode) {
 }
 
 void LoveFactory::doProduceItem(Uint32 deliveryID, bool multipleMode) {
+    ensureDeliveryStock();
     BuildItem* item = getBuildItem(deliveryID);
     if(item == nullptr || !isDeliveryChoice(deliveryID) || !okToOrder()) {
         return;
     }
 
     for(int i = 0; i < (multipleMode ? 5 : 1); i++) {
-        if(getOwner()->getCredits() < static_cast<int>(item->price)) {
+        const int deliveryStock = getOwner()->getChoam().getNumAvailable(deliveryID);
+        if(deliveryStock <= 0 || getOwner()->getCredits() < static_cast<int>(item->price)) {
             break;
         }
 
         item->num++;
         currentProductionQueue.emplace_back(deliveryID, item->price);
         getOwner()->takeCredits(item->price);
+        getOwner()->getChoam().setNumAvailable(deliveryID, deliveryStock - 1);
     }
 }
 
 void LoveFactory::doCancelItem(Uint32 deliveryID, bool multipleMode) {
+    ensureDeliveryStock();
     BuildItem* item = getBuildItem(deliveryID);
     if(item == nullptr || !isDeliveryChoice(deliveryID)) {
         return;
@@ -178,6 +198,9 @@ void LoveFactory::doCancelItem(Uint32 deliveryID, bool multipleMode) {
 
         item->num--;
         getOwner()->returnCredits(mostExpensive->price);
+        const int deliveryStock = getOwner()->getChoam().getNumAvailable(deliveryID);
+        getOwner()->getChoam().setNumAvailable(
+            deliveryID, deliveryStock < LOVE_FACTORY_MAX_STOCK ? deliveryStock + 1 : LOVE_FACTORY_MAX_STOCK);
         currentProductionQueue.erase(mostExpensive);
     }
 }
@@ -185,7 +208,8 @@ void LoveFactory::doCancelItem(Uint32 deliveryID, bool multipleMode) {
 void LoveFactory::doBuildRandom() {
     std::vector<Uint32> affordable;
     for(const BuildItem& item : buildList) {
-        if(getOwner()->getCredits() >= static_cast<int>(item.price) + LOVE_FACTORY_AI_CREDIT_RESERVE) {
+        if(getOwner()->getChoam().getNumAvailable(item.itemID) > 0
+           && getOwner()->getCredits() >= static_cast<int>(item.price) + LOVE_FACTORY_AI_CREDIT_RESERVE) {
             affordable.push_back(item.itemID);
         }
     }
@@ -264,14 +288,18 @@ void LoveFactory::deployOrderedItem(Uint32 deliveryID) {
         attempts++;
         const int index = currentGame->randomGen.rand(
             0, static_cast<int>(candidates.size()) - 1);
-        if(deploySingleUnit(candidates[index], delivered == 0)) {
+        const Uint32 selectedUnit = candidates[index];
+        const Uint32 deployableUnit = selectedUnit == Unit_Infantry
+            ? Unit_Soldier
+            : (selectedUnit == Unit_Troopers ? Unit_Trooper : selectedUnit);
+        if(deploySingleUnit(deployableUnit, delivered == 0)) {
             delivered++;
         }
     }
 }
 
 void LoveFactory::updateStructureSpecificStuff() {
-    StarPort::updateStructureSpecificStuff();
+    ensureDeliveryStock();    StarPort::updateStructureSpecificStuff();
 
     if(currentGame == nullptr || getOwner() == nullptr || !getOwner()->isAI()
        || !okToOrder() || !currentProductionQueue.empty()

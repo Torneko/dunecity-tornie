@@ -32,6 +32,7 @@ protected:
     void deployOrderedItem(Uint32 orderedItemID) override;
 
 private:
+    void ensureDeliveryStock();
     bool isDeliveryChoice(Uint32 itemID) const;
     bool isDeliveryCandidate(Uint32 unitItemID, Uint32 deliveryID) const;
     int getDeliveryMaximum(Uint32 deliveryID) const;

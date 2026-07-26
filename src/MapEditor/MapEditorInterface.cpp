@@ -60,7 +60,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     currentEditStructureID = INVALID;
     currentEditUnitID = INVALID;
 
-    tornieContentVisible_ = (ModManager::instance().getActiveModName() == "Tornie");
+    tornieContentVisible_ = ModManager::instance().isTornieContentActive();
 
 
     setTransparentBackground(true);

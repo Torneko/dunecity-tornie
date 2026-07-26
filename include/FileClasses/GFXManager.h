@@ -232,6 +232,7 @@ typedef enum {
     Picture_PalaceLightVehicles,   ///< Tornie: Neutral/Rebels Palace Trike/Quad call icon
     Picture_SonicTrike,            ///< Tornie: portrait from SonicTrikeIcon.png
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
+    Picture_LoveFactory,         ///< Tornie: portrait from LoveFactoryIcon.png
     NUM_SMALLDETAILPICS
 } SmallDetailPics_Enum;
 

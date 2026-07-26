@@ -891,7 +891,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(Owner); break;
         case Unit_Special: {
             const bool tornieActive = ModManager::instance().isInitialized()
-                && ModManager::instance().getActiveModName() == "Tornie";
+                && ModManager::instance().isTornieContentActive();
             const int houseID = Owner->getHouseID();
             std::vector<int> objectDataIxCandidates;
             if(houseID == HOUSE_CUSTOM) {
