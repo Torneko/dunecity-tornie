@@ -710,6 +710,13 @@ StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int
         return nullptr;
     }
 
+    const Coord requestedStructureSize = getStructureSize(itemID);
+    if(requestedStructureSize.x <= 0 || requestedStructureSize.y <= 0
+       || xPos + requestedStructureSize.x > currentGameMap->getSizeX()
+       || yPos + requestedStructureSize.y > currentGameMap->getSizeY()) {
+        return nullptr;
+    }
+
     BuilderBase* pBuilder = (builderID == NONE_ID) ? nullptr : dynamic_cast<BuilderBase*>(currentGame->getObjectManager().getObject(builderID));
 
     if(currentGame->getGameInitSettings().getGameOptions().onlyOnePalace && pBuilder != nullptr && itemID == Structure_Palace && getNumItems(Structure_Palace) > 0) {
@@ -808,6 +815,14 @@ StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int
             if(newStructure == nullptr) {
                 delete newObject;
                 THROW(std::runtime_error, "Cannot create structure with itemID %d!", itemID);
+            }
+
+            const int actualSizeX = newStructure->getStructureSizeX();
+            const int actualSizeY = newStructure->getStructureSizeY();
+            if(actualSizeX <= 0 || actualSizeY <= 0
+               || !currentGameMap->tileExists(xPos + actualSizeX - 1, yPos + actualSizeY - 1)) {
+                delete newObject;
+                return nullptr;
             }
 
             if(bForcePlacing == false) {

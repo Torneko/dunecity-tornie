@@ -608,6 +608,23 @@ std::string getDuneLegacyDataDir() {
         }
 #endif
 
+#if defined(__linux__) && !defined(__ANDROID__)
+        // AppImage mounts its filesystem at a temporary location and exposes
+        // that root through APPDIR. Prefer the bundled FHS data directory so
+        // the executable remains relocatable.
+        if(dataDir.empty()) {
+            const char* appDir = SDL_getenv("APPDIR");
+            if((appDir != nullptr) && (appDir[0] != '\0')) {
+                const std::string appImageDataDir = std::string(appDir) + "/usr/share/DuneCity/";
+                struct stat dirCheck;
+                if((stat(appImageDataDir.c_str(), &dirCheck) == 0) && S_ISDIR(dirCheck.st_mode)) {
+                    dataDir = appImageDataDir;
+                    SDL_Log("Using AppImage data dir: %s", dataDir.c_str());
+                }
+            }
+        }
+#endif
+
 #ifdef DUNELEGACY_DATADIR
         // Only use the compile-time install path if it actually exists
         // (i.e. the binary was installed, not run from a build directory)

@@ -134,7 +134,7 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_Terrain_Tracks
     { 1, 1 },   // ObjPic_Star
     { 8, 1 },   // ObjPic_RebelHarvester
-    { 4, 1 },   // ObjPic_Worfinery
+    { 10, 1 },  // ObjPic_Worfinery (vanilla Refinery animation layout)
     { 4, 1 },   // ObjPic_TechCenter
     { 4, 1 },   // ObjPic_Scoutpost
     { 4, 4 },   // ObjPic_ZoneResidential (4 density × 4 value-tier variants)
@@ -2091,7 +2091,10 @@ GFXManager::GFXManager() {
             SDL_Surface* buildSource = buildSite ? buildSite.get() : raw.get();
             const int buildFrameCount = getTornieFrameCount(buildSource, frameWidth, frameHeight);
 
-            sdl2::surface_ptr atlas{ SDL_CreateRGBSurface(0, 4 * frameWidth, frameHeight, 8, 0, 0, 0, 0) };
+            const int atlasFrameCount = objPicEnum == ObjPic_Worfinery ? 10 : 4;
+            sdl2::surface_ptr atlas{
+                SDL_CreateRGBSurface(0, atlasFrameCount * frameWidth, frameHeight, 8, 0, 0, 0, 0)
+            };
             if(!atlas || !atlas->format->palette) {
                 return;
             }
@@ -2137,8 +2140,24 @@ GFXManager::GFXManager() {
 
             blitFrame(buildSource, &buildTop, 0);
             blitFrame(buildSource, &buildBottom, 1);
-            blitFrame(raw.get(), &srcTop, 2);
-            blitFrame(raw.get(), &srcBottom, 3);
+            if(objPicEnum == ObjPic_Worfinery) {
+                // Expand the seven vertical source frames into the vanilla
+                // Refinery state layout: 2-3 idle, 4-6 approaching, and
+                // 8-9 occupied. Frame 7 safely repeats the final approach.
+                const int sevenFrameMap[8] = { 0, 1, 2, 3, 4, 4, 5, 6 };
+                for(int atlasFrame = 2; atlasFrame <= 9; ++atlasFrame) {
+                    const int activeIndex = atlasFrame - 2;
+                    const int sourceIndex = rawFrameCount >= 8
+                        ? activeIndex
+                        : (rawFrameCount == 7 ? sevenFrameMap[activeIndex] : activeIndex % rawFrameCount);
+                    SDL_Rect activeFrame =
+                        getTornieFrameRect(raw.get(), frameWidth, frameHeight, sourceIndex);
+                    blitFrame(raw.get(), &activeFrame, atlasFrame);
+                }
+            } else {
+                blitFrame(raw.get(), &srcTop, 2);
+                blitFrame(raw.get(), &srcBottom, 3);
+            }
             logTornieStructureSurfaceDiagnostics("atlas-built", label, atlas.get(), frameWidth, frameHeight);
 
             if(protectOpaqueBlack) {
@@ -2166,7 +2185,7 @@ GFXManager::GFXManager() {
             SDL_Log("GFXManager: %s — %s sprite load failed, using vanilla fallback", e.what(), label);
         }
     };
-    loadTornieStructureSprite(ObjPic_Worfinery,  "Worfinery.png",  Coord(3,2), "BUILDING_3x2_prebuild.png", "Worfinery", true, true);
+    loadTornieStructureSprite(ObjPic_Worfinery,  "BUILDING_3x2_worfinery.png",  Coord(3,2), "BUILDING_3x2_prebuild.png", "Worfinery", true, true);
     loadTornieStructureSprite(ObjPic_TechCenter, "TechCenter.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "TechCenter", true);
     loadTornieStructureSprite(ObjPic_Scoutpost,  "Scoutpost.png",  Coord(1,1), "BUILDING_1x1_prebuild.png", "Scoutpost", true);
 
@@ -5031,7 +5050,13 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphicSurface(): UI Graphic with ID %u is not available!", id);
     }
-    house = getHouseVisualHouse(house);
+    const bool useHouseIdentity =
+        id == UI_Herald_Colored
+        || id == UI_Herald_ColoredLarge
+        || id == UI_Herald_Grey;
+    if(!useHouseIdentity) {
+        house = getHouseVisualHouse(house);
+    }
     if(!isValidHouseColorSlot(house)) {
         house = HOUSE_HARKONNEN;
     }
@@ -5064,7 +5089,13 @@ SDL_Texture* GFXManager::getUIGraphic(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphic(): UI Graphic with ID %u is not available!", id);
     }
-    house = getHouseVisualHouse(house);
+    const bool useHouseIdentity =
+        id == UI_Herald_Colored
+        || id == UI_Herald_ColoredLarge
+        || id == UI_Herald_Grey;
+    if(!useHouseIdentity) {
+        house = getHouseVisualHouse(house);
+    }
     if(!isValidHouseColorSlot(house)) {
         house = HOUSE_HARKONNEN;
     }

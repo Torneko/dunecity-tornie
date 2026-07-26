@@ -171,7 +171,7 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             return true;
 
         case Structure_Worfinery:
-            preview = { ObjPic_Worfinery, 4, 1, TornieStructureFrame_BuildSite, -1 };
+            preview = { ObjPic_Worfinery, 10, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
         case Structure_TechCenter:
@@ -1621,6 +1621,11 @@ void Game::drawScreen()
                 if(pBuilder) {
                     int placeItem = pBuilder->getCurrentProducedItem();
                     Coord structuresize = getStructureSize(placeItem);
+                    const bool footprintInsideMap =
+                        structuresize.x > 0 && structuresize.y > 0
+                        && xPos >= 0 && yPos >= 0
+                        && xPos + structuresize.x <= currentGameMap->getSizeX()
+                        && yPos + structuresize.y <= currentGameMap->getSizeY();
                     static int loggedPlacementStateCount = 0;
                     StructurePlacementPreview placementPreviewForLog;
                     if(loggedPlacementStateCount < 12 && getTornieStructurePlacementPreview(placeItem, placementPreviewForLog)) {
@@ -1638,10 +1643,12 @@ void Game::drawScreen()
                     }
 
                     bool withinRange = false;
-                    for (int i = xPos; i < (xPos + structuresize.x); i++) {
-                        for (int j = yPos; j < (yPos + structuresize.y); j++) {
-                            if (currentGameMap->isWithinBuildRange(i, j, pBuilder->getOwner())) {
-                                withinRange = true;         //find out if the structure is close enough to other buildings
+                    if(footprintInsideMap) {
+                        for (int i = xPos; i < (xPos + structuresize.x); i++) {
+                            for (int j = yPos; j < (yPos + structuresize.y); j++) {
+                                if (currentGameMap->isWithinBuildRange(i, j, pBuilder->getOwner())) {
+                                    withinRange = true;         //find out if the structure is close enough to other buildings
+                                }
                             }
                         }
                     }
@@ -1673,7 +1680,7 @@ void Game::drawScreen()
                             SDL_Texture* image;
 
                             bool tileValid = false;
-                            if(withinRange && currentGameMap->tileExists(i,j)) {
+                            if(footprintInsideMap && withinRange && currentGameMap->tileExists(i,j)) {
                                 Tile* pTile = currentGameMap->getTile(i,j);
                                 if(isZoneStructure(placeItem)) {
                                     tileValid = !pTile->isMountain() && !pTile->hasAGroundObject();
@@ -1690,7 +1697,7 @@ void Game::drawScreen()
                     }
 
                     StructurePlacementPreview preview;
-                    if(getTornieStructurePlacementPreview(placeItem, preview)) {
+                    if(footprintInsideMap && getTornieStructurePlacementPreview(placeItem, preview)) {
                         const int ownerHouse = pBuilder->getOwner()->getHouseID();
                         static int loggedPlacementPreviewCandidateCount = 0;
                         if(loggedPlacementPreviewCandidateCount < 12) {
@@ -4476,6 +4483,17 @@ bool Game::handlePlacementClick(int xPos, int yPos) {
 
     int placeItem = pBuilder->getCurrentProducedItem();
     Coord structuresize = getStructureSize(placeItem);
+
+    const bool footprintInsideMap =
+        structuresize.x > 0 && structuresize.y > 0
+        && xPos >= 0 && yPos >= 0
+        && xPos + structuresize.x <= currentGameMap->getSizeX()
+        && yPos + structuresize.y <= currentGameMap->getSizeY();
+    if(!footprintInsideMap) {
+        currentGame->addToNewsTicker(fmt::sprintf(_("@DUNE.ENG|134#Cannot place %%s here."), resolveItemName(placeItem)));
+        soundPlayer->playSound(Sound_InvalidAction);
+        return false;
+    }
 
             if(placeItem == Structure_Slab1) {
             if((currentGameMap->isWithinBuildRange(xPos, yPos, pBuilder->getOwner()))

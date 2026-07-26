@@ -216,8 +216,14 @@ void SFXManager::loadEnglishVoice() {
         { // Scope
           // "Warning Wormsign"
             auto WarningChunk = getChunkFromFile(HouseString + "WARNING.VOC");
-            auto WormSignChunk = getChunkFromFile(HouseString + "WORMY.VOC");
-            lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
+            try {
+                auto WormSignChunk = getChunkFromFile(HouseString + "WORMY.VOC");
+                lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
+            } catch(const std::exception& e) {
+                SDL_Log("SFXManager: optional '%sWORMY.VOC' unavailable (%s); using warning-only voice",
+                        HouseString.c_str(), e.what());
+                lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = std::move(WarningChunk);
+            }
         }
 
         // "Our base is under attack"
@@ -383,12 +389,14 @@ void SFXManager::loadNonEnglishVoice(const std::string& languagePrefix) {
     lngVoice[BloomLocated] = getChunkFromFile(languagePrefix + "BLOOM.VOC");
 
     // "Warning Wormsign"
-    if(pFileManager->exists(languagePrefix + "WORMY.VOC")) {
-        auto WarningChunk = getChunkFromFile(languagePrefix + "WARNING.VOC");
+    auto WarningChunk = getChunkFromFile(languagePrefix + "WARNING.VOC");
+    try {
         auto WormSignChunk = getChunkFromFile(languagePrefix + "WORMY.VOC");
         lngVoice[WarningWormSign] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
-    } else {
-        lngVoice[WarningWormSign] = getChunkFromFile(languagePrefix + "WARNING.VOC");
+    } catch(const std::exception& e) {
+        SDL_Log("SFXManager: optional '%sWORMY.VOC' unavailable (%s); using warning-only voice",
+                languagePrefix.c_str(), e.what());
+        lngVoice[WarningWormSign] = std::move(WarningChunk);
     }
 
     // "Our base is under attack"

@@ -67,6 +67,14 @@ public:
      * \return Mod name (e.g., "vanilla")
      */
     std::string getActiveModName() const;
+    bool isTornieContentActive() const {
+        const std::string activeModName = getActiveModName();
+        return activeModName == "Tornie" || activeModName == "TornieLite";
+    }
+
+    bool isTornieLiteActive() const {
+        return getActiveModName() == "TornieLite";
+    }
     const CustomHouseInfo& getActiveCustomHouseInfo() const;
     bool isCustomHouseRegistered() const;
     const ModMentatInfo& getActiveMentatInfo(int house) const;
