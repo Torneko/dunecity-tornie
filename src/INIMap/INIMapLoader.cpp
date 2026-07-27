@@ -42,7 +42,7 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     }
 
     const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
+        && ModManager::instance().isTornieContentActive();
     std::vector<int> objectDataIxCandidates;
     if(houseID == HOUSE_CUSTOM) {
         objectDataIxCandidates = discoverCustomHouseSpecialVehicleCandidates([&](int candidate) {
@@ -123,10 +123,14 @@ void INIMapLoader::loadMap() {
     pGame->winFlags = inifile->getIntValue("BASIC","WinFlags",3);
     pGame->loseFlags = inifile->getIntValue("BASIC","LoseFlags",1);
 
-    if(pGame->techLevel == 0) {
-        const int defaultTechLevel = (ModManager::instance().isInitialized()
-                                      && ModManager::instance().getActiveModName() == "Tornie") ? 9 : 8;
-        pGame->techLevel = inifile->getIntValue("BASIC","TechLevel", defaultTechLevel);
+    const int configuredTechLevel = inifile->getIntValue("BASIC", "TechLevel", 0);
+    if(configuredTechLevel > 0) {
+        pGame->techLevel = configuredTechLevel;
+    } else if(pGame->techLevel == 0) {
+        const bool extendedTechTree = ModManager::instance().isInitialized()
+                                      && (ModManager::instance().getActiveModName() == "Tornie"
+                                          || ModManager::instance().getActiveModName() == "TornieLite");
+        pGame->techLevel = extendedTechTree ? 9 : 8;
     }
 
     int timeout = inifile->getIntValue("BASIC","TIMEOUT",0);
