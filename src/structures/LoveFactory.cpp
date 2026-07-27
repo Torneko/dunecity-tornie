@@ -37,10 +37,10 @@ constexpr std::array<Uint32, 4> DeliveryChoices = {
 
 int fallbackBasePrice(Uint32 deliveryID) {
     switch(deliveryID) {
-        case Delivery_Small:   return 1200;
-        case Delivery_Medium:  return 2000;
-        case Delivery_Heavy:   return 3200;
-        case Delivery_Support: return 2600;
+        case Delivery_Small:   return 600;
+        case Delivery_Medium:  return 1000;
+        case Delivery_Heavy:   return 1600;
+        case Delivery_Support: return 1300;
         default:               return 0;
     }
 }

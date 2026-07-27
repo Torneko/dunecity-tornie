@@ -14,7 +14,7 @@
 // change amount of available units every 30s
 #define CHOAM_CHANGE_AMOUNT     (MILLI2CYCLES(30*1000))
 
-#define LOVE_FACTORY_CHANGE_AMOUNT (MILLI2CYCLES(60*1000))
+#define LOVE_FACTORY_CHANGE_AMOUNT (MILLI2CYCLES(120*1000))
 #define LOVE_FACTORY_MAX_AMOUNT    5
 
 namespace {

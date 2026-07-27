@@ -620,7 +620,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(&editorModeStructs_Worfinery);
 
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 2*D2_TILESIZE + 4);
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 3*D2_TILESIZE + 4);
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_TechCenter);
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_LoveFactory);
