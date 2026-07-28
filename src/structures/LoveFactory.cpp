@@ -109,6 +109,17 @@ void LoveFactory::updateBuildList() {
         return;
     }
 
+    // BuilderBase may have populated this inherited Starport list before the
+    // Love Factory is fully initialized. Its sidebar must expose only the four
+    // reinforcement deliveries, never the regular CHOAM unit catalogue.
+    for(auto iter = buildList.begin(); iter != buildList.end();) {
+        if(!isDeliveryChoice(iter->itemID)) {
+            iter = buildList.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
     ensureDeliveryStock();
 
     const Uint32 now = currentGame->getGameCycleCount();

@@ -21,7 +21,7 @@
 #include <units/TankBase.h>
 
 // Elite Siege Tank — Tornie mod only. Uses same Siege Tank tile graphics but with upgraded stats.
-class EliteSiegeTank final : public TankBase
+class EliteSiegeTank : public TankBase
 {
 public:
     explicit EliteSiegeTank(House* newOwner);

@@ -1924,7 +1924,8 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
             case Unit_SonicTrike:       objectPicBase = ObjPic_SonicTrike;                                                                                        break;
             case Unit_FlameTank:        objectPicBase = ObjPic_Tank_Base;       objectPicGun = tornieActive ? ObjPic_FlameTankGunTornie : ObjPic_Launcher_Gun; objectPicGunHouse = tornieActive ? HOUSE_HARKONNEN : unit.house; gunOffset = launcherTurretOffset; break;
             case Unit_EliteLauncher:    objectPicBase = ObjPic_Tank_Base;       objectPicGun = tornieActive ? ObjPic_EliteLauncherGunTornie : ObjPic_Launcher_Gun; objectPicGunHouse = tornieActive ? HOUSE_HARKONNEN : unit.house; gunOffset = launcherTurretOffset; break;
-            case Unit_EliteSiegeTank:   objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_EliteSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
+            case Unit_EliteSiegeTank:   objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_EliteSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
+            case Unit_ChemicalSiegeTank: objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_ChemicalSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
         }
 
         SDL_Texture* pObjectSprite = pGFXManager->getZoomedObjPic(objectPicBase, unit.house, currentZoomlevel);
@@ -1959,7 +1960,7 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                                        || unit.itemID == Unit_Deviator);
         const bool customStarMarker = (unit.itemID == Unit_RocketTrike || unit.itemID == Unit_SonicTrike
                                        || unit.itemID == Unit_FlameTank || unit.itemID == Unit_EliteLauncher
-                                       || unit.itemID == Unit_EliteSiegeTank || unit.itemID == Unit_RebelHarvester);
+                                       || unit.itemID == Unit_EliteSiegeTank || unit.itemID == Unit_ChemicalSiegeTank || unit.itemID == Unit_RebelHarvester);
         if(yellowStarMarker || customStarMarker) {
             SDL_Texture* pStarSprite = pGFXManager->getZoomedObjPic(ObjPic_Star, currentZoomlevel);
 

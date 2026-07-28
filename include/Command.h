@@ -60,6 +60,7 @@ typedef enum {
     CMD_CITY_TOOL,                      ///< CMD_CITY_TOOL(X, Y, TOOL_TYPE) - bulldoze, road, power line, etc.
     CMD_TECHCENTER_SPAWN,               ///< TECHCENTER_SPAWN(OBJECT_ID)
 
+    CMD_CHEMICAL_HEALOBJECT,             ///< CHEMICAL_HEALOBJECT(OBJECT_ID,TARGET_OBJECT_ID)
     CMD_MAX
 } CMDTYPE;
 

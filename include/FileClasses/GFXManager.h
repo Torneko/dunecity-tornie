@@ -141,6 +141,7 @@ typedef enum {
     ObjPic_RebelSonicTankGun,      ///< Tornie: Rebels-only violet Sonic Tank turret
     ObjPic_HarvestankGunTornie,     ///< Tornie: Harvestank turret overlay
     ObjPic_LoveFactory,             ///< Tornie: 2x3 Love Factory delivery building
+    ObjPic_ChemicalSiegeTankGunTornie, ///< Tornie: fixed cyan Chemical Siege Tank turret
     NUM_OBJPICS
 } ObjPic_enum;
 
@@ -157,7 +158,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
-    "HarvestankGunTornie", "LoveFactory" } };
+    "HarvestankGunTornie", "LoveFactory" , "ChemicalSiegeTankGunTornie" } };
 
 #define GROUNDUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+3)|TILE_FLIPV, (i+4)|TILE_NORMAL,(i+3)|TILE_NORMAL
 #define AIRUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+1)|TILE_ROTATE, i|TILE_FLIPH,(i+1)|TILE_FLIPH
@@ -233,6 +234,7 @@ typedef enum {
     Picture_SonicTrike,            ///< Tornie: portrait from SonicTrikeIcon.png
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
     Picture_LoveFactory,         ///< Tornie: portrait from LoveFactoryIcon.png
+    Picture_ChemicalSiegeTank,       ///< Tornie: Chemical Siege Tank portrait
     NUM_SMALLDETAILPICS
 } SmallDetailPics_Enum;
 
@@ -291,7 +293,8 @@ typedef enum {
     UI_CursorDown,
     UI_CursorLeft,
     UI_CursorMove_Zoomlevel0,
-    UI_CursorAttack_Zoomlevel0,
+    UI_CursorAttack_Zoomlevel0,
+    UI_CursorChimicalHeal_Zoomlevel0,
     UI_CursorCapture_Zoomlevel0,
     UI_CursorCarryallDrop_Zoomlevel0,
     UI_SendToRepairIcon,
@@ -482,6 +485,7 @@ typedef enum {
     UI_MapEditor_FlameTank,             ///< Tornie: sonic-line flame weapon
     UI_MapEditor_EliteLauncher,         ///< Tornie: upgraded Launcher
     UI_MapEditor_EliteSiegeTank,        ///< Tornie: upgraded Siege Tank
+    UI_MapEditor_ChemicalSiegeTank,     ///< Tornie: Chemical Siege Tank
     UI_MapEditor_Saboteur,
     UI_MapEditor_Sandworm,
     UI_MapEditor_SpecialUnit,

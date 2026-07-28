@@ -26,6 +26,7 @@ private:
     SDL_Cursor* normalCursor;
     SDL_Cursor* moveCursor;
     SDL_Cursor* attackCursor;
+    SDL_Cursor* healCursor;
     SDL_Cursor* captureCursor;
     SDL_Cursor* carryallDropCursor;
     bool initialized;

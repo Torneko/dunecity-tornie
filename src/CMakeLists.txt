@@ -301,6 +301,7 @@ target_sources(dunecity
         units/FlameTank.cpp
         units/EliteLauncher.cpp
         units/EliteSiegeTank.cpp
+    units/ChemicalSiegeTank.cpp
 
         # CutScenes
         CutScenes/CutScene.cpp

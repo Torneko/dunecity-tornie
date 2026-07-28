@@ -52,7 +52,7 @@
 /* number spice output frames - 1 */
 #define LASTSANDFRAME 2
 
-RebelHarvester::RebelHarvester(House* newOwner) : TrackedUnit(newOwner)
+RebelHarvester::RebelHarvester(House* newOwner) : TankBase(newOwner)
 {
     RebelHarvester::init();
 
@@ -68,7 +68,7 @@ RebelHarvester::RebelHarvester(House* newOwner) : TrackedUnit(newOwner)
     attackMode = GUARD;
 }
 
-RebelHarvester::RebelHarvester(InputStream& stream) : TrackedUnit(stream)
+RebelHarvester::RebelHarvester(InputStream& stream) : TankBase(stream, false)
 {
     RebelHarvester::init();
 
@@ -90,7 +90,7 @@ void RebelHarvester::init()
     graphicID = ObjPic_Harvester;
     graphic = pGFXManager->getObjPic(graphicID,getOwner()->getHouseID());
     const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
+        && ModManager::instance().isTornieContentActive();
     gunGraphicID = tornieActive ? ObjPic_HarvestankGunTornie : -1;
     turretGraphic = tornieActive ? pGFXManager->getObjPic(gunGraphicID, getOwner()->getHouseID()) : zoomable_texture{};
 
@@ -136,7 +136,7 @@ void RebelHarvester::blitToScreen()
         };
 
         SDL_Texture* pTurretGraphic = turretGraphic[currentZoomlevel];
-        SDL_Rect turretSource = calcSpriteSourceRect(pTurretGraphic, drawnAngle, NUM_ANGLES);
+        SDL_Rect turretSource = calcSpriteSourceRect(pTurretGraphic, drawnTurretAngle, NUM_ANGLES);
         SDL_Rect turretDest = calcSpriteDrawingRect(
             pTurretGraphic,
             screenborder->world2screenX(realX + harvestankTurretOffset[drawnAngle].x),

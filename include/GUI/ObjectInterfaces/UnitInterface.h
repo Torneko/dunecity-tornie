@@ -103,10 +103,18 @@ protected:
 
         commandHBox.addWidget(HSpacer::create(2));
 
-        destructButton.setSymbol(pGFXManager->getUIGraphicSurface(UI_DestructIcon));
-        destructButton.setTooltipText(_("Self-destruct this unit"));
-        destructButton.setVisible( (itemID == Unit_Devastator) );
-        destructButton.setOnClick(std::bind(&UnitInterface::onDestruct, this));
+        if(itemID == Unit_ChemicalSiegeTank) {
+            destructButton.setSymbol(pGFXManager->getUIGraphicSurface(UI_CursorChimicalHeal_Zoomlevel0));
+            destructButton.setTooltipText(_("Chimical Heal"));
+            destructButton.setToggleButton(true);
+            destructButton.setVisible(true);
+            destructButton.setOnClick(std::bind(&UnitInterface::onHeal, this));
+        } else {
+            destructButton.setSymbol(pGFXManager->getUIGraphicSurface(UI_DestructIcon));
+            destructButton.setTooltipText(_("Self-destruct this unit"));
+            destructButton.setVisible( (itemID == Unit_Devastator) );
+            destructButton.setOnClick(std::bind(&UnitInterface::onDestruct, this));
+        }
         commandHBox.addWidget(&destructButton);
 
         commandHBox.addWidget(HSpacer::create(2));
@@ -188,6 +196,10 @@ protected:
 
     void onAttack() {
         currentGame->setCursorMode(Game::CursorMode_Attack);
+    }
+
+    void onHeal() {
+        currentGame->setCursorMode(Game::CursorMode_ChimicalHeal);
     }
 
     void onCapture() {
@@ -280,6 +292,9 @@ protected:
 
         moveButton.setToggleState(currentGame->currentCursorMode == Game::CursorMode_Move);
         attackButton.setToggleState(currentGame->currentCursorMode == Game::CursorMode_Attack);
+        if(itemID == Unit_ChemicalSiegeTank) {
+            destructButton.setToggleState(currentGame->currentCursorMode == Game::CursorMode_ChimicalHeal);
+        }
         attackButton.setVisible(pObject->canAttack());
         captureButton.setToggleState(currentGame->currentCursorMode == Game::CursorMode_Capture);
         carryallDropButton.setToggleState(currentGame->currentCursorMode == Game::CursorMode_CarryallDrop);

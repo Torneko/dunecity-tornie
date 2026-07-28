@@ -152,6 +152,7 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_RebelSonicTankGun
     { 8, 1 },   // ObjPic_HarvestankGunTornie
     { 10, 1 },  // ObjPic_LoveFactory
+    { 8, 1 },   // ObjPic_ChemicalSiegeTankGunTornie
 };
 static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
               "objPicTiles must have one entry per ObjPic enum value");
@@ -1517,6 +1518,74 @@ GFXManager::GFXManager() {
     loadTorniePalettedSprite(ObjPic_HarvestankGunTornie,
                              "HarvestankGun.png",
                              "Harvestank turret");
+    try {
+        auto chemicalTurret = LoadPNG_RW(pFileManager->openFile("ChemicalSiegeTank.png").get());
+        if(chemicalTurret && chemicalTurret->w == NUM_ANGLES * D2_TILESIZE
+           && chemicalTurret->h == D2_TILESIZE) {
+            // Preserve the PNG alpha byte-for-byte. SDL_ConvertSurface/copySurface can
+            // blend a paletted PNG while converting it, which makes the cyan turret
+            // fully transparent on some renderers and custom-colour slots.
+            const auto copyChemicalTurretAtScale = [](SDL_Surface* source, int factor) -> sdl2::surface_ptr {
+                if(source == nullptr || factor <= 0) {
+                    return nullptr;
+                }
+
+                sdl2::surface_ptr result{
+                    SDL_CreateRGBSurfaceWithFormat(0,
+                                                   source->w * factor,
+                                                   source->h * factor,
+                                                   32,
+                                                   SDL_PIXELFORMAT_RGBA32)
+                };
+                if(result == nullptr) {
+                    return nullptr;
+                }
+
+                SDL_SetColorKey(result.get(), SDL_FALSE, 0);
+                SDL_SetSurfaceBlendMode(result.get(), SDL_BLENDMODE_NONE);
+                {
+                    sdl2::surface_lock sourceLock{ source };
+                    sdl2::surface_lock resultLock{ result.get() };
+                    for(int y = 0; y < source->h; ++y) {
+                        for(int x = 0; x < source->w; ++x) {
+                            Uint8 red = 0;
+                            Uint8 green = 0;
+                            Uint8 blue = 0;
+                            Uint8 alpha = 0;
+                            SDL_GetRGBA(getPixel(source, x, y), source->format,
+                                        &red, &green, &blue, &alpha);
+                            const Uint32 pixel = SDL_MapRGBA(result->format,
+                                                             red, green, blue, alpha);
+                            for(int scaledY = 0; scaledY < factor; ++scaledY) {
+                                for(int scaledX = 0; scaledX < factor; ++scaledX) {
+                                    putPixel(result.get(),
+                                             x * factor + scaledX,
+                                             y * factor + scaledY,
+                                             pixel);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SDL_SetSurfaceBlendMode(result.get(), SDL_BLENDMODE_BLEND);
+                return result;
+            };
+
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                for(int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+                    objPic[ObjPic_ChemicalSiegeTankGunTornie][colorSlot][zoom] =
+                        copyChemicalTurretAtScale(chemicalTurret.get(), 1 << zoom);
+                    objPicTex[ObjPic_ChemicalSiegeTankGunTornie][colorSlot][zoom].reset();
+                }
+            }
+            SDL_Log("GFXManager: Chemical Siege Tank cyan turret loaded with exact RGBA transparency for every color slot");
+        } else {
+            SDL_Log("GFXManager: ChemicalSiegeTank.png has an invalid 8-frame layout");
+        }
+    } catch(const std::exception& e) {
+        SDL_Log("GFXManager: %s - Chemical Siege Tank turret will use its fallback", e.what());
+    }
 
     try {
         auto setAdvancedWindtrapAtlas = [&](int objPicEnum, sdl2::surface_ptr atlas, const char* label) {
@@ -2574,7 +2643,8 @@ GFXManager::GFXManager() {
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
         loadIcon(Picture_Harvestank,     "HarvestankIcon.png",     "HARVEST.WSA");
-        loadIcon(Picture_LoveFactory,    "LoveFactoryIcon.png",    "STARPORT.WSA");
+        loadIcon(Picture_LoveFactory,    "LoveFactoryIcon.png",    "STARPORT.WSA");
+        loadIcon(Picture_ChemicalSiegeTank, "ChemicalSiegeTankIcon.png", "HTANK.WSA");
     }
 
     // unused: FARTR.WSA, FHARK.WSA, FORDOS.WSA
@@ -2650,6 +2720,9 @@ GFXManager::GFXManager() {
 
     uiGraphic[UI_CursorAttack_Zoomlevel0][HOUSE_HARKONNEN] = mapSurfaceColorRange(uiGraphic[UI_CursorMove_Zoomlevel0][HOUSE_HARKONNEN].get(), 232, PALCOLOR_HARKONNEN);
     SDL_SetColorKey(uiGraphic[UI_CursorAttack_Zoomlevel0][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
+    uiGraphic[UI_CursorChimicalHeal_Zoomlevel0][HOUSE_HARKONNEN] = mapSurfaceColorRange(uiGraphic[UI_CursorMove_Zoomlevel0][HOUSE_HARKONNEN].get(), 232, PALCOLOR_ATREIDES);
+    SDL_SetColorKey(uiGraphic[UI_CursorChimicalHeal_Zoomlevel0][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
+
 
     uiGraphic[UI_CursorCapture_Zoomlevel0][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("Capture.png").get());
     SDL_SetColorKey(uiGraphic[UI_CursorCapture_Zoomlevel0][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
@@ -3193,7 +3266,9 @@ GFXManager::GFXManager() {
     const unsigned int eliteLauncherEditorGun =
         selectEditorSprite(ObjPic_EliteLauncherGunTornie, ObjPic_Launcher_Gun);
     const unsigned int eliteSiegeTankEditorGun =
-        selectEditorSprite(ObjPic_EliteSiegeTankGunTornie, ObjPic_Siegetank_Gun);
+        selectEditorSprite(ObjPic_EliteSiegeTankGunTornie, ObjPic_Siegetank_Gun);
+    const unsigned int chemicalSiegeTankEditorGun =
+        selectEditorSprite(ObjPic_ChemicalSiegeTankGunTornie, ObjPic_Siegetank_Gun);
     uiGraphic[UI_MapEditor_Deviator][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[deviatorEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 3, 0);
     addMapEditorStar(UI_MapEditor_Deviator);
     // Tornie: dedicated sprites for the 3 mod units with their own .png sheets.
@@ -3213,7 +3288,9 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapEditor_EliteLauncher][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[eliteLauncherEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 3, 0);
     addMapEditorStar(UI_MapEditor_EliteLauncher, true);
     uiGraphic[UI_MapEditor_EliteSiegeTank][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Siegetank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[eliteSiegeTankEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 2, -4);
-    addMapEditorStar(UI_MapEditor_EliteSiegeTank, true);
+    addMapEditorStar(UI_MapEditor_EliteSiegeTank, true);    uiGraphic[UI_MapEditor_ChemicalSiegeTank][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Siegetank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[chemicalSiegeTankEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 2, -4);
+    addMapEditorStar(UI_MapEditor_ChemicalSiegeTank, true);
+
 
     // Compose custom vehicle previews one part at a time for every visual
     // colour. This keeps fixed Tornie cannons in their authored colour while
@@ -3332,6 +3409,14 @@ GFXManager::GFXManager() {
             uiGraphic[UI_MapEditor_EliteSiegeTank][colorSlot] =
                 decorateEditorVehicle(std::move(eliteSiegeTank), true);
         }
+        auto chemicalSiegeTank = composeEditorVehicle(
+            ObjPic_Siegetank_Base, colorSlot,
+            static_cast<int>(chemicalSiegeTankEditorGun), colorSlot, 2, -4);
+        if(chemicalSiegeTank) {
+            uiGraphic[UI_MapEditor_ChemicalSiegeTank][colorSlot] =
+                decorateEditorVehicle(std::move(chemicalSiegeTank), true);
+        }
+
     }
 
     uiGraphic[UI_MapEditor_Saboteur][HOUSE_HARKONNEN] = getSubFrame(objPic[ObjPic_Saboteur][HOUSE_HARKONNEN][0].get(),0,0,4,3);
@@ -4632,7 +4717,8 @@ void GFXManager::invalidateAllSpriteTextures() {
                || id == ObjPic_Worfinery
                || id == ObjPic_TechCenter
                || id == ObjPic_Scoutpost
-               || id == ObjPic_LoveFactory;
+               || id == ObjPic_LoveFactory
+               || id == ObjPic_ChemicalSiegeTankGunTornie;
     };
     for(int id = 0; id < NUM_OBJPICS; id++) {
         for(int h = 0; h < NUM_HOUSE_COLOR_SLOTS; h++) {
@@ -4876,7 +4962,7 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                 ObjPic_RocketTrike, ObjPic_SonicTrike, ObjPic_FlameTankGunTornie,
                 ObjPic_EliteSiegeTankGunTornie, ObjPic_DeviatorGunTornie,
                 ObjPic_EliteLauncherGunTornie, ObjPic_RebelSonicTankGun,
-                ObjPic_HarvestankGunTornie,
+                ObjPic_HarvestankGunTornie, ObjPic_ChemicalSiegeTankGunTornie,
                 ObjPic_AdvancedWindTrap, ObjPic_AdvancedWindTrap2x3, ObjPic_AdvancedWindTrap3x2,
                 ObjPic_RebelHarvester,  // falls back to vanilla Harvester
                 ObjPic_Worfinery,       // falls back to vanilla WOR
@@ -4907,7 +4993,7 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                           || id == ObjPic_FlameTankGunTornie
                           || id == ObjPic_EliteLauncherGunTornie) {
                     fallbackId = ObjPic_Launcher_Gun;
-                } else if(id == ObjPic_EliteSiegeTankGunTornie) {
+                } else if(id == ObjPic_EliteSiegeTankGunTornie || id == ObjPic_ChemicalSiegeTankGunTornie) {
                     fallbackId = ObjPic_Siegetank_Gun;
                 } else if(id == ObjPic_RebelSonicTankGun) {
                     fallbackId = ObjPic_Sonictank_Gun;

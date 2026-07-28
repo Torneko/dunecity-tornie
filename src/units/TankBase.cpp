@@ -38,13 +38,20 @@ TankBase::TankBase(House* newOwner) : TrackedUnit(newOwner) {
     turretAngle = drawnTurretAngle;
 }
 
-TankBase::TankBase(InputStream& stream) : TrackedUnit(stream) {
+TankBase::TankBase(InputStream& stream) : TankBase(stream, true) {
+}
+
+TankBase::TankBase(InputStream& stream, bool loadTurretState) : TrackedUnit(stream) {
     TankBase::init();
 
-    turretAngle = stream.readFixPoint();
-    drawnTurretAngle = stream.readSint8();
-
-    closeTarget.load(stream);
+    if(loadTurretState) {
+        turretAngle = stream.readFixPoint();
+        drawnTurretAngle = stream.readSint8();
+        closeTarget.load(stream);
+    } else {
+        drawnTurretAngle = drawnAngle;
+        turretAngle = drawnTurretAngle;
+    }
 }
 
 void TankBase::init() {

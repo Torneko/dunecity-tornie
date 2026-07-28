@@ -108,7 +108,8 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Unit_SonicTrike:               newPicID = Picture_SonicTrike;          break;
         case Unit_FlameTank:                newPicID = Picture_FlameTank;           break;
         case Unit_EliteLauncher:            newPicID = Picture_EliteLauncher;       break;
-        case Unit_EliteSiegeTank:           newPicID = Picture_EliteSiegeTank;      break;
+        case Unit_EliteSiegeTank:           newPicID = Picture_EliteSiegeTank;      break;
+        case Unit_ChemicalSiegeTank:        newPicID = Picture_ChemicalSiegeTank;   break;
         case Unit_RebelHarvester:           newPicID = Picture_Harvestank;          break;
         case Delivery_Small:                newPicID = Picture_Trooper;             break;
         case Delivery_Medium:               newPicID = Picture_Quad;                break;
@@ -323,7 +324,8 @@ Uint32  getItemIDByName(const std::string& name) {
     else if(lowerName == "sonic trike")                                         return Unit_SonicTrike;
     else if(lowerName == "flame tank")                                          return Unit_FlameTank;
     else if(lowerName == "elite launcher")                                      return Unit_EliteLauncher;
-    else if(lowerName == "elite siege tank")                                    return Unit_EliteSiegeTank;
+    else if(lowerName == "elite siege tank")                                    return Unit_EliteSiegeTank;
+    else if((lowerName == "chemical siege tank") || (lowerName == "chimical siege tank")) return Unit_ChemicalSiegeTank;
     else if((lowerName == "harvestank") || (lowerName == "rebel harvester"))     return Unit_RebelHarvester;
     else                                                                        return ItemID_Invalid;
 }
@@ -403,7 +405,8 @@ std::string getItemNameByID(Uint32 itemID) {
         case Unit_SonicTrike:               return "Sonic Trike";       break;
         case Unit_FlameTank:                return "Flame Tank";        break;
         case Unit_EliteLauncher:            return "Elite Launcher";    break;
-        case Unit_EliteSiegeTank:           return "Elite Siege Tank";  break;
+        case Unit_EliteSiegeTank:           return "Elite Siege Tank";  break;
+        case Unit_ChemicalSiegeTank:        return "Chemical Siege Tank"; break;
         case Unit_RebelHarvester:           return "Harvestank";        break;
 
         default:
@@ -487,7 +490,8 @@ std::string resolveItemName(int itemID) {
         case Unit_SonicTrike:               return _("Sonic Trike");                       break;
         case Unit_FlameTank:                return _("Flame Tank");                        break;
         case Unit_EliteLauncher:            return _("Elite Launcher");                    break;
-        case Unit_EliteSiegeTank:           return _("Elite Siege Tank");                  break;
+        case Unit_EliteSiegeTank:           return _("Elite Siege Tank");                  break;
+        case Unit_ChemicalSiegeTank:        return _("Chemical Siege Tank");             break;
         case Unit_RebelHarvester:           return _("Harvestank");                       break;
 
         default:

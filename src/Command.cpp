@@ -32,6 +32,7 @@
 #include <units/Harvester.h>
 #include <units/HarvesterHelpers.h>
 #include <units/InfantryBase.h>
+#include <units/ChemicalSiegeTank.h>
 #include <structures/BuilderBase.h>
 #include <structures/TurretBase.h>
 #include <structures/Palace.h>
@@ -170,6 +171,18 @@ void Command::executeCommand() const {
                 return;
             }
             pUnit->doAttackObject((int) parameter[1], true);
+        } break;
+
+        case CMD_CHEMICAL_HEALOBJECT: {
+            if(parameter.size() != 2) {
+                THROW(std::invalid_argument, "Command::executeCommand(): CMD_CHEMICAL_HEALOBJECT needs 2 Parameters!");
+            }
+            auto* pChemicalSiegeTank = dynamic_cast<ChemicalSiegeTank*>(
+                currentGame->getObjectManager().getObject(parameter[0]));
+            if(pChemicalSiegeTank == nullptr) {
+                return;
+            }
+            pChemicalSiegeTank->doHealObject(parameter[1]);
         } break;
 
         case CMD_INFANTRY_CAPTURE: {

@@ -180,6 +180,14 @@ void Bullet::init()
             graphic = pGFXManager->getObjPic(ObjPic_Bullet_MediumRocket, houseID);
         } break;
 
+        case Bullet_ChemicalHeal: {
+            damageRadius = 0;
+            speed = 19.2_fix;
+            detonationTimer = -1;
+            numFrames = 16;
+            graphic = pGFXManager->getObjPic(ObjPic_Bullet_MediumRocket, houseID);
+        } break;
+
         case Bullet_LargeRocket: {
             damageRadius = TILESIZE;
             speed = 32.0_fix;
@@ -412,7 +420,7 @@ void Bullet::update()
         ySpeed = speed * -FixPoint::sin(Deg256ToRad(angle));
 
         drawnAngle = lround(numFrames*angle/256) % numFrames;
-    } else if(bulletID == Bullet_TurretRocket) {
+    } else if(bulletID == Bullet_TurretRocket || bulletID == Bullet_ChemicalHeal) {
 
         // Dynasty: Turret rockets actively track their moving target
         ObjectBase* pTarget = target.getObjPointer();
@@ -538,12 +546,12 @@ void Bullet::update()
                 return;
                     }
                 }
-            } else if(bulletID == Bullet_TurretRocket) {
+            } else if(bulletID == Bullet_TurretRocket || bulletID == Bullet_ChemicalHeal) {
                 // Dynasty/v0.96.4: Turret rockets (anti-air) detonate IMMEDIATELY upon reaching destination
                 // No timer check needed - they should always hit their target on proximity
                 // MULTIPLAYER-SAFE: Track proximity detonation
                 ObjectBase* pTarget = target.getObjPointer();
-                if(pTarget && pTarget->getItemID() == Unit_Ornithopter) {
+                if(bulletID == Bullet_TurretRocket && pTarget && pTarget->getItemID() == Unit_Ornithopter) {
                     currentGame->combatStats.turretRocketsProximityDetonated++;
                 }
                 realX = destination.x;
@@ -571,6 +579,20 @@ void Bullet::destroy()
     int houseID = owner->getHouseID();
 
     switch(bulletID) {
+        case Bullet_ChemicalHeal: {
+            ObjectBase* pTarget = target.getObjPointer();
+            if(pTarget != nullptr && pTarget->isAUnit() && pTarget->isActive()
+               && pTarget->getOwner() != nullptr
+               && pTarget->getOwner()->getTeamID() == owner->getTeamID()) {
+                const int healedHealth = std::min(
+                    pTarget->getMaxHealth(), lround(pTarget->getHealth()) + damage);
+                pTarget->setHealth(healedHealth);
+            }
+            soundPlayer->playSoundAt(Sound_ExplosionGas, position);
+            currentGame->getExplosionList().push_back(
+                new Explosion(Explosion_Gas, position, houseID));
+        } break;
+
         case Bullet_DRocket: {
             currentGameMap->damage(shooterID, owner, position, bulletID, damage, damageRadius, airAttack);
             soundPlayer->playSoundAt(Sound_ExplosionGas, position);

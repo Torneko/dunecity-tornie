@@ -723,6 +723,10 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeUnits_EliteSiegeTank.setToggleButton(true);
     editorModeUnits_EliteSiegeTank.setTooltipText(resolveItemName(Unit_EliteSiegeTank));
     editorModeUnits_EliteSiegeTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_EliteSiegeTank));
+    editorModeUnits_ChemicalSiegeTank.setToggleButton(true);
+    editorModeUnits_ChemicalSiegeTank.setTooltipText(resolveItemName(Unit_ChemicalSiegeTank));
+    editorModeUnits_ChemicalSiegeTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_ChemicalSiegeTank));
+
 
     editorModeUnits_VBox.addWidget(VSpacer::create(2));
 
@@ -828,6 +832,11 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeUnits_HBoxTornieElite.addWidget(&editorModeUnits_EliteLauncher);
         editorModeUnits_HBoxTornieElite.addWidget(HSpacer::create(2));
         editorModeUnits_HBoxTornieElite.addWidget(&editorModeUnits_EliteSiegeTank);
+        editorModeUnits_VBox.addWidget(&editorModeUnits_HBoxTornieChemical, 2*D2_TILESIZE);
+        editorModeUnits_HBoxTornieChemical.addWidget(&editorModeUnits_ChemicalSiegeTank);
+        editorModeUnits_HBoxTornieChemical.addWidget(HSpacer::create(2));
+        editorModeUnits_HBoxTornieChemical.addWidget(Spacer::create());
+
     }
 
     editorModeUnits_MainVBox.addWidget(Spacer::create());
@@ -1289,6 +1298,7 @@ void MapEditorInterface::onUnitButton(int unitType) {
     editorModeUnits_FlameTank.setToggleState( (unitType == Unit_FlameTank) );
     editorModeUnits_EliteLauncher.setToggleState( (unitType == Unit_EliteLauncher) );
     editorModeUnits_EliteSiegeTank.setToggleState( (unitType == Unit_EliteSiegeTank) );
+    editorModeUnits_ChemicalSiegeTank.setToggleState( (unitType == Unit_ChemicalSiegeTank) );
     editorModeUnits_Tank.setToggleState( (unitType == Unit_Tank) );
     editorModeUnits_SiegeTank.setToggleState( (unitType == Unit_SiegeTank) );
     editorModeUnits_Launcher.setToggleState( (unitType == Unit_Launcher) );
@@ -1547,6 +1557,7 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeUnits_FlameTank.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_FlameTank, newHouse));
     editorModeUnits_EliteLauncher.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_EliteLauncher, newHouse));
     editorModeUnits_EliteSiegeTank.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_EliteSiegeTank, newHouse));
+    editorModeUnits_ChemicalSiegeTank.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ChemicalSiegeTank, newHouse));
     editorModeUnits_Tank.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Tank, newHouse));
     editorModeUnits_SiegeTank.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_SiegeTank, newHouse));
     editorModeUnits_Launcher.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Launcher, newHouse));

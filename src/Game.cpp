@@ -81,6 +81,7 @@ std::mutex Game::performanceLogMutex;
 #include <units/HarvesterHelpers.h>
 #include <units/InfantryBase.h>
 #include <units/GroundUnit.h>
+#include <units/ChemicalSiegeTank.h>
 #include <units/AmbientAirplane.h>
 #include <units/AmbientHelicopter.h>
 #include <structures/Airport.h>
@@ -2048,6 +2049,14 @@ void Game::doInput()
 
                                 } break;
 
+                                case CursorMode_ChimicalHeal: {
+
+                                    if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
+                                        handleSelectedObjectsHealClick(screenborder->screen2MapX(mouse->x), screenborder->screen2MapY(mouse->y));
+                                    }
+
+                                } break;
+
                                 case CursorMode_Move: {
 
                                     if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
@@ -3991,6 +4000,11 @@ bool Game::onRadarClick(Coord worldPosition, bool bRightMouseButton, bool bDrag)
                     return false;
                 } break;
 
+                case CursorMode_ChimicalHeal: {
+                    handleSelectedObjectsHealClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
+                    return false;
+                } break;
+
                 case CursorMode_Move: {
                     handleSelectedObjectsMoveClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
                     return false;
@@ -4616,6 +4630,43 @@ bool Game::handleSelectedObjectsAttackClick(int xPos, int yPos) {
     } else {
         return false;
     }
+}
+
+bool Game::handleSelectedObjectsHealClick(int xPos, int yPos) {
+    ChemicalSiegeTank* pResponder = nullptr;
+    ObjectBase* pTarget = nullptr;
+
+    if(currentGameMap->tileExists(xPos, yPos)) {
+        Tile* pTile = currentGameMap->getTile(xPos, yPos);
+        if(pTile->hasAnObject()) {
+            pTarget = pTile->getObject();
+        }
+    }
+
+    if(pTarget != nullptr) {
+        for(Uint32 objectID : selectedList) {
+            ObjectBase* pObject = objectManager.getObject(objectID);
+            auto* pChemicalSiegeTank = dynamic_cast<ChemicalSiegeTank*>(pObject);
+            if(pChemicalSiegeTank != nullptr
+               && pChemicalSiegeTank->getOwner() == pLocalHouse
+               && pChemicalSiegeTank->isRespondable()
+               && pChemicalSiegeTank->canHeal(pTarget)) {
+                getCommandManager().addCommand(
+                    Command(pLocalPlayer->getPlayerID(), CMD_CHEMICAL_HEALOBJECT,
+                            pChemicalSiegeTank->getObjectID(), pTarget->getObjectID()));
+                pResponder = pChemicalSiegeTank;
+            }
+        }
+    }
+
+    setCursorMode(CursorMode_Normal);
+    if(pResponder != nullptr) {
+        pResponder->playConfirmSound();
+        return true;
+    }
+
+    soundPlayer->playSound(Sound_InvalidAction);
+    return false;
 }
 
 bool Game::handleSelectedObjectsMoveClick(int xPos, int yPos) {

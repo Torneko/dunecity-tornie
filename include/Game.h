@@ -522,6 +522,14 @@ private:
     bool handleSelectedObjectsAttackClick(int xPos, int yPos);
 
     /**
+        Performs a Chimical Heal click for the currently selected Chemical Siege Tanks.
+        \param  xPos    x-coordinate in map coordinates
+        \param  yPos    y-coordinate in map coordinates
+        \return true if healing is possible
+    */
+    bool handleSelectedObjectsHealClick(int xPos, int yPos);
+
+    /**
         Performs a move click for the currently selected units/structures.
         \param  xPos    x-coordinate in map coordinates
         \param  yPos    x-coordinate in map coordinates
@@ -585,7 +593,8 @@ public:
         CursorMode_CarryallDrop,
         CursorMode_Placing,
         CursorMode_CityZone,
-        CursorMode_CityRoad
+        CursorMode_CityRoad,
+        CursorMode_ChimicalHeal
     };
 
     int         currentCursorMode = CursorMode_Normal;

@@ -451,6 +451,7 @@ void INIMapLoader::loadHouses()
     std::vector<HOUSETYPE> unboundedHouses;
 
     for(int h=0;h<NUM_HOUSES;h++) {
+        if(ModManager::instance().isTornieLiteActive() && h >= 6) continue;
         if(!isHouseAvailable(static_cast<HOUSETYPE>(h))) continue;
         bool bFound = false;
         for(const GameInitSettings::HouseInfo& houseInfo : houseInfoList) {

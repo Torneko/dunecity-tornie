@@ -141,6 +141,7 @@ std::string getHouseRegionPrefix(HOUSETYPE house) {
 
 int getHousePaletteIndex(HOUSETYPE house) {
     if(house == HOUSE_CUSTOM) {
+        if(ModManager::instance().isTornieLiteActive()) return 128;
         const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
         return isHouseAvailable(house) ? info.paletteIndex : PALCOLOR_HARKONNEN;
     }

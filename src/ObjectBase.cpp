@@ -90,6 +90,7 @@
 #include <units/FlameTank.h>
 #include <units/EliteLauncher.h>
 #include <units/EliteSiegeTank.h>
+#include <units/ChemicalSiegeTank.h>
 
 #include <array>
 #include <vector>
@@ -889,6 +890,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Unit_FlameTank:                newObject = new FlameTank(Owner); break;
         case Unit_EliteLauncher:            newObject = new EliteLauncher(Owner); break;
         case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(Owner); break;
+        case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(Owner); break;
         case Unit_Special: {
             const bool tornieActive = ModManager::instance().isInitialized()
                 && ModManager::instance().isTornieContentActive();
@@ -926,6 +928,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
                     case Unit_FlameTank:       newObject = new FlameTank(Owner); break;
                     case Unit_EliteLauncher:   newObject = new EliteLauncher(Owner); break;
                     case Unit_EliteSiegeTank:  newObject = new EliteSiegeTank(Owner); break;
+                    case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(Owner); break;
                     default: break;
                 }
             }
@@ -1009,7 +1012,8 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Unit_FlameTank:                newObject = new FlameTank(stream); break;
         case Unit_EliteLauncher:            newObject = new EliteLauncher(stream); break;
         case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(stream); break;
-
+
+        case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(stream); break;
         default:                            newObject = nullptr;
                                             SDL_Log("ObjectBase::loadObject(): %d is no valid ItemID!",itemID);
                                             break;
