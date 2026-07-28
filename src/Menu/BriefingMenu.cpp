@@ -120,10 +120,11 @@ void BriefingMenu::onMentatTextFinished() {
 
 int BriefingMenu::showMenu()
 {
+    const HOUSETYPE musicHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(house));
     switch(type) {
         case DEBRIEFING_WIN:
         {
-            switch(house) {
+            switch(musicHouse) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -145,7 +146,7 @@ int BriefingMenu::showMenu()
 
         case DEBRIEFING_LOST:
         {
-            switch(house) {
+            switch(musicHouse) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -167,7 +168,7 @@ int BriefingMenu::showMenu()
 
         case BRIEFING:
         {
-            switch(house) {
+            switch(musicHouse) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
