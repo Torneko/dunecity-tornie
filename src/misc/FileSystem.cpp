@@ -625,6 +625,25 @@ std::string getDuneLegacyDataDir() {
         }
 #endif
 
+#if defined(__linux__) && !defined(__ANDROID__)
+        // Installed Linux packages and the portable TGZ both place the
+        // executable in bin/ and game data in the sibling share/DuneCity/
+        // directory. Resolve that layout before using an absolute build-time
+        // prefix so extracted archives remain relocatable.
+        if(dataDir.empty()) {
+            char* basePath = SDL_GetBasePath();
+            if(basePath != nullptr) {
+                const std::string siblingDataDir = std::string(basePath) + "../share/DuneCity/";
+                struct stat dirCheck;
+                if((stat(siblingDataDir.c_str(), &dirCheck) == 0) && S_ISDIR(dirCheck.st_mode)) {
+                    dataDir = siblingDataDir;
+                    SDL_Log("Using executable-relative Linux data dir: %s", dataDir.c_str());
+                }
+                SDL_free(basePath);
+            }
+        }
+#endif
+
 #ifdef DUNELEGACY_DATADIR
         // Only use the compile-time install path if it actually exists
         // (i.e. the binary was installed, not run from a build directory)

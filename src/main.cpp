@@ -1100,9 +1100,11 @@ int main(int argc, char *argv[]) {
             if(bFirstInit == true) {
                 SDL_Log("Initializing audio...");
                 if( Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0 ) {
-                    SDL_Quit();
-                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, SDL_GetError());
+                    const std::string mixerError = Mix_GetError();
+                    SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Mix_OpenAudio failed: %s", mixerError.c_str());
+                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, mixerError.c_str());
                 } else {
+                    SDL_Log("Audio device opened successfully.");
                     SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
                 }
             }
