@@ -176,11 +176,14 @@ void setVideoMode(int displayIndex)
         if(settings.video.height < 480) settings.video.height = 480;
     }
 
-    // Prefer Direct3D on Windows, let SDL choose best renderer on other platforms
+    // Prefer a renderer known to handle DuneCity's target textures reliably.
 #ifdef _WIN32
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#elif defined(__linux__) && !defined(__ANDROID__)
+    // SDL may otherwise select OpenGL ES 2, which can produce a black frame
+    // on some Linux desktop/fullscreen combinations.
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
 #else
-    // On non-Windows platforms, let SDL choose the best renderer
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
 #endif
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");  // Use nearest-neighbor scaling for pixel-perfect look
@@ -198,6 +201,13 @@ void setVideoMode(int displayIndex)
     Uint32 rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
     
     renderer = SDL_CreateRenderer(window, -1, rendererFlags);
+#if defined(__linux__) && !defined(__ANDROID__)
+    if (!renderer) {
+        SDL_Log("OpenGL renderer unavailable (%s); retrying with software rendering", SDL_GetError());
+        SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE);
+    }
+#endif
     if (!renderer) {
         fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
