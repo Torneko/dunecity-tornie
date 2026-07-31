@@ -205,9 +205,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: vcpkg-linux-x64-desktop-v1-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-linux-x64-desktop-v2-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
-            vcpkg-linux-x64-
+            vcpkg-linux-x64-desktop-v2-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
