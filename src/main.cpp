@@ -133,6 +133,12 @@ void setVideoMode(int displayIndex)
 {
     int videoFlags = 0;
 
+#if defined(__linux__) && !defined(__ANDROID__)
+    // Keep the X11 compositor active in desktop fullscreen. Bypassing it can
+    // leave Cinnamon and similar desktops on a black screen after launch.
+    SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+#endif
+
     if(settings.video.fullscreen) {
         videoFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
