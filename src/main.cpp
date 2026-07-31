@@ -1046,6 +1046,19 @@ int main(int argc, char *argv[]) {
                 SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");      // Enable render batching
                 SDL_SetHint(SDL_HINT_RENDER_LINE_METHOD, "3");   // Best line rendering quality
 
+#if defined(__linux__) && !defined(__ANDROID__)
+                // A desktop AppImage must never silently select SDL's headless
+                // offscreen driver. Prefer the active X11 session before video
+                // initialization so a real window is always mapped.
+                const char* x11Display = SDL_getenv("DISPLAY");
+                if((x11Display != nullptr) && (x11Display[0] != '\0')) {
+                    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "x11", SDL_HINT_OVERRIDE);
+                    SDL_Log("Linux DISPLAY=%s; forcing SDL video driver x11", x11Display);
+                } else {
+                    SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Linux DISPLAY is unset; an X11 window cannot be created");
+                }
+#endif
+
                 if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0) {
                     THROW(sdl_error, "Couldn't initialize SDL: %s!", SDL_GetError());
                 }
