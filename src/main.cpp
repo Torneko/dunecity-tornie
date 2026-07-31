@@ -131,7 +131,7 @@ int getLogicalToPhysicalResolutionFactor(int physicalWidth, int physicalHeight) 
 
 void setVideoMode(int displayIndex)
 {
-    int videoFlags = 0;
+    int videoFlags = SDL_WINDOW_SHOWN;
 
 #if defined(__linux__) && !defined(__ANDROID__)
     // Keep the X11 compositor active in desktop fullscreen. Bypassing it can
@@ -197,6 +197,15 @@ void setVideoMode(int displayIndex)
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
+#if defined(__linux__) && !defined(__ANDROID__)
+    // Some Linux window managers do not map this fullscreen window unless it
+    // is shown explicitly, even though rendering and audio continue.
+    SDL_ShowWindow(window);
+    SDL_RaiseWindow(window);
+    SDL_Log("Linux video driver: %s; window flags: 0x%08x",
+            SDL_GetCurrentVideoDriver() != nullptr ? SDL_GetCurrentVideoDriver() : "unknown",
+            SDL_GetWindowFlags(window));
+#endif
     // Create renderer (VSync set separately for macOS compatibility)
     Uint32 rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
     
