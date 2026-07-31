@@ -205,7 +205,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: vcpkg-linux-x64-${{ hashFiles('vcpkg.json', '.github/workflows/build.yml') }}
+          key: vcpkg-linux-x64-desktop-v1-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
             vcpkg-linux-x64-
 
@@ -231,7 +231,13 @@ jobs:
 
       - name: Validate Linux SDL video backend
         run: |
-          if ! strings build/src/dunecity | grep -Eq 'X11_CreateDevice|libX11\.so|SDL x11 video driver'; then
+          binary="$(find build -type f -name dunecity -perm -111 -print -quit)"
+          if [ -z "$binary" ]; then
+            echo "Unable to locate the built DuneCity executable" >&2
+            exit 1
+          fi
+          echo "Validating SDL backends in $binary"
+          if ! strings "$binary" | grep -Eq 'X11_CreateDevice|libX11\.so|SDL x11 video driver'; then
             echo "SDL2 was built without its X11 video backend" >&2
             exit 1
           fi
