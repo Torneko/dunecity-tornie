@@ -195,13 +195,17 @@ jobs:
           sudo apt-get install -y \
             autoconf autoconf-archive automake libtool libltdl-dev \
             build-essential pkg-config bison flex \
-            libsystemd-dev
+            libsystemd-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev \
+            libxi-dev libxfixes-dev libxinerama-dev libxss-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libibus-1.0-dev
 
       - name: Cache vcpkg binary packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: vcpkg-linux-x64-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-linux-x64-${{ hashFiles('vcpkg.json', '.github/workflows/build.yml') }}
           restore-keys: |
             vcpkg-linux-x64-
 
@@ -224,6 +228,13 @@ jobs:
         # Limit to 2 parallel jobs — ubuntu-latest has 4 cores but only 7GB
         # RAM, and 4 concurrent g++ -O2 processes on large TUs exceed that.
         run: cmake --build build --config Release --parallel 2
+
+      - name: Validate Linux SDL video backend
+        run: |
+          if ! strings build/src/dunecity | grep -Eq 'X11_CreateDevice|libX11\.so|SDL x11 video driver'; then
+            echo "SDL2 was built without its X11 video backend" >&2
+            exit 1
+          fi
 
       - name: Create Linux Packages
         run: |
