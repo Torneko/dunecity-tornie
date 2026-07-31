@@ -196,7 +196,7 @@ jobs:
             autoconf autoconf-archive automake libtool libltdl-dev \
             build-essential pkg-config bison flex \
             libsystemd-dev \
-            libx11-dev libxext-dev libxrandr-dev libxcursor-dev \
+            libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev \
             libxi-dev libxfixes-dev libxinerama-dev libxss-dev \
             libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev \
             libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libibus-1.0-dev

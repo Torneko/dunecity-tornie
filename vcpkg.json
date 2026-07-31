@@ -10,6 +10,7 @@
       "default-features": false,
       "features": [
         "alsa",
+        "dbus",
         "x11",
         "wayland",
         "ibus"
