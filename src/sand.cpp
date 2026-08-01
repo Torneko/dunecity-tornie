@@ -79,7 +79,7 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Structure_Worfinery:          newPicID = Picture_Worfinery;           break;
         case Structure_TechCenter:         newPicID = Picture_TechCenter;          break;
         case Structure_Scoutpost:          newPicID = Picture_Scoutpost;           break;
-        case Structure_LoveFactory:        newPicID = Picture_LoveFactory;         break;
+        case Structure_LoveFactory:        newPicID = Picture_LoveFactory;       break;
         case Structure_ZoneResidential:    newPicID = Picture_ZoneResidential;    break;
         case Structure_ZoneCommercial:     newPicID = Picture_ZoneCommercial;     break;
         case Structure_ZoneIndustrial:     newPicID = Picture_ZoneIndustrial;     break;
@@ -108,13 +108,9 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Unit_SonicTrike:               newPicID = Picture_SonicTrike;          break;
         case Unit_FlameTank:                newPicID = Picture_FlameTank;           break;
         case Unit_EliteLauncher:            newPicID = Picture_EliteLauncher;       break;
-        case Unit_EliteSiegeTank:           newPicID = Picture_EliteSiegeTank;      break;
+        case Unit_EliteSiegeTank:           newPicID = Picture_EliteSiegeTank;      break;
         case Unit_ChemicalSiegeTank:        newPicID = Picture_ChemicalSiegeTank;   break;
         case Unit_RebelHarvester:           newPicID = Picture_Harvestank;          break;
-        case Delivery_Small:                newPicID = Picture_Trooper;             break;
-        case Delivery_Medium:               newPicID = Picture_Quad;                break;
-        case Delivery_Heavy:                newPicID = Picture_Tank;                break;
-        case Delivery_Support:              newPicID = Picture_Carryall;            break;
         case Unit_Soldier:                  newPicID = Picture_Soldier;             break;
         case Unit_Trooper: {
             switch(house) {
@@ -138,7 +134,7 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         break;
     }
 
-    return pGFXManager->getSmallDetailPic(newPicID);
+    return pGFXManager->getSmallDetailPic(newPicID, house);
 }
 
 
@@ -290,11 +286,7 @@ Uint32  getItemIDByName(const std::string& name) {
     else if(lowerName == "worfinery")                                             return Structure_Worfinery;
     else if((lowerName == "tech center") || (lowerName == "techcenter"))          return Structure_TechCenter;
     else if((lowerName == "scoutpost") || (lowerName == "scout post") || (lowerName == "green post") || (lowerName == "sentinel post") || (lowerName == "avant-poste") || (lowerName == "avant poste")) return Structure_Scoutpost;
-    else if((lowerName == "love factory") || (lowerName == "love-factory"))        return Structure_LoveFactory;
-    else if(lowerName == "small delivery")                                         return Delivery_Small;
-    else if(lowerName == "medium delivery")                                        return Delivery_Medium;
-    else if(lowerName == "heavy delivery")                                         return Delivery_Heavy;
-    else if(lowerName == "support delivery")                                       return Delivery_Support;
+    else if((lowerName == "love factory") || (lowerName == "lovefactory"))       return Structure_LoveFactory;
     else if((lowerName == "carryall") || (lowerName == "carry-all"))            return Unit_Carryall;
     else if((lowerName == "devastator") || (lowerName == "devistator"))         return Unit_Devastator;
     else if(lowerName == "deviator")                                            return Unit_Deviator;
@@ -324,8 +316,8 @@ Uint32  getItemIDByName(const std::string& name) {
     else if(lowerName == "sonic trike")                                         return Unit_SonicTrike;
     else if(lowerName == "flame tank")                                          return Unit_FlameTank;
     else if(lowerName == "elite launcher")                                      return Unit_EliteLauncher;
-    else if(lowerName == "elite siege tank")                                    return Unit_EliteSiegeTank;
-    else if((lowerName == "chemical siege tank") || (lowerName == "chimical siege tank")) return Unit_ChemicalSiegeTank;
+    else if(lowerName == "elite siege tank")                                    return Unit_EliteSiegeTank;
+    else if(lowerName == "chemical siege tank")                                 return Unit_ChemicalSiegeTank;
     else if((lowerName == "harvestank") || (lowerName == "rebel harvester"))     return Unit_RebelHarvester;
     else                                                                        return ItemID_Invalid;
 }
@@ -373,10 +365,6 @@ std::string getItemNameByID(Uint32 itemID) {
         case Structure_TechCenter:          return "Tech Center";       break;
         case Structure_Scoutpost:           return "Scoutpost";         break;
         case Structure_LoveFactory:         return "Love Factory";      break;
-        case Delivery_Small:                return "Small Delivery";    break;
-        case Delivery_Medium:               return "Medium Delivery";   break;
-        case Delivery_Heavy:                return "Heavy Delivery";    break;
-        case Delivery_Support:              return "Support Delivery";  break;
 
         case Unit_Carryall:                 return "Carryall";          break;
         case Unit_Devastator:               return "Devastator";        break;
@@ -405,7 +393,7 @@ std::string getItemNameByID(Uint32 itemID) {
         case Unit_SonicTrike:               return "Sonic Trike";       break;
         case Unit_FlameTank:                return "Flame Tank";        break;
         case Unit_EliteLauncher:            return "Elite Launcher";    break;
-        case Unit_EliteSiegeTank:           return "Elite Siege Tank";  break;
+        case Unit_EliteSiegeTank:           return "Elite Siege Tank";  break;
         case Unit_ChemicalSiegeTank:        return "Chemical Siege Tank"; break;
         case Unit_RebelHarvester:           return "Harvestank";        break;
 
@@ -457,11 +445,7 @@ std::string resolveItemName(int itemID) {
         case Structure_Worfinery:           return _("Worfinery");                         break;
         case Structure_TechCenter:          return _("Tech Center");                       break;
         case Structure_Scoutpost:           return _("Scoutpost");                         break;
-        case Structure_LoveFactory:         return _("Love Factory");                      break;
-        case Delivery_Small:                return _("Small Delivery");                    break;
-        case Delivery_Medium:               return _("Medium Delivery");                   break;
-        case Delivery_Heavy:                return _("Heavy Delivery");                    break;
-        case Delivery_Support:              return _("Support Delivery");                  break;
+        case Structure_LoveFactory:         return _("Love Factory");             break;
 
         case Unit_Carryall:                 return _("@DUNE.ENG|195#Carryall");            break;
         case Unit_Devastator:               return _("@DUNE.ENG|217#Devastator");          break;
@@ -490,8 +474,8 @@ std::string resolveItemName(int itemID) {
         case Unit_SonicTrike:               return _("Sonic Trike");                       break;
         case Unit_FlameTank:                return _("Flame Tank");                        break;
         case Unit_EliteLauncher:            return _("Elite Launcher");                    break;
-        case Unit_EliteSiegeTank:           return _("Elite Siege Tank");                  break;
-        case Unit_ChemicalSiegeTank:        return _("Chemical Siege Tank");             break;
+        case Unit_EliteSiegeTank:           return _("Elite Siege Tank");                  break;
+        case Unit_ChemicalSiegeTank:        return _("Chemical Siege Tank");               break;
         case Unit_RebelHarvester:           return _("Harvestank");                       break;
 
         default:
@@ -516,8 +500,8 @@ HOUSETYPE getHouseByName(const std::string& name) {
     else if(lowerName == "fremen")       return HOUSE_FREMEN;
     else if(lowerName == "sardaukar")    return HOUSE_SARDAUKAR;
     else if(lowerName == "mercenary")    return HOUSE_MERCENARY;
-    else if(lowerName == "neutral")      return HOUSE_NEUTRAL;
-    else if((lowerName == "rebel") || (lowerName == "rebels")) return HOUSE_REBELS;
+    else if((lowerName == "wildspade") || (lowerName == "neutral")) return HOUSE_NEUTRAL;
+    else if((lowerName == "kleshmersh") || (lowerName == "rebel") || (lowerName == "rebels")) return HOUSE_REBELS;
     else if(isHouseAvailable(HOUSE_CUSTOM)
             && lowerName == strToLower(ModManager::instance().getActiveCustomHouseInfo().displayName)) return HOUSE_CUSTOM;
     else                                return HOUSE_INVALID;
@@ -534,6 +518,11 @@ std::string getHouseNameByNumber(HOUSETYPE house) {
         return "Custom";
     }
     if(house >= 0 && house < NUM_LEGACY_HOUSES) {
+        const bool jerichoActive = ModManager::instance().isInitialized()
+            && ModManager::instance().getActiveModName() == "Jericho";
+        if(jerichoActive && house == HOUSE_NEUTRAL) return "Wildspade";
+        if(jerichoActive && house == HOUSE_REBELS) return "Kleshmersh";
+
         static const char* const houseName[NUM_LEGACY_HOUSES] = {
             "Harkonnen", "Atreides", "Ordos", "Fremen", "Sardaukar",
             "Mercenary", "Neutral", "Rebels"
@@ -602,9 +591,7 @@ Uint32 getColorByTerrainType(int terrainType) {
 
 Uint32 getHouseRadarColor(HOUSETYPE house) {
     const int visualHouse = getHouseVisualHouse(house);
-    if(visualHouse == HOUSE_REBELS) {
-        return COLOR_RGB(74, 74, 80);
-    }
+
 
     if(isValidHouseColorSlot(visualHouse)) {
         return getHouseColorRGB(visualHouse, 0);
@@ -615,9 +602,7 @@ Uint32 getHouseRadarColor(HOUSETYPE house) {
 
 Uint32 getHouseInterfaceColor(HOUSETYPE house, int shadeOffset) {
     const int visualHouse = getHouseVisualHouse(house);
-    if(visualHouse == HOUSE_REBELS) {
-        return COLOR_RGB(58, 58, 62);
-    }
+
 
     if(isValidHouseColorSlot(visualHouse)) {
         return getHouseColorRGB(visualHouse, shadeOffset);

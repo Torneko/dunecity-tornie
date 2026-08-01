@@ -32,8 +32,7 @@ typedef enum {
     Bullet_Sonic = 9,
     Bullet_Sandworm = 10,
     Bullet_Flame = 11,            ///< Tornie: launcher-like fire missile with flame area damage
-    Bullet_SonicTrike = 12,       ///< Tornie: shorter and weaker Sonic Trike wave
-    Bullet_ChemicalHeal = 13      ///< Tornie: homing healing missile with Deviator gas impact
+    Bullet_SonicTrike = 12        ///< Tornie: shorter and weaker Sonic Trike wave
 } BulletID_enum;
 
 typedef enum {
@@ -144,17 +143,10 @@ typedef enum {
 
     // Appended after every 1.0.517 object ID to preserve save compatibility.
     Unit_SonicTrike = 63,               ///< Tornie: Rebels-only light sonic vehicle
+    Unit_ChemicalSiegeTank = 64,        ///< Tornie: custom-house chemical Siege Tank
+    Structure_LoveFactory = 65,         ///< Tornie: animated 2x3 Love Factory
 
-    // Tornie Love Factory and its four non-world delivery choices.
-    // These IDs are appended so every existing object keeps its save ID.
-    Structure_LoveFactory = 64,
-    Delivery_Small = 65,
-    Delivery_Medium = 66,
-    Delivery_Heavy = 67,
-    Delivery_Support = 68,
-
-    Unit_ChemicalSiegeTank = 69,      ///< Tornie: cyan support Siege Tank with allied healing
-    ItemID_LastID = 69,
+    ItemID_LastID = 65,
 
     Num_ItemID
 } ItemID_enum;

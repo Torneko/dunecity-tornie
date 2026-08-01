@@ -36,9 +36,8 @@
 #include <algorithm>
 
 const int BuilderBase::itemOrder[] = {    Structure_Slab4, Structure_Slab1, Structure_Road, Structure_IX, Structure_StarPort,
-                                           Structure_LoveFactory,
                                            Structure_HighTechFactory, Structure_HeavyFactory, Structure_RocketTurret,
-                                           Structure_Scoutpost,
+                                           Structure_Scoutpost, Structure_LoveFactory,
                                            Structure_RepairYard, Structure_GunTurret, Structure_TechCenter, Structure_WOR,
                                            Structure_Worfinery,
                                            Structure_Barracks, Structure_Wall, Structure_LightFactory,

@@ -81,7 +81,6 @@ std::mutex Game::performanceLogMutex;
 #include <units/HarvesterHelpers.h>
 #include <units/InfantryBase.h>
 #include <units/GroundUnit.h>
-#include <units/ChemicalSiegeTank.h>
 #include <units/AmbientAirplane.h>
 #include <units/AmbientHelicopter.h>
 #include <structures/Airport.h>
@@ -184,7 +183,7 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             return true;
 
         case Structure_LoveFactory:
-            preview = { ObjPic_LoveFactory, 10, 1, TornieStructureFrame_BuildSite, -1 };
+            preview = { ObjPic_LoveFactory, 8, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
         default:
@@ -441,16 +440,6 @@ void Game::initGame(const GameInitSettings& newGameInitSettings) {
                     objectData.data[Structure_ZoneResidential][h].enabled = false;
                     objectData.data[Structure_ZoneCommercial][h].enabled  = false;
                     objectData.data[Structure_ZoneIndustrial][h].enabled  = false;
-                }
-            }
-
-            if(!ModManager::instance().isTornieContentActive()) {
-                for(int h = 0; h < NUM_HOUSES; h++) {
-                    objectData.data[Structure_LoveFactory][h].enabled = false;
-                    objectData.data[Delivery_Small][h].enabled = false;
-                    objectData.data[Delivery_Medium][h].enabled = false;
-                    objectData.data[Delivery_Heavy][h].enabled = false;
-                    objectData.data[Delivery_Support][h].enabled = false;
                 }
             }
 
@@ -2045,14 +2034,6 @@ void Game::doInput()
 
                                     if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
                                         handleSelectedObjectsAttackClick(screenborder->screen2MapX(mouse->x), screenborder->screen2MapY(mouse->y));
-                                    }
-
-                                } break;
-
-                                case CursorMode_ChimicalHeal: {
-
-                                    if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
-                                        handleSelectedObjectsHealClick(screenborder->screen2MapX(mouse->x), screenborder->screen2MapY(mouse->y));
                                     }
 
                                 } break;
@@ -4000,11 +3981,6 @@ bool Game::onRadarClick(Coord worldPosition, bool bRightMouseButton, bool bDrag)
                     return false;
                 } break;
 
-                case CursorMode_ChimicalHeal: {
-                    handleSelectedObjectsHealClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
-                    return false;
-                } break;
-
                 case CursorMode_Move: {
                     handleSelectedObjectsMoveClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
                     return false;
@@ -4630,43 +4606,6 @@ bool Game::handleSelectedObjectsAttackClick(int xPos, int yPos) {
     } else {
         return false;
     }
-}
-
-bool Game::handleSelectedObjectsHealClick(int xPos, int yPos) {
-    ChemicalSiegeTank* pResponder = nullptr;
-    ObjectBase* pTarget = nullptr;
-
-    if(currentGameMap->tileExists(xPos, yPos)) {
-        Tile* pTile = currentGameMap->getTile(xPos, yPos);
-        if(pTile->hasAnObject()) {
-            pTarget = pTile->getObject();
-        }
-    }
-
-    if(pTarget != nullptr) {
-        for(Uint32 objectID : selectedList) {
-            ObjectBase* pObject = objectManager.getObject(objectID);
-            auto* pChemicalSiegeTank = dynamic_cast<ChemicalSiegeTank*>(pObject);
-            if(pChemicalSiegeTank != nullptr
-               && pChemicalSiegeTank->getOwner() == pLocalHouse
-               && pChemicalSiegeTank->isRespondable()
-               && pChemicalSiegeTank->canHeal(pTarget)) {
-                getCommandManager().addCommand(
-                    Command(pLocalPlayer->getPlayerID(), CMD_CHEMICAL_HEALOBJECT,
-                            pChemicalSiegeTank->getObjectID(), pTarget->getObjectID()));
-                pResponder = pChemicalSiegeTank;
-            }
-        }
-    }
-
-    setCursorMode(CursorMode_Normal);
-    if(pResponder != nullptr) {
-        pResponder->playConfirmSound();
-        return true;
-    }
-
-    soundPlayer->playSound(Sound_InvalidAction);
-    return false;
 }
 
 bool Game::handleSelectedObjectsMoveClick(int xPos, int yPos) {

@@ -69,7 +69,7 @@ public:
     std::string getActiveModName() const;
     bool isTornieContentActive() const {
         const std::string activeModName = getActiveModName();
-        return activeModName == "Tornie" || activeModName == "TornieLite";
+        return activeModName == "Tornie" || activeModName == "TornieLite" || activeModName == "Jericho";
     }
 
     bool isTornieLiteActive() const {
@@ -209,8 +209,8 @@ public:
      */
     void seedDunecityFromDefaults();
 
-    // Seed a bundled Tornie-family mod from install defaults.
-    void seedTornieFamilyModFromDefaults(const std::string& modName);
+    // DuneCity 1.0.492: seed the Tornie mod
+    void seedTornieFromDefaults();
     void seedDune2RFromDefaults();
 
     /**
@@ -219,8 +219,8 @@ public:
      */
     bool dunecityNeedsReseed() const;
 
-    // Check whether a bundled Tornie-family mod needs to be refreshed.
-    bool tornieFamilyModNeedsReseed(const std::string& modName) const;
+    // DuneCity 1.0.492: Tornie mod reseed check
+    bool tornieNeedsReseed() const;
     
     // === Paths ===
     

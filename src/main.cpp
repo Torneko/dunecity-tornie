@@ -86,6 +86,9 @@
 #include <misc/MacFunctions.h>
 #endif
 
+#if defined(__linux__)
+#include <dlfcn.h>
+#endif
 
 #if !defined(__GNUG__) || (defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1) && (ATOMIC_INT_LOCK_FREE > 1) && !defined(_GLIBCXX_HAS_GTHREADS))
 // g++ does not provide std::async on all platforms
@@ -131,13 +134,7 @@ int getLogicalToPhysicalResolutionFactor(int physicalWidth, int physicalHeight) 
 
 void setVideoMode(int displayIndex)
 {
-    int videoFlags = SDL_WINDOW_SHOWN;
-
-#if defined(__linux__) && !defined(__ANDROID__)
-    // Keep the X11 compositor active in desktop fullscreen. Bypassing it can
-    // leave Cinnamon and similar desktops on a black screen after launch.
-    SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-#endif
+    int videoFlags = 0;
 
     if(settings.video.fullscreen) {
         videoFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -176,14 +173,11 @@ void setVideoMode(int displayIndex)
         if(settings.video.height < 480) settings.video.height = 480;
     }
 
-    // Prefer a renderer known to handle DuneCity's target textures reliably.
+    // Prefer Direct3D on Windows, let SDL choose best renderer on other platforms
 #ifdef _WIN32
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
-#elif defined(__linux__) && !defined(__ANDROID__)
-    // SDL may otherwise select OpenGL ES 2, which can produce a black frame
-    // on some Linux desktop/fullscreen combinations.
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
 #else
+    // On non-Windows platforms, let SDL choose the best renderer
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
 #endif
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");  // Use nearest-neighbor scaling for pixel-perfect look
@@ -197,26 +191,10 @@ void setVideoMode(int displayIndex)
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
-#if defined(__linux__) && !defined(__ANDROID__)
-    // Some Linux window managers do not map this fullscreen window unless it
-    // is shown explicitly, even though rendering and audio continue.
-    SDL_ShowWindow(window);
-    SDL_RaiseWindow(window);
-    SDL_Log("Linux video driver: %s; window flags: 0x%08x",
-            SDL_GetCurrentVideoDriver() != nullptr ? SDL_GetCurrentVideoDriver() : "unknown",
-            SDL_GetWindowFlags(window));
-#endif
     // Create renderer (VSync set separately for macOS compatibility)
     Uint32 rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE;
     
     renderer = SDL_CreateRenderer(window, -1, rendererFlags);
-#if defined(__linux__) && !defined(__ANDROID__)
-    if (!renderer) {
-        SDL_Log("OpenGL renderer unavailable (%s); retrying with software rendering", SDL_GetError());
-        SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE);
-    }
-#endif
     if (!renderer) {
         fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
@@ -895,6 +873,41 @@ int main(int argc, char *argv[]) {
 
         SDL_Log("Starting DuneCity %s on %s", VERSION, SDL_GetPlatform());
 
+#if defined(__linux__) && !defined(__ANDROID__)
+        // Verify that required shared libraries are loadable before proceeding.
+        // If the binary was installed without bundled .so files and the system
+        // libraries are the wrong version or absent, dlopen catches this and
+        // logs a human-readable error instead of crashing silently on SDL_Init.
+        {
+            const char* const requiredLibs[] = {
+                "libSDL2-2.0.so.0",
+                "libSDL2_mixer-2.0.so.0",
+                "libSDL2_ttf-2.0.so.0",
+            };
+            bool allLibsFound = true;
+            for (const char* lib : requiredLibs) {
+                // RTLD_NOLOAD checks if already loaded (it is, since we're running);
+                // if it returns null anyway, fall back to a full load attempt.
+                void* handle = dlopen(lib, RTLD_LAZY | RTLD_NOLOAD);
+                if (!handle) {
+                    handle = dlopen(lib, RTLD_LAZY);
+                }
+                if (!handle) {
+                    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                        "Required library missing or incompatible: %s — %s", lib, dlerror());
+                    allLibsFound = false;
+                } else {
+                    dlclose(handle);
+                }
+            }
+            if (!allLibsFound) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                    "Cannot start: one or more required shared libraries could not be loaded. "
+                    "See log at: %s", getLogFilepath().c_str());
+                return EXIT_FAILURE;
+            }
+        }
+#endif
 
         // First check for missing files
         std::vector<std::string> missingFiles = FileManager::getMissingFiles();
@@ -1046,19 +1059,6 @@ int main(int argc, char *argv[]) {
                 SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");      // Enable render batching
                 SDL_SetHint(SDL_HINT_RENDER_LINE_METHOD, "3");   // Best line rendering quality
 
-#if defined(__linux__) && !defined(__ANDROID__)
-                // A desktop AppImage must never silently select SDL's headless
-                // offscreen driver. Prefer the active X11 session before video
-                // initialization so a real window is always mapped.
-                const char* x11Display = SDL_getenv("DISPLAY");
-                if((x11Display != nullptr) && (x11Display[0] != '\0')) {
-                    SDL_SetHintWithPriority(SDL_HINT_VIDEODRIVER, "x11", SDL_HINT_OVERRIDE);
-                    SDL_Log("Linux DISPLAY=%s; forcing SDL video driver x11", x11Display);
-                } else {
-                    SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Linux DISPLAY is unset; an X11 window cannot be created");
-                }
-#endif
-
                 if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) < 0) {
                     THROW(sdl_error, "Couldn't initialize SDL: %s!", SDL_GetError());
                 }
@@ -1138,11 +1138,9 @@ int main(int argc, char *argv[]) {
             if(bFirstInit == true) {
                 SDL_Log("Initializing audio...");
                 if( Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0 ) {
-                    const std::string mixerError = Mix_GetError();
-                    SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Mix_OpenAudio failed: %s", mixerError.c_str());
-                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, mixerError.c_str());
+                    SDL_Quit();
+                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, SDL_GetError());
                 } else {
-                    SDL_Log("Audio device opened successfully.");
                     SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
                 }
             }

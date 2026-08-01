@@ -193,9 +193,9 @@ void Worfinery::unbookHarvesterDropoff() {
 
 void Worfinery::startAnimate() {
     if(!extractingSpice) {
-        firstAnimFrame = 4;
-        lastAnimFrame = 6;
-        curAnimFrame = 4;
+        firstAnimFrame = 2;
+        lastAnimFrame = 7;
+        curAnimFrame = 2;
         justPlacedTimer = 0;
         animationCounter = 0;
     }

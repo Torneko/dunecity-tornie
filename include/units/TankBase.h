@@ -25,7 +25,6 @@ class TankBase : public TrackedUnit
 public:
     explicit TankBase(House* newOwner);
     explicit TankBase(InputStream& stream);
-    TankBase(InputStream& stream, bool loadTurretState);
     void init();
     virtual ~TankBase();
 

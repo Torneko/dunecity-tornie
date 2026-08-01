@@ -151,8 +151,10 @@ inline int getHouseColorPaletteIndexFromSlot(int colorSlot) {
     return PALCOLOR_HARKONNEN;
 }
 
+bool isJerichoHouseColorSlot(int colorSlot);
+
 inline const Palette& getPaletteForHouseColorSlot(int colorSlot) {
-    return (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot)) && customPaletteLoaded
+    return (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot)) && customPaletteLoaded
         ? customPalette
         : palette;
 }

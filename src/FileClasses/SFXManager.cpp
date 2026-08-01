@@ -92,7 +92,8 @@ void SFXManager::loadEnglishVoice() {
     lngVoice.resize(NUM_VOICE*NUM_HOUSES);
 
     const bool tornieVoiceFx = ModManager::instance().isInitialized()
-        && (ModManager::instance().getActiveModName() == "Tornie");
+        && (ModManager::instance().getActiveModName() == "Tornie"
+            || ModManager::instance().getActiveModName() == "Jericho");
 
     const CustomHouseInfo& customHouse = ModManager::instance().getActiveCustomHouseInfo();
     const bool customHouseActive = ModManager::instance().isCustomHouseRegistered();
@@ -149,11 +150,11 @@ void SFXManager::loadEnglishVoice() {
                 break;
             case HOUSE_NEUTRAL:
                 HouseString = "A";
-                HouseNameChunk = getChunkFromFile("ANEU.VOC", "AATRE.VOC");
+                HouseNameChunk = getChunkFromFile("WILDSPADE.VOC", "ANEU.VOC");
                 break;
             case HOUSE_REBELS:
                 HouseString = "H";
-                HouseNameChunk = getChunkFromFile("RREBELS.VOC", "HHARK.VOC");
+                HouseNameChunk = getChunkFromFile("KLESHMERSH.VOC", "RREBELS.VOC");
                 break;
             default:
                 break;
@@ -216,14 +217,8 @@ void SFXManager::loadEnglishVoice() {
         { // Scope
           // "Warning Wormsign"
             auto WarningChunk = getChunkFromFile(HouseString + "WARNING.VOC");
-            try {
-                auto WormSignChunk = getChunkFromFile(HouseString + "WORMY.VOC");
-                lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
-            } catch(const std::exception& e) {
-                SDL_Log("SFXManager: optional '%sWORMY.VOC' unavailable (%s); using warning-only voice",
-                        HouseString.c_str(), e.what());
-                lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = std::move(WarningChunk);
-            }
+            auto WormSignChunk = getChunkFromFile(HouseString + "WORMY.VOC");
+            lngVoice[WarningWormSign*NUM_HOUSES + VoiceNum] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
         }
 
         // "Our base is under attack"
@@ -281,10 +276,10 @@ void SFXManager::loadEnglishVoice() {
                 lngVoice[HouseOrdos*NUM_HOUSES+VoiceNum] = getChunkFromFile("OMERC.VOC", "MORDOS.VOC");
                 break;
             case HOUSE_NEUTRAL:
-                lngVoice[HouseAtreides*NUM_HOUSES+VoiceNum] = getChunkFromFile("ANEU.VOC", "MATRE.VOC");
+                lngVoice[HouseAtreides*NUM_HOUSES+VoiceNum] = getChunkFromFile("WILDSPADE.VOC", "ANEU.VOC");
                 break;
             case HOUSE_REBELS:
-                lngVoice[HouseHarkonnen*NUM_HOUSES+VoiceNum] = getChunkFromFile("RREBELS.VOC", "MHARK.VOC");
+                lngVoice[HouseHarkonnen*NUM_HOUSES+VoiceNum] = getChunkFromFile("KLESHMERSH.VOC", "RREBELS.VOC");
                 break;
             default:
                 break;
@@ -389,14 +384,12 @@ void SFXManager::loadNonEnglishVoice(const std::string& languagePrefix) {
     lngVoice[BloomLocated] = getChunkFromFile(languagePrefix + "BLOOM.VOC");
 
     // "Warning Wormsign"
-    auto WarningChunk = getChunkFromFile(languagePrefix + "WARNING.VOC");
-    try {
+    if(pFileManager->exists(languagePrefix + "WORMY.VOC")) {
+        auto WarningChunk = getChunkFromFile(languagePrefix + "WARNING.VOC");
         auto WormSignChunk = getChunkFromFile(languagePrefix + "WORMY.VOC");
         lngVoice[WarningWormSign] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
-    } catch(const std::exception& e) {
-        SDL_Log("SFXManager: optional '%sWORMY.VOC' unavailable (%s); using warning-only voice",
-                languagePrefix.c_str(), e.what());
-        lngVoice[WarningWormSign] = std::move(WarningChunk);
+    } else {
+        lngVoice[WarningWormSign] = getChunkFromFile(languagePrefix + "WARNING.VOC");
     }
 
     // "Our base is under attack"

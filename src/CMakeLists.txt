@@ -254,13 +254,13 @@ target_sources(dunecity
         structures/RocketTurret.cpp
         structures/Silo.cpp
         structures/StarPort.cpp
-        structures/LoveFactory.cpp
         structures/Wall.cpp
         structures/WindTrap.cpp
         structures/AdvancedWindTrap.cpp
         structures/Worfinery.cpp
         structures/TechCenter.cpp
         structures/Scoutpost.cpp
+        structures/LoveFactory.cpp
         structures/WOR.cpp
         structures/NuclearPlant.cpp
         structures/PoliceStation.cpp
@@ -301,7 +301,7 @@ target_sources(dunecity
         units/FlameTank.cpp
         units/EliteLauncher.cpp
         units/EliteSiegeTank.cpp
-    units/ChemicalSiegeTank.cpp
+        units/ChemicalSiegeTank.cpp
 
         # CutScenes
         CutScenes/CutScene.cpp

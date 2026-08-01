@@ -31,9 +31,8 @@ class UnitBase;
 ///
 /// Per Tornie spec: this is a single building that combines the visual
 /// identity of a WOR with the production role of a Refinery. Its two active
-/// seven source frames are expanded into the vanilla Refinery's 10-frame
-/// layout: two idle frames, three approach frames, and two occupied frames.
-/// State transitions and timing follow the vanilla Refinery.
+/// frames are expanded into the vanilla Refinery's 10-frame layout and use
+/// the same idle, approach, loaded-state, and timing rules.
 class Worfinery final : public BuilderBase
 {
 public:

@@ -82,7 +82,6 @@ struct CursorCache {
     SDL_Cursor* normal = nullptr;
     SDL_Cursor* move = nullptr;
     SDL_Cursor* attack = nullptr;
-    SDL_Cursor* heal = nullptr;
     SDL_Cursor* capture = nullptr;
     SDL_Cursor* carryallDrop = nullptr;
 
@@ -98,10 +97,6 @@ struct CursorCache {
         if(attack) {
             SDL_FreeCursor(attack);
             attack = nullptr;
-        }
-        if(heal) {
-            SDL_FreeCursor(heal);
-            heal = nullptr;
         }
         if(capture) {
             SDL_FreeCursor(capture);
@@ -216,7 +211,6 @@ CursorManager::CursorManager() :
     normalCursor(nullptr),
     moveCursor(nullptr),
     attackCursor(nullptr),
-    healCursor(nullptr),
     captureCursor(nullptr),
     carryallDropCursor(nullptr),
     initialized(false) {
@@ -241,7 +235,6 @@ void CursorManager::initialize() {
         SDL_Surface* normalSurface = pGFXManager->getUIGraphicSurface(UI_CursorNormal);
         SDL_Surface* moveSurface = pGFXManager->getUIGraphicSurface(UI_CursorMove_Zoomlevel0);
         SDL_Surface* attackSurface = pGFXManager->getUIGraphicSurface(UI_CursorAttack_Zoomlevel0);
-        SDL_Surface* healSurface = pGFXManager->getUIGraphicSurface(UI_CursorChimicalHeal_Zoomlevel0);
         SDL_Surface* captureSurface = pGFXManager->getUIGraphicSurface(UI_CursorCapture_Zoomlevel0);
         SDL_Surface* carryallDropSurface = pGFXManager->getUIGraphicSurface(UI_CursorCarryallDrop_Zoomlevel0);
 
@@ -255,9 +248,6 @@ void CursorManager::initialize() {
         if (attackSurface) {
             cache.attack = createColorCursorSafe(attackSurface, attackSurface->w / 2, attackSurface->h / 2, scale, SDL_SYSTEM_CURSOR_CROSSHAIR);
         }
-        if (healSurface) {
-            cache.heal = createColorCursorSafe(healSurface, healSurface->w / 2, healSurface->h / 2, scale, SDL_SYSTEM_CURSOR_CROSSHAIR);
-        }
         if (captureSurface) {
             cache.capture = createColorCursorSafe(captureSurface, captureSurface->w / 2, captureSurface->h / 2, scale, SDL_SYSTEM_CURSOR_HAND);
         }
@@ -269,7 +259,6 @@ void CursorManager::initialize() {
     normalCursor = cache.normal;
     moveCursor = cache.move;
     attackCursor = cache.attack;
-    healCursor = cache.heal;
     captureCursor = cache.capture;
     carryallDropCursor = cache.carryallDrop;
 
@@ -287,7 +276,6 @@ void CursorManager::cleanup() {
     normalCursor = nullptr;
     moveCursor = nullptr;
     attackCursor = nullptr;
-    healCursor = nullptr;
     captureCursor = nullptr;
     carryallDropCursor = nullptr;
 }
@@ -309,9 +297,6 @@ void CursorManager::setCursorMode(int mode) {
             break;
         case Game::CursorMode_Attack:
             cursorToSet = attackCursor ? attackCursor : normalCursor;
-            break;
-        case Game::CursorMode_ChimicalHeal:
-            cursorToSet = healCursor ? healCursor : normalCursor;
             break;
         case Game::CursorMode_Capture:
             cursorToSet = captureCursor ? captureCursor : normalCursor;
@@ -355,13 +340,6 @@ bool CursorManager::canSetCursorMode(int mode, const std::vector<Uint32>& select
                     if (pPalace->isSpecialWeaponReady()) {
                         return true;
                     }
-                }
-                break;
-            case Game::CursorMode_ChimicalHeal:
-                if (pObject->getItemID() == Unit_ChemicalSiegeTank
-                    && pObject->getOwner() == pLocalHouse
-                    && pObject->isRespondable()) {
-                    return true;
                 }
                 break;
             case Game::CursorMode_Capture:

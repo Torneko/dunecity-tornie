@@ -9,11 +9,10 @@
       "name": "sdl2",
       "default-features": false,
       "features": [
-        "alsa",
-        "dbus",
         "x11",
         "wayland",
-        "ibus"
+        "ibus",
+        "dbus"
       ],
       "platform": "linux"
     },

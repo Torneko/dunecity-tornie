@@ -911,7 +911,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
                 houseID, tornieActive, objectDataIxCandidates);
             std::vector<int> enabledPool;
             for(const int candidate : pool) {
-                if(currentGame->objectData.data[candidate][houseID].enabled) {
+                if(isSpecialVehicleSelectionCandidate(candidate) && currentGame->objectData.data[candidate][houseID].enabled) {
                     enabledPool.push_back(candidate);
                 }
             }
@@ -928,7 +928,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
                     case Unit_FlameTank:       newObject = new FlameTank(Owner); break;
                     case Unit_EliteLauncher:   newObject = new EliteLauncher(Owner); break;
                     case Unit_EliteSiegeTank:  newObject = new EliteSiegeTank(Owner); break;
-                    case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(Owner); break;
+                    case Unit_ChemicalSiegeTank: newObject = new ChemicalSiegeTank(Owner); break;
                     default: break;
                 }
             }
@@ -1012,8 +1012,8 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Unit_FlameTank:                newObject = new FlameTank(stream); break;
         case Unit_EliteLauncher:            newObject = new EliteLauncher(stream); break;
         case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(stream); break;
-
         case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(stream); break;
+
         default:                            newObject = nullptr;
                                             SDL_Log("ObjectBase::loadObject(): %d is no valid ItemID!",itemID);
                                             break;

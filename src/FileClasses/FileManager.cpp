@@ -47,7 +47,7 @@ std::string getBaseFilenameUpper(const std::string& filepath) {
 }
 
 bool isTornieModActive() {
-    return ModManager::instance().isInitialized() && strToUpper(ModManager::instance().getActiveModName()) == "TORNIE";
+    return ModManager::instance().isInitialized() && ModManager::instance().isTornieContentActive();
 }
 
 std::vector<std::string> getActiveModDataPaths() {
@@ -382,15 +382,12 @@ sdl2::RWops_ptr FileManager::openFile(const std::string& filename) {
 }
 
 sdl2::RWops_ptr FileManager::openCampaignFile(const std::string& filename) {
-    const auto& modManager = ModManager::instance();
-    const bool isTornieCampaign = isCampaignFile(filename)
-        && modManager.isInitialized()
-        && modManager.isTornieContentActive();
+    const bool isTornieCampaign = isCampaignFile(filename) && isTornieModActive();
 
     if(isTornieCampaign) {
-        const std::string activeModName = modManager.getActiveModName();
+        const std::string activeModName = ModManager::instance().getActiveModName();
         std::vector<std::string> candidates;
-        addCampaignCandidates(candidates, modManager.getModPath(activeModName) + "/campaign", filename);
+        addCampaignCandidates(candidates, ModManager::instance().getModPath(activeModName) + "/campaign", filename);
 
         for(const auto& searchPath : getSearchPath()) {
             addCampaignCandidates(candidates, searchPath + "/mods/" + activeModName + "/campaign", filename);
@@ -400,22 +397,22 @@ sdl2::RWops_ptr FileManager::openCampaignFile(const std::string& filename) {
         for(const auto& candidate : candidates) {
             auto rwop = openExternalFileIfPresent(candidate);
             if(rwop) {
-                SDL_Log("FileManager: using active-mod campaign file '%s' from '%s'", filename.c_str(), candidate.c_str());
+                SDL_Log("FileManager: using Tornie campaign file '%s' from '%s'", filename.c_str(), candidate.c_str());
                 return rwop;
             }
         }
 
         if(auto rwop = openFromNamedPakCaseInsensitive(pakFiles, filename, "TORNIE.PAK")) {
-            SDL_Log("FileManager: using active-mod campaign file '%s' from Tornie.PAK", filename.c_str());
+            SDL_Log("FileManager: using Tornie campaign file '%s' from Tornie.PAK", filename.c_str());
             return rwop;
         }
 
         if(auto rwop = openFromNamedPakCaseInsensitive(pakFiles, filename, "EXTRA.PAK")) {
-            SDL_Log("FileManager: using fallback campaign file '%s' from Extra.PAK while a Tornie content mod is active", filename.c_str());
+            SDL_Log("FileManager: using fallback campaign file '%s' from Extra.PAK while Tornie is active", filename.c_str());
             return rwop;
         }
 
-        THROW(io_error, "Cannot find active-mod campaign file '%s' in the selected mod campaign folder, Tornie.PAK, or Extra.PAK!", filename);
+        THROW(io_error, "Cannot find Tornie campaign file '%s' in the Tornie campaign folder, Tornie.PAK, or Extra.PAK!", filename);
     }
 
     if(!isTornieCampaign && isVanillaAddonCampaignFile(filename)) {

@@ -97,7 +97,7 @@ BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHo
     }
 
     if(ModManager::instance().isInitialized()
-            && ModManager::instance().getActiveModName() == "Tornie") {
+            && ModManager::instance().isTornieContentActive()) {
         tornieHouseAnimation = createTornieHouseAnimation(anim, house);
         if(tornieHouseAnimation != nullptr) {
             anim = tornieHouseAnimation.get();
@@ -120,11 +120,10 @@ void BriefingMenu::onMentatTextFinished() {
 
 int BriefingMenu::showMenu()
 {
-    const HOUSETYPE musicHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(house));
     switch(type) {
         case DEBRIEFING_WIN:
         {
-            switch(musicHouse) {
+            switch(house) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -146,7 +145,7 @@ int BriefingMenu::showMenu()
 
         case DEBRIEFING_LOST:
         {
-            switch(musicHouse) {
+            switch(house) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -168,7 +167,7 @@ int BriefingMenu::showMenu()
 
         case BRIEFING:
         {
-            switch(musicHouse) {
+            switch(house) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {

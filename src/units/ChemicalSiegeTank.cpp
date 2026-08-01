@@ -1,148 +1,84 @@
-#include <units/ChemicalSiegeTank.h>
+/*
+ *  This file is part of Dune Legacy.
+ *
+ *  Dune Legacy is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 2 of the License, or
+ *  (at your option) any later version.
+ */
 
-#include <algorithm>
+#include <units/ChemicalSiegeTank.h>
 
 #include <globals.h>
 
-#include <Bullet.h>
 #include <FileClasses/GFXManager.h>
-#include <Command.h>
+#include <House.h>
 #include <Game.h>
 #include <Map.h>
-#include <Tile.h>
-#include <players/Player.h>
-#include <House.h>
+#include <Explosion.h>
+#include <ScreenBorder.h>
 #include <SoundPlayer.h>
 
-ChemicalSiegeTank::ChemicalSiegeTank(House* newOwner) : EliteSiegeTank(newOwner) {
-    initChemicalSiegeTank();
+ChemicalSiegeTank::ChemicalSiegeTank(House* newOwner) : TankBase(newOwner) {
+    ChemicalSiegeTank::init();
+    setHealth(getMaxHealth());
 }
 
-ChemicalSiegeTank::ChemicalSiegeTank(InputStream& stream) : EliteSiegeTank(stream) {
-    initChemicalSiegeTank();
+ChemicalSiegeTank::ChemicalSiegeTank(InputStream& stream) : TankBase(stream) {
+    ChemicalSiegeTank::init();
+}
+
+void ChemicalSiegeTank::init() {
+    itemID = Unit_ChemicalSiegeTank;
+    owner->incrementUnits(itemID);
+    numWeapons = 2;
+    bulletType = Bullet_ShellLarge;
+    graphicID = ObjPic_Siegetank_Base;
+    graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
+    gunGraphicID = ObjPic_ChemicalSiegeTankGunTornie;
+    turretGraphic = pGFXManager->getObjPic(gunGraphicID, getOwner()->getHouseID());
+    numImagesX = NUM_ANGLES;
+    numImagesY = 1;
 }
 
 ChemicalSiegeTank::~ChemicalSiegeTank() = default;
 
-void ChemicalSiegeTank::initChemicalSiegeTank() {
-    itemID = Unit_ChemicalSiegeTank;
-    gunGraphicID = ObjPic_ChemicalSiegeTankGunTornie;
-    turretGraphic = pGFXManager->getObjPic(gunGraphicID, getOwner()->getHouseID());
+void ChemicalSiegeTank::blitToScreen() {
+    const int x1 = screenborder->world2screenX(realX);
+    const int y1 = screenborder->world2screenY(realY);
+    SDL_Texture* pUnitGraphic = graphic[currentZoomlevel];
+    SDL_Rect source1 = calcSpriteSourceRect(pUnitGraphic, drawnAngle, numImagesX);
+    SDL_Rect dest1 = calcSpriteDrawingRect(pUnitGraphic, x1, y1, numImagesX, 1, HAlign::Center, VAlign::Center);
+    SDL_RenderCopy(renderer, pUnitGraphic, &source1, &dest1);
+
+    const Coord siegeTankTurretOffset[] = {
+        Coord(8, -12), Coord(0, -20), Coord(0, -20), Coord(-4, -20),
+        Coord(-8, -12), Coord(-8, -4), Coord(-4, -12), Coord(8, -4)
+    };
+    SDL_Texture* pTurretGraphic = turretGraphic[currentZoomlevel];
+    SDL_Rect source2 = calcSpriteSourceRect(pTurretGraphic, drawnTurretAngle, NUM_ANGLES);
+    SDL_Rect dest2 = calcSpriteDrawingRect(
+        pTurretGraphic,
+        screenborder->world2screenX(realX + siegeTankTurretOffset[drawnTurretAngle].x),
+        screenborder->world2screenY(realY + siegeTankTurretOffset[drawnTurretAngle].y),
+        NUM_ANGLES, 1, HAlign::Center, VAlign::Center);
+    SDL_RenderCopy(renderer, pTurretGraphic, &source2, &dest2);
+    if(isBadlyDamaged()) drawSmoke(x1, y1);
 }
 
-bool ChemicalSiegeTank::isFriendly(const ObjectBase* object) const {
-    return object != nullptr && object->getOwner() != nullptr && getOwner() != nullptr
-        && object->getOwner()->getTeamID() == getOwner()->getTeamID();
-}
-
-bool ChemicalSiegeTank::isFriendlyDamagedUnit(const ObjectBase* object) const {
-    const UnitBase* unit = dynamic_cast<const UnitBase*>(object);
-    return unit != nullptr && unit != this && unit->isActive() && isFriendly(unit)
-        && unit->getHealth() < unit->getMaxHealth();
-}
-
-bool ChemicalSiegeTank::canAttack(const ObjectBase* object) const {
-    return EliteSiegeTank::canAttack(object);
-}
-
-bool ChemicalSiegeTank::canHeal(const ObjectBase* object) const {
-    return isFriendlyDamagedUnit(object);
-}
-void ChemicalSiegeTank::handleActionClick(int xPos, int yPos) {
-    if(respondable && currentGameMap->tileExists(xPos, yPos)) {
-        Tile* tile = currentGameMap->getTile(xPos, yPos);
-        if(tile->hasAnObject()) {
-            ObjectBase* actionTarget = tile->getObject();
-            if(canHeal(actionTarget)) {
-                currentGame->getCommandManager().addCommand(Command(
-                    pLocalPlayer->getPlayerID(), CMD_CHEMICAL_HEALOBJECT,
-                    objectID, actionTarget->getObjectID()));
-                return;
-            }
+void ChemicalSiegeTank::destroy() {
+    if(currentGameMap->tileExists(location) && isVisible()) {
+        const Coord realPos(lround(realX), lround(realY));
+        const Uint32 explosionID = currentGame->randomGen.getRandOf({Explosion_Medium1, Explosion_Medium2});
+        currentGame->getExplosionList().push_back(new Explosion(explosionID, realPos, owner->getHouseID()));
+        if(isVisible(getOwner()->getTeamID())) {
+            screenborder->shakeScreen(18);
+            soundPlayer->playSoundAt(Sound_ExplosionLarge, location);
         }
     }
-
-    EliteSiegeTank::handleActionClick(xPos, yPos);
+    TankBase::destroy();
 }
 
-void ChemicalSiegeTank::doHealObject(Uint32 targetObjectID) {
-    ObjectBase* pTarget = currentGame->getObjectManager().getObject(targetObjectID);
-    if(!canHeal(pTarget)) {
-        return;
-    }
-
-    healingTarget = true;
-    doAttackObject(pTarget, true);
-}
-
-void ChemicalSiegeTank::targeting() {
-    ObjectBase* currentTarget = target.getObjPointer();
-    if(currentTarget != nullptr && isFriendly(currentTarget)) {
-        if(!healingTarget) {
-            releaseTarget();
-        } else if(const ObjectBase* enemy = findTarget(); enemy != nullptr && !isFriendly(enemy)) {
-            healingTarget = false;
-            doAttackObject(enemy, false);
-        } else if(!isFriendlyDamagedUnit(currentTarget)) {
-            healingTarget = false;
-            setForced(false);
-            releaseTarget();
-        }
-    } else if(currentTarget != nullptr) {
-        healingTarget = false;
-    } else {
-        healingTarget = false;
-    }
-
-    EliteSiegeTank::targeting();
-
-    if(target || moving || forced || (destination.isValid() && destination != location)
-       || attackMode == STOP || attackMode == RETREAT
-       || attackMode == CARRYALLREQUESTED) {
-        return;
-    }
-
-    const int healScanRange = attackMode == AREAGUARD
-        ? std::max(getWeaponRange(), 10)
-        : getWeaponRange();
-
-    for(UnitBase* candidate : unitList) {
-        if(!isFriendlyDamagedUnit(candidate)) {
-            continue;
-        }
-
-        const Coord closestPoint = candidate->getClosestPoint(location);
-        if(blockDistance(location, closestPoint) <= healScanRange) {
-            healingTarget = true;
-            doAttackObject(candidate, true);
-            return;
-        }
-    }
-}
-
-bool ChemicalSiegeTank::attack() {
-    ObjectBase* currentTarget = target.getObjPointer();
-    if(currentTarget == nullptr || !isFriendly(currentTarget)) {
-        return EliteSiegeTank::attack();
-    }
-
-    if(!healingTarget) {
-        return false;
-    }
-
-    if(!isFriendlyDamagedUnit(currentTarget) || primaryWeaponTimer != 0
-       || getCurrentAttackAngle() != targetAngle) {
-        return false;
-    }
-
-    Coord centerPoint = getCenterPoint();
-    Coord targetCenterPoint = currentTarget->getCenterPoint();
-    const int healAmount = std::max(1, currentTarget->getMaxHealth() / 10);
-    bulletList.push_back(new Bullet(objectID, &centerPoint, &targetCenterPoint,
-                                    Bullet_ChemicalHeal, healAmount, false, currentTarget));
-    lastFiredBulletType = Bullet_ChemicalHeal;
-    soundPlayer->playSoundAt(Sound_Rocket, location);
-
-    primaryWeaponTimer = getWeaponReloadTime() * 2;
-    return true;
+void ChemicalSiegeTank::playAttackSound() {
+    soundPlayer->playSoundAt(Sound_ExplosionSmall, location);
 }

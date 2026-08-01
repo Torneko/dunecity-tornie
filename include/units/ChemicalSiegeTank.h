@@ -1,30 +1,29 @@
+/*
+ *  This file is part of Dune Legacy.
+ *
+ *  Dune Legacy is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 2 of the License, or
+ *  (at your option) any later version.
+ */
+
 #ifndef CHEMICALSIEGETANK_H
 #define CHEMICALSIEGETANK_H
 
-#include <units/EliteSiegeTank.h>
+#include <units/TankBase.h>
 
-class ChemicalSiegeTank final : public EliteSiegeTank
+/// Chemical Siege Tank used by the Tornie/Jericho custom house.
+class ChemicalSiegeTank final : public TankBase
 {
 public:
     explicit ChemicalSiegeTank(House* newOwner);
     explicit ChemicalSiegeTank(InputStream& stream);
-    ~ChemicalSiegeTank() override;
+    void init();
+    virtual ~ChemicalSiegeTank();
 
-    void handleActionClick(int xPos, int yPos) override;
-
-    bool canAttack(const ObjectBase* object) const override;
-    bool canHeal(const ObjectBase* object) const;
-    void doHealObject(Uint32 targetObjectID);
-
-protected:
-    bool attack() override;
-    void targeting() override;
-
-private:
-    void initChemicalSiegeTank();
-    bool isFriendly(const ObjectBase* object) const;
-    bool isFriendlyDamagedUnit(const ObjectBase* object) const;
-    bool healingTarget = false;
+    void blitToScreen() override;
+    void destroy() override;
+    void playAttackSound() override;
 };
 
 #endif // CHEMICALSIEGETANK_H

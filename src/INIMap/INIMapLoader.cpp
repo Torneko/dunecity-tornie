@@ -62,7 +62,7 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     enabledPool.reserve(pool.size());
 
     for(const int candidate : pool) {
-        if(isUnit(candidate) && pGame->objectData.data[candidate][houseID].enabled) {
+        if(isSpecialVehicleSelectionCandidate(candidate) && pGame->objectData.data[candidate][houseID].enabled) {
             enabledPool.push_back(candidate);
         }
     }
@@ -123,14 +123,10 @@ void INIMapLoader::loadMap() {
     pGame->winFlags = inifile->getIntValue("BASIC","WinFlags",3);
     pGame->loseFlags = inifile->getIntValue("BASIC","LoseFlags",1);
 
-    const int configuredTechLevel = inifile->getIntValue("BASIC", "TechLevel", 0);
-    if(configuredTechLevel > 0) {
-        pGame->techLevel = configuredTechLevel;
-    } else if(pGame->techLevel == 0) {
-        const bool extendedTechTree = ModManager::instance().isInitialized()
-                                      && (ModManager::instance().getActiveModName() == "Tornie"
-                                          || ModManager::instance().getActiveModName() == "TornieLite");
-        pGame->techLevel = extendedTechTree ? 9 : 8;
+    if(pGame->techLevel == 0) {
+        const int defaultTechLevel = (ModManager::instance().isInitialized()
+                                      && ModManager::instance().getActiveModName() == "Tornie") ? 9 : 8;
+        pGame->techLevel = inifile->getIntValue("BASIC","TechLevel", defaultTechLevel);
     }
 
     int timeout = inifile->getIntValue("BASIC","TIMEOUT",0);
@@ -451,7 +447,6 @@ void INIMapLoader::loadHouses()
     std::vector<HOUSETYPE> unboundedHouses;
 
     for(int h=0;h<NUM_HOUSES;h++) {
-        if(ModManager::instance().isTornieLiteActive() && h >= 6) continue;
         if(!isHouseAvailable(static_cast<HOUSETYPE>(h))) continue;
         bool bFound = false;
         for(const GameInitSettings::HouseInfo& houseInfo : houseInfoList) {

@@ -247,7 +247,8 @@ private:
     SymbolButton        editorModeStructs_TechCenter;   ///< Tornie: Palace-equivalent that spawns vehicles
     HBox                editorModeStructs_HBoxScoutpost;
     SymbolButton        editorModeStructs_Scoutpost;     ///< Tornie: power/defense/recon post
-    SymbolButton        editorModeStructs_LoveFactory;   ///< Tornie: 2x3 category delivery building
+    HBox                editorModeStructs_HBoxLoveFactory;
+    SymbolButton        editorModeStructs_LoveFactory;
     // DuneCity: SimCity-style buildings, only added to the picker when the
     // dune city mod is active. Buttons are always declared so the shared
     // setHouse symbol-wiring and onStructButton toggle reset can address

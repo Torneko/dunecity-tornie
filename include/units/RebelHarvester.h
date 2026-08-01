@@ -18,7 +18,7 @@
 #ifndef REBELHARVESTER_H
 #define REBELHARVESTER_H
 
-#include <units/TankBase.h>
+#include <units/Harvester.h>
 
 /// RebelHarvester (Tornie mod) — dedicated Harvester for House Rebels.
 ///
@@ -30,7 +30,7 @@
 /// Builder(R) = Refinery, Builder(*) = Invalid). This is enforced at the
 /// construction-list level, not at object creation — so this class doesn't
 /// need extra guards.
-class RebelHarvester final : public TankBase
+class RebelHarvester final : public TrackedUnit
 {
 public:
     explicit RebelHarvester(House* newOwner);
@@ -76,7 +76,11 @@ public:
 private:
 
     void setSpeeds() override;
-// harvester state
+
+    zoomable_texture turretGraphic{};   ///< Reserved for the Harvestank cannon overlay
+    int              gunGraphicID;      ///< Reserved cannon sprite id
+
+    // harvester state
     bool     harvestingMode;         ///< currently harvesting
     bool     returningToRefinery;    ///< currently on the way back to a refinery
     FixPoint spice;                  ///< loaded spice

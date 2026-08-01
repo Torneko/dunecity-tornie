@@ -324,7 +324,7 @@ void NewMapWindow::onMapTypeChanged(int buttonID) {
     rockDigitsTextBox.setVisible( (buttonID == 1) );
     spiceLabel.setVisible( (buttonID == 1) );
     spiceDigitsTextBox.setVisible( (buttonID == 1) );
-    const bool showTornieSpice = (buttonID == 1) && ModManager::instance().isTornieContentActive();
+    const bool showTornieSpice = (buttonID == 1) && (ModManager::instance().isTornieContentActive());
     tornieSpiceHBox.setVisible(showTornieSpice);
     greenSpiceDigitsTextBox.setEnabled(showTornieSpice && greenSpiceCheckbox.isChecked());
     redSpiceDigitsTextBox.setEnabled(showTornieSpice && redSpiceCheckbox.isChecked());
@@ -336,7 +336,7 @@ void NewMapWindow::onMapTypeChanged(int buttonID) {
 }
 
 void NewMapWindow::onMapPropertiesChanged() {
-    const bool showTornieSpice = randomMapRadioButton.isChecked() && ModManager::instance().isTornieContentActive();
+    const bool showTornieSpice = randomMapRadioButton.isChecked() && (ModManager::instance().isTornieContentActive());
     greenSpiceDigitsTextBox.setEnabled(showTornieSpice && greenSpiceCheckbox.isChecked());
     redSpiceDigitsTextBox.setEnabled(showTornieSpice && redSpiceCheckbox.isChecked());
 

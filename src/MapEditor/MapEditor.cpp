@@ -250,11 +250,15 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.emplace_back(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,true,false,"CPU",25);
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"CPU",25));
         if(!ModManager::instance().isTornieLiteActive()) {
-            players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"CPU",25));
-            players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"CPU",25));
-            if(isHouseAvailable(HOUSE_CUSTOM)) {
-                players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"CPU",25));
+    players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"CPU",25));
             }
+        if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"CPU",25));
+            }
+        if(isHouseAvailable(HOUSE_CUSTOM)) {
+            if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"CPU",25));
+                }
         }
     } else {
         players.push_back(Player(getHouseNameByNumber(HOUSE_HARKONNEN),HOUSE_HARKONNEN,HOUSE_HARKONNEN,true,true,"Team1"));
@@ -264,11 +268,15 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
         players.push_back(Player(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,true,true,"Team5"));
         players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
         if(!ModManager::instance().isTornieLiteActive()) {
-            players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
-            players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
-            if(isHouseAvailable(HOUSE_CUSTOM)) {
-                players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+    players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
             }
+        if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
+            }
+        if(isHouseAvailable(HOUSE_CUSTOM)) {
+            if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+                }
         }
     }
 
@@ -453,11 +461,15 @@ void MapEditor::loadMap(const std::string& filepath) {
     players.push_back(Player(getHouseNameByNumber(HOUSE_SARDAUKAR),HOUSE_SARDAUKAR,HOUSE_SARDAUKAR,false,false,"Team5"));
     players.push_back(Player(getHouseNameByNumber(HOUSE_MERCENARY),HOUSE_MERCENARY,HOUSE_MERCENARY,false,false,"Team6"));
     if(!ModManager::instance().isTornieLiteActive()) {
-        players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
-        players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
-        if(isHouseAvailable(HOUSE_CUSTOM)) {
-            players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+    players.push_back(Player(getHouseNameByNumber(HOUSE_NEUTRAL),HOUSE_NEUTRAL,HOUSE_NEUTRAL,false,false,"Team7"));
         }
+    if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_REBELS),HOUSE_REBELS,HOUSE_REBELS,false,false,"Team8"));
+        }
+    if(isHouseAvailable(HOUSE_CUSTOM)) {
+        if(!ModManager::instance().isTornieLiteActive()) {
+    players.push_back(Player(getHouseNameByNumber(HOUSE_CUSTOM),HOUSE_CUSTOM,HOUSE_CUSTOM,false,false,"Team9"));
+            }
     }
 
     // load map
@@ -1924,8 +1936,8 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
             case Unit_SonicTrike:       objectPicBase = ObjPic_SonicTrike;                                                                                        break;
             case Unit_FlameTank:        objectPicBase = ObjPic_Tank_Base;       objectPicGun = tornieActive ? ObjPic_FlameTankGunTornie : ObjPic_Launcher_Gun; objectPicGunHouse = tornieActive ? HOUSE_HARKONNEN : unit.house; gunOffset = launcherTurretOffset; break;
             case Unit_EliteLauncher:    objectPicBase = ObjPic_Tank_Base;       objectPicGun = tornieActive ? ObjPic_EliteLauncherGunTornie : ObjPic_Launcher_Gun; objectPicGunHouse = tornieActive ? HOUSE_HARKONNEN : unit.house; gunOffset = launcherTurretOffset; break;
-            case Unit_EliteSiegeTank:   objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_EliteSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
-            case Unit_ChemicalSiegeTank: objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_ChemicalSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
+            case Unit_EliteSiegeTank:   objectPicBase = ObjPic_Siegetank_Base;  objectPicGun = ObjPic_EliteSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
+            case Unit_ChemicalSiegeTank: objectPicBase = ObjPic_Siegetank_Base; objectPicGun = ObjPic_ChemicalSiegeTankGunTornie; gunOffset = siegeTankTurretOffset; break;
         }
 
         SDL_Texture* pObjectSprite = pGFXManager->getZoomedObjPic(objectPicBase, unit.house, currentZoomlevel);

@@ -22,11 +22,18 @@ struct CustomHouseSpecialVehicleCandidateData {
     bool requiresHouseIx = false;
 };
 
+inline bool isSpecialVehicleSelectionCandidate(int itemID) {
+    return isUnit(itemID)
+        && !isFlyingUnit(itemID)
+        && !isInfantryUnit(itemID)
+        && !isHarvesterLikeUnit(itemID);
+}
+
 inline bool isCustomHouseSpecialVehicleCandidate(
         int itemID,
         const CustomHouseSpecialVehicleCandidateData& candidateData) {
     return candidateData.enabled
-        && isUnit(itemID)
+        && isSpecialVehicleSelectionCandidate(itemID)
         && !isFlyingUnit(itemID)
         && !isInfantryUnit(itemID)
         && !isHarvesterLikeUnit(itemID)
@@ -56,8 +63,8 @@ inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(int house, bool to
             case HOUSE_FREMEN:     return { Unit_EliteSiegeTank, Unit_FlameTank };
             case HOUSE_SARDAUKAR:  return { Unit_Devastator, Unit_SonicTank };
             case HOUSE_MERCENARY:  return { Unit_EliteLauncher, Unit_Deviator };
-            case HOUSE_NEUTRAL:    return { Unit_EliteLauncher, Unit_EliteSiegeTank };
-            case HOUSE_REBELS:     return { Unit_SonicTank, Unit_FlameTank };
+            case HOUSE_NEUTRAL:    return { Unit_EliteLauncher, Unit_FlameTank };
+            case HOUSE_REBELS:     return { Unit_SonicTank, Unit_EliteSiegeTank };
             case HOUSE_CUSTOM:     break;
             default:               return {};
         }

@@ -41,7 +41,7 @@
 namespace {
 
 bool isEnabledTechCenterVehicle(int itemID, int house) {
-    if(currentGame == nullptr || !isUnit(itemID) || isFlyingUnit(itemID) || isInfantryUnit(itemID) || isHarvesterLikeUnit(itemID)) {
+    if(currentGame == nullptr || !isSpecialVehicleSelectionCandidate(itemID)) {
         return false;
     }
 
@@ -175,7 +175,11 @@ int TechCenter::spawnRandomVehicles(int count) {
         }
     }
 
-    if(vehiclePool.empty()) {
+    const bool jerichoNamedHouse = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho"
+        && (originalHouseID == HOUSE_NEUTRAL || originalHouseID == HOUSE_REBELS);
+
+    if(vehiclePool.empty() && !jerichoNamedHouse) {
         for(const auto fallback : { Unit_Trike, Unit_Quad }) {
             const auto& data = currentGame->objectData.data[fallback][originalHouseID];
             if(data.enabled && data.builder != ItemID_Invalid) {

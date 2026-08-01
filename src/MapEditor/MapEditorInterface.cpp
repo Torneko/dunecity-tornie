@@ -60,7 +60,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     currentEditStructureID = INVALID;
     currentEditUnitID = INVALID;
 
-    tornieContentVisible_ = ModManager::instance().isTornieContentActive();
+    tornieContentVisible_ = (ModManager::instance().isTornieContentActive());
 
 
     setTransparentBackground(true);
@@ -555,13 +555,12 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_TechCenter.setTooltipText(resolveItemName(Structure_TechCenter));
     editorModeStructs_TechCenter.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_TechCenter));
 
-    editorModeStructs_LoveFactory.setToggleButton(true);
-    editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
-    editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
-
     editorModeStructs_Scoutpost.setToggleButton(true);
     editorModeStructs_Scoutpost.setTooltipText(resolveItemName(Structure_Scoutpost));
     editorModeStructs_Scoutpost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Scoutpost));
+    editorModeStructs_LoveFactory.setToggleButton(true);
+    editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
+    editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
 
     // DuneCity: expose SimCity-style buildings (R/C/I zones, Road, nuclear
     // plant) in the editor when the dune city mod is the active mod. Always
@@ -620,13 +619,13 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(&editorModeStructs_Worfinery);
 
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 3*D2_TILESIZE + 4);
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 2*D2_TILESIZE + 4);
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_TechCenter);
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_LoveFactory);
-
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, D2_TILESIZE + 4);
-        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxLoveFactory, 3*D2_TILESIZE + 4);
+        editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
+        editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
     }
 
     // setup units mode
@@ -726,7 +725,6 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeUnits_ChemicalSiegeTank.setToggleButton(true);
     editorModeUnits_ChemicalSiegeTank.setTooltipText(resolveItemName(Unit_ChemicalSiegeTank));
     editorModeUnits_ChemicalSiegeTank.setOnClick(std::bind(&MapEditorInterface::onUnitButton, this, Unit_ChemicalSiegeTank));
-
 
     editorModeUnits_VBox.addWidget(VSpacer::create(2));
 
@@ -834,9 +832,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeUnits_HBoxTornieElite.addWidget(&editorModeUnits_EliteSiegeTank);
         editorModeUnits_VBox.addWidget(&editorModeUnits_HBoxTornieChemical, 2*D2_TILESIZE);
         editorModeUnits_HBoxTornieChemical.addWidget(&editorModeUnits_ChemicalSiegeTank);
-        editorModeUnits_HBoxTornieChemical.addWidget(HSpacer::create(2));
         editorModeUnits_HBoxTornieChemical.addWidget(Spacer::create());
-
     }
 
     editorModeUnits_MainVBox.addWidget(Spacer::create());

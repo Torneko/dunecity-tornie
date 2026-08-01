@@ -171,7 +171,8 @@ jobs:
             "$DISCORD_WEBHOOK"
 
   build-linux:
-    runs-on: ubuntu-latest
+    # Ubuntu 22.04 keeps glibc compatibility with Linux Mint 21 and remains compatible with Mint 22.
+    runs-on: ubuntu-22.04
     needs: [verify-version]
     if: always() && (needs.verify-version.result == 'success' || needs.verify-version.result == 'skipped')
     steps:
@@ -195,19 +196,15 @@ jobs:
           sudo apt-get install -y \
             autoconf autoconf-archive automake libtool libltdl-dev \
             build-essential pkg-config bison flex \
-            libsystemd-dev \
-            libx11-dev libxft-dev libxext-dev libxrandr-dev libxcursor-dev \
-            libxi-dev libxfixes-dev libxinerama-dev libxss-dev \
-            libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev \
-            libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libibus-1.0-dev
+            libsystemd-dev
 
       - name: Cache vcpkg binary packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg/archives
-          key: vcpkg-linux-x64-desktop-v2-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-linux-x64-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
-            vcpkg-linux-x64-desktop-v2-
+            vcpkg-linux-x64-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -222,25 +219,12 @@ jobs:
         run: echo "VCPKG_BINARY_SOURCES=clear;files,$HOME/.cache/vcpkg/archives,readwrite" >> "$GITHUB_ENV"
 
       - name: Configure CMake
-        run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+        run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         # Limit to 2 parallel jobs — ubuntu-latest has 4 cores but only 7GB
         # RAM, and 4 concurrent g++ -O2 processes on large TUs exceed that.
         run: cmake --build build --config Release --parallel 2
-
-      - name: Validate Linux SDL video backend
-        run: |
-          binary="$(find build -type f -name dunecity -perm -111 -print -quit)"
-          if [ -z "$binary" ]; then
-            echo "Unable to locate the built DuneCity executable" >&2
-            exit 1
-          fi
-          echo "Validating SDL backends in $binary"
-          if ! strings "$binary" | grep -Eq 'X11_CreateDevice|libX11\.so|SDL x11 video driver'; then
-            echo "SDL2 was built without its X11 video backend" >&2
-            exit 1
-          fi
 
       - name: Create Linux Packages
         run: |
