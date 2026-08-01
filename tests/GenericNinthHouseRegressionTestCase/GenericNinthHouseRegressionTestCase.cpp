@@ -154,8 +154,8 @@ TEST_CASE("Custom-house presentation defaults request safe fallbacks",
 
 TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
           "[custom-house][special-vehicle][tornie]") {
-    std::vector<CustomHouseSpecialVehicleCandidateData> objectData(ItemID_LastID + 1);
-    const CustomHouseSpecialVehicleCandidateData enabledIxVehicle{
+    std::vector<HouseSpecialVehicleCandidateData> objectData(ItemID_LastID + 1);
+    const HouseSpecialVehicleCandidateData enabledIxVehicle{
         true,
         Structure_HeavyFactory,
         true
@@ -169,7 +169,7 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
     objectData[Unit_Harvester] = enabledIxVehicle;
     objectData[Unit_FlameTank] = { true, Structure_HeavyFactory, false };
 
-    const auto tornieIxCandidates = discoverCustomHouseSpecialVehicleCandidates(
+    const auto tornieIxCandidates = discoverHouseSpecialVehicleCandidates(
         [&](int itemID) { return objectData[itemID]; });
     const std::vector<int> expectedCandidates = {
         Unit_Deviator,
@@ -177,15 +177,15 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
     };
 
     REQUIRE(resolveSpecialVehiclePoolForHouse(
-                HOUSE_CUSTOM, true, tornieIxCandidates)
+                HOUSE_CUSTOM, true, false, tornieIxCandidates)
             == expectedCandidates);
-    REQUIRE_FALSE(isCustomHouseSpecialVehicleCandidate(
+    REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
         Unit_Ornithopter, objectData[Unit_Ornithopter]));
-    REQUIRE_FALSE(isCustomHouseSpecialVehicleCandidate(
+    REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
         Unit_Devastator, objectData[Unit_Devastator]));
-    REQUIRE_FALSE(isCustomHouseSpecialVehicleCandidate(
+    REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
         Unit_Trooper, objectData[Unit_Trooper]));
-    REQUIRE_FALSE(isCustomHouseSpecialVehicleCandidate(
+    REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
         Unit_Harvester, objectData[Unit_Harvester]));
 }
 
@@ -198,9 +198,9 @@ TEST_CASE("Custom house uses the generic special-vehicle fallback only when need
     };
 
     REQUIRE(resolveSpecialVehiclePoolForHouse(
-                HOUSE_CUSTOM, false, noModOwnedCandidates)
+                HOUSE_CUSTOM, false, false, noModOwnedCandidates)
             == genericFallback);
     REQUIRE(resolveSpecialVehiclePoolForHouse(
-                HOUSE_CUSTOM, true, noModOwnedCandidates)
+                HOUSE_CUSTOM, true, false, noModOwnedCandidates)
             == genericFallback);
 }
