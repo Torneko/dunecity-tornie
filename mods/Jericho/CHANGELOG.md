@@ -1,5 +1,13 @@
 # Tornie changelog
 
+## Jericho 1.0.524-11 - Campaign and roster consistency
+
+- Unified campaign and skirmish scenario loading so both modes use the same campaign tables.
+- Restored the Tornie-based Wildspade and Kleshmersh region progression and distinct enemy bases in missions 20-22.
+- Replaced unavailable Wildspade Trikes and Quads with Raider Trikes and Rocket Trikes in scenarios and reinforcements.
+- Added Wildspade Raider Trikes and Rocket Trikes to the Light Factory and CHOAM, with the requested level-3 upgrade requirement.
+- Aligned Starport availability across campaign and skirmish while preserving Tornie and Tornie Lite content.
+
 ## Jericho 1.0.524-10 - Official Tornie continuation
 
 - Rebased campaigns on Torneko/dunecity-tornie release tornie-v1.0.524-9.
