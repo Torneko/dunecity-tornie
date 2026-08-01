@@ -67,10 +67,6 @@ ObjectInterface* Scoutpost::getInterfaceContainer() {
 }
 
 void Scoutpost::updateStructureSpecificStuff() {
-    if(justPlacedTimer <= 0 || curAnimFrame != 0) {
-        curAnimFrame = 2 + ((currentGame->getGameCycleCount() / 16) % 2);
-    }
-
     auto* citySim = currentGame->getCitySimulation();
     if(citySim) {
         citySim->registerPowerSource(location.x, location.y, getProducedPower());

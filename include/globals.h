@@ -151,8 +151,12 @@ inline int getHouseColorPaletteIndexFromSlot(int colorSlot) {
     return PALCOLOR_HARKONNEN;
 }
 
+bool isJerichoHouseColorSlot(int colorSlot);
+
 inline const Palette& getPaletteForHouseColorSlot(int colorSlot) {
-    return isCustomHouseColorSlot(colorSlot) && customPaletteLoaded ? customPalette : palette;
+    return (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot)) && customPaletteLoaded
+        ? customPalette
+        : palette;
 }
 
 inline SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset = 3) {

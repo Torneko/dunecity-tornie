@@ -171,7 +171,8 @@ jobs:
             "$DISCORD_WEBHOOK"
 
   build-linux:
-    runs-on: ubuntu-latest
+    # Ubuntu 22.04 keeps glibc compatibility with Linux Mint 21 and remains compatible with Mint 22.
+    runs-on: ubuntu-22.04
     needs: [verify-version]
     if: always() && (needs.verify-version.result == 'success' || needs.verify-version.result == 'skipped')
     steps:

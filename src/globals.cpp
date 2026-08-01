@@ -94,13 +94,25 @@ void loadCustomPalette() {
     }
 }
 
+bool isJerichoHouseColorSlot(int colorSlot) {
+    return (colorSlot == HOUSE_NEUTRAL || colorSlot == HOUSE_REBELS)
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+}
+
 void applyCustomPaletteRuntimeHouseRamps() {
     if(palette.getNumColors() < 256) {
         return;
     }
 
+    // Jericho faction colors are private per-surface ramps. Never copy them
+    // into the global palette, where shared indexes would tint unrelated art.
+    if(isJerichoHouseColorSlot(HOUSE_NEUTRAL)) {
+        return;
+    }
+
     static const Uint8 rebelsGreyRamp[8] = { 82, 72, 62, 52, 42, 34, 27, 20 };
-    for(int k = 0; k < 8; k++) {
+    for(int k = 0; k < 8; ++k) {
         SDL_Color& color = palette[PALCOLOR_REBELS + k];
         color.r = rebelsGreyRamp[k];
         color.g = rebelsGreyRamp[k];
@@ -121,6 +133,10 @@ int getNumAvailableHouses() {
 }
 
 char getHouseScenarioLetter(HOUSETYPE house) {
+    const bool jerichoActive = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+    if(jerichoActive && house == HOUSE_NEUTRAL) return 'W';
+    if(jerichoActive && house == HOUSE_REBELS) return 'K';
     if(house == HOUSE_CUSTOM) {
         const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
         return isHouseAvailable(house) ? info.scenarioLetter : '?';

@@ -37,7 +37,7 @@
 
 const int BuilderBase::itemOrder[] = {    Structure_Slab4, Structure_Slab1, Structure_Road, Structure_IX, Structure_StarPort,
                                            Structure_HighTechFactory, Structure_HeavyFactory, Structure_RocketTurret,
-                                           Structure_Scoutpost,
+                                           Structure_Scoutpost, Structure_LoveFactory,
                                            Structure_RepairYard, Structure_GunTurret, Structure_TechCenter, Structure_WOR,
                                            Structure_Worfinery,
                                            Structure_Barracks, Structure_Wall, Structure_LightFactory,
@@ -47,7 +47,7 @@ const int BuilderBase::itemOrder[] = {    Structure_Slab4, Structure_Slab1, Stru
                                            Structure_Stadium, Structure_Airport,
                                            Structure_ZoneResidential, Structure_ZoneCommercial, Structure_ZoneIndustrial,
                                            Unit_SonicTank, Unit_Devastator, Unit_Deviator, Unit_Special,
-                                           Unit_EliteLauncher, Unit_EliteSiegeTank, Unit_FlameTank,
+                                           Unit_EliteLauncher, Unit_EliteSiegeTank, Unit_ChemicalSiegeTank, Unit_FlameTank,
                                            Unit_Launcher, Unit_SiegeTank, Unit_Tank, Unit_MCV,
                                            Unit_RebelHarvester, Unit_Harvester,
                                            Unit_Ornithopter, Unit_Carryall, Unit_Quad, Unit_RocketTrike, Unit_SonicTrike, Unit_RaiderTrike,

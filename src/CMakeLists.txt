@@ -260,6 +260,7 @@ target_sources(dunecity
         structures/Worfinery.cpp
         structures/TechCenter.cpp
         structures/Scoutpost.cpp
+        structures/LoveFactory.cpp
         structures/WOR.cpp
         structures/NuclearPlant.cpp
         structures/PoliceStation.cpp
@@ -300,6 +301,7 @@ target_sources(dunecity
         units/FlameTank.cpp
         units/EliteLauncher.cpp
         units/EliteSiegeTank.cpp
+        units/ChemicalSiegeTank.cpp
 
         # CutScenes
         CutScenes/CutScene.cpp
@@ -623,6 +625,12 @@ if(WIN32)
     install(
         FILES "${DATA_DIR}/Dune2-Versions.txt"
         DESTINATION .
+    )
+
+    # Neutral's herald is a loose runtime graphic rather than a PAK entry.
+    install(
+        FILES "${DATA_DIR}/HeraldNeu.png"
+        DESTINATION data
     )
     
     # Install config files from config directory to root installation directory

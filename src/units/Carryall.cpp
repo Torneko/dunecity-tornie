@@ -543,7 +543,7 @@ void Carryall::pickupTarget()
     } else {
         // get unit from structure
         if(getHarvesterDropoff(pTarget) != nullptr) {
-            // get a stored harvester (normal Refinery; Worfinery stores none)
+            // get a harvester stored by a compatible drop-off structure
             getHarvesterDropoff(pTarget)->deployContainedHarvester(this);
         } else if(pTarget->getItemID() == Structure_RepairYard) {
             // get repaired unit

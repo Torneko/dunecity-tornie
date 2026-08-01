@@ -96,8 +96,13 @@ protected:
         Palace* pPalace = dynamic_cast<Palace*>(pObject);
         if(pPalace != nullptr) {
             int picID;
+            const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(pPalace->getOriginalHouseID());
 
-            switch(getHouseFallbackHouse(static_cast<HOUSETYPE>(pPalace->getOriginalHouseID()))) {
+            if(pPalace->usesJerichoOrnithopterStrike()) {
+                picID = Picture_Ornithopter;
+            } else if(pPalace->usesLightVehicleCall()) {
+                picID = Picture_PalaceLightVehicles;
+            } else switch(getHouseFallbackHouse(originalHouse)) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR: {
                     picID = Picture_DeathHand;

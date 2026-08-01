@@ -18,7 +18,10 @@
 #ifndef MODINFO_H
 #define MODINFO_H
 
+#include <mod/ModMentatConfig.h>
+
 #include <string>
+#include <vector>
 
 /**
  * Optional registration for the fixed generic ninth-house slot.
@@ -31,6 +34,10 @@ struct CustomHouseInfo {
     std::string regionPrefix;
     int paletteIndex = 0;
     int fallbackHouse = 0;
+    std::string heraldAsset;
+    std::string houseNameVoiceAsset;
+    double voicePlaybackRate = 1.0;
+    double voiceGain = 1.0;
 };
 
 /**
@@ -65,6 +72,7 @@ struct ModInfo {
     std::string gameVersion;     ///< Game version this mod was created for
     ModChecksums checksums;      ///< Cached checksums
     CustomHouseInfo customHouse; ///< Optional generic ninth-house registration
+    std::vector<ModMentatInfo> mentats; ///< Optional active-mod Mentat presentations by house ID
     
     bool hasObjectData;          ///< Does this mod have ObjectData.ini?
     bool hasQuantBotConfig;      ///< Does this mod have QuantBot Config.ini?

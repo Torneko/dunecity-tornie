@@ -97,7 +97,7 @@ BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHo
     }
 
     if(ModManager::instance().isInitialized()
-            && ModManager::instance().getActiveModName() == "Tornie") {
+            && ModManager::instance().isTornieContentActive()) {
         tornieHouseAnimation = createTornieHouseAnimation(anim, house);
         if(tornieHouseAnimation != nullptr) {
             anim = tornieHouseAnimation.get();

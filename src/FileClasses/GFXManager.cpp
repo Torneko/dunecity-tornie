@@ -61,6 +61,7 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_RocketTrike (Tornie — derived from RocketTrike.png sprite sheet)
     { 8, 1 },   // ObjPic_FlameTank (Tornie — derived from FlameTank.png sprite sheet)
     { 8, 1 },   // ObjPic_EliteSiegeTankCustom (Tornie — derived from EliteSiegeTank.png sprite sheet)
+    { 8, 1 },   // ObjPic_ChemicalSiegeTankGunTornie
     { 8, 1 },   // ObjPic_Quad
     { 8, 1 },   // ObjPic_Trike
     { 8, 1 },   // ObjPic_Harvester
@@ -80,9 +81,9 @@ static const Coord objPicTiles[] {
     { 1, 9 },   // ObjPic_Sandworm
     { 4, 1 },   // ObjPic_ConstructionYard
     { 4, 1 },   // ObjPic_Windtrap
-    { 4, 1 },   // ObjPic_AdvancedWindTrap
-    { 4, 1 },   // ObjPic_AdvancedWindTrap2x3
-    { 4, 1 },   // ObjPic_AdvancedWindTrap3x2
+    { 10, 7 },  // ObjPic_AdvancedWindTrap (2 build frames + 66 animated frames)
+    { 10, 7 },  // ObjPic_AdvancedWindTrap2x3 (2 build frames + 66 animated frames)
+    { 10, 7 },  // ObjPic_AdvancedWindTrap3x2 (2 build frames + 66 animated frames)
     { 10, 1 },  // ObjPic_Refinery
     { 4, 1 },   // ObjPic_Barracks
     { 4, 1 },   // ObjPic_WOR
@@ -134,9 +135,10 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_Terrain_Tracks
     { 1, 1 },   // ObjPic_Star
     { 8, 1 },   // ObjPic_RebelHarvester
-    { 4, 1 },   // ObjPic_Worfinery
+    { 10, 1 },  // ObjPic_Worfinery (vanilla Refinery animation layout)
     { 4, 1 },   // ObjPic_TechCenter
     { 4, 1 },   // ObjPic_Scoutpost
+    { 8, 1 },   // ObjPic_LoveFactory
     { 4, 4 },   // ObjPic_ZoneResidential (4 density × 4 value-tier variants)
     { 4, 4 },   // ObjPic_ZoneCommercial  (4 density × 4 value-tier variants)
     { 4, 2 },   // ObjPic_ZoneIndustrial  (4 density × 2 value-tier variants)
@@ -156,7 +158,16 @@ static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
               "objPicTiles must have one entry per ObjPic enum value");
 
 static void applyRebelsTint(SDL_Surface* surface);
+static bool usesPrivateVisualColorRamp(int colorSlot) {
+    return colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
+}
+static int getVisualRemapPaletteIndex(int colorSlot) {
+    return usesPrivateVisualColorRamp(colorSlot)
+        ? PALCOLOR_HARKONNEN
+        : getHouseColorPaletteIndexFromSlot(colorSlot);
+}
 static void applyCustomVisualColorRamp(SDL_Surface* surface, int colorSlot);
+static sdl2::surface_ptr remapTruecolorHouseColorRange(SDL_Surface* source, int colorSlot, int shadeCount = 8);
 static void preserveOpaqueBlackIndex(SDL_Surface* surface);
 static void normalizeTransparentPaletteIndexes(SDL_Surface* surface);
 static sdl2::surface_ptr convertTornieIndexedSurfaceToRGBA(SDL_Surface* source, const char* label, int house, unsigned int zoom, bool useTextureMask = false);
@@ -164,10 +175,15 @@ static void logTornieStructureSurfaceDiagnostics(const char* stage, const char* 
 static bool isTornieStructureObjPic(unsigned int id);
 static const char* getTornieStructureObjPicName(unsigned int id);
 static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette);
-static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette);
+static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source,
+                                                         const SDL_Palette* targetPalette,
+                                                         int reservedIndex = -1,
+                                                         SDL_Color reservedColor = SDL_Color{});
+static sdl2::surface_ptr generateTornieWindtrapAnimationFrames(SDL_Surface* windtrapPic);
 static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface);
 static void normalizeHarkonnenTeamRed(SDL_Surface* surface);
 static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface);
+static void normalizeTornieStructureTeamPaintToHarkonnen(SDL_Surface* surface, unsigned int objPicID);
 static sdl2::surface_ptr createTintedTerrainSpiceSurface(SDL_Surface* source, SDL_Color thinTint, SDL_Color thickTint);
 static sdl2::surface_ptr createTintedMapEditorIcon(SDL_Surface* source, SDL_Surface* sand, SDL_Color tint);
 static sdl2::surface_ptr createCustomMapEditorStar(SDL_Surface* source);
@@ -1299,7 +1315,7 @@ GFXManager::GFXManager() {
 
     auto openTornieAsset = [&](const char* filename, const char* label) -> sdl2::RWops_ptr {
         const bool tornieActive = ModManager::instance().isInitialized()
-            && ModManager::instance().getActiveModName() == "Tornie";
+            && ModManager::instance().isTornieContentActive();
         if(!tornieActive) {
             return nullptr;
         }
@@ -1496,6 +1512,9 @@ GFXManager::GFXManager() {
     loadTorniePalettedSprite(ObjPic_EliteLauncherGunTornie,
                              "EliteLauncherGun.png",
                              "Elite Launcher turret");
+    loadTorniePalettedSprite(ObjPic_ChemicalSiegeTankGunTornie,
+                             "ChemicalSiegeTank.png",
+                             "Chemical Siege Tank turret");
     loadTorniePalettedSprite(ObjPic_HarvestankGunTornie,
                              "HarvestankGun.png",
                              "Harvestank turret");
@@ -1506,18 +1525,58 @@ GFXManager::GFXManager() {
                 return false;
             }
 
-            objPic[objPicEnum][HOUSE_HARKONNEN][0] = std::move(atlas);
-            objPic[objPicEnum][HOUSE_HARKONNEN][1] =
-                scaleSurfaceNearest(objPic[objPicEnum][HOUSE_HARKONNEN][0].get(), 2);
-            if(objPic[objPicEnum][HOUSE_HARKONNEN][1]) {
-                objPic[objPicEnum][HOUSE_HARKONNEN][2] =
-                    scaleSurfaceNearest(objPic[objPicEnum][HOUSE_HARKONNEN][0].get(), 3);
+            normalizeTornieStructureTeamPaintToHarkonnen(
+                atlas.get(), static_cast<unsigned int>(objPicEnum));
+            normalizeTransparentPaletteIndexes(atlas.get());
+
+            bool installedHarkonnen = false;
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                sdl2::surface_ptr indexed;
+                if(colorSlot == HOUSE_HARKONNEN) {
+                    indexed = copySurface(atlas.get());
+                } else {
+                    indexed = mapSurfaceColorRange(
+                        atlas.get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
+                    if(indexed) {
+                        applyCustomVisualColorRamp(indexed.get(), colorSlot);
+                        if(colorSlot == HOUSE_REBELS) {
+                            applyRebelsTint(indexed.get());
+                        }
+                    }
+                }
+
+                if(!indexed) {
+                    SDL_Log("GFXManager: Advanced Windtrap %s color slot %d remap failed",
+                            label, colorSlot);
+                    continue;
+                }
+
+                normalizeTransparentPaletteIndexes(indexed.get());
+                auto animatedAtlas = generateTornieWindtrapAnimationFrames(indexed.get());
+                if(!animatedAtlas) {
+                    SDL_Log("GFXManager: Advanced Windtrap %s color slot %d animation atlas generation failed",
+                            label, colorSlot);
+                    continue;
+                }
+
+                objPic[objPicEnum][colorSlot][0] = std::move(animatedAtlas);
+                objPic[objPicEnum][colorSlot][1] =
+                    scaleSurfaceNearest(objPic[objPicEnum][colorSlot][0].get(), 2);
+                if(objPic[objPicEnum][colorSlot][1]) {
+                    objPic[objPicEnum][colorSlot][2] =
+                        scaleSurfaceNearest(objPic[objPicEnum][colorSlot][0].get(), 3);
+                }
+                installedHarkonnen = installedHarkonnen || colorSlot == HOUSE_HARKONNEN;
             }
-            SDL_Log("GFXManager: Advanced Windtrap %s sprite loaded", label);
-            return true;
+
+            if(installedHarkonnen) {
+                SDL_Log("GFXManager: Advanced Windtrap %s sprite loaded for %d visual colour slots",
+                        label, NUM_HOUSE_COLOR_SLOTS);
+            }
+            return installedHarkonnen;
         };
 
-        auto loadIndexedTornieAtlasSource = [&](const char* pngName, const char* label) -> sdl2::surface_ptr {
+        auto loadIndexedTornieAtlasSource = [&](const char* pngName, const char* label, bool useAssetSpecificTeamPaint = false) -> sdl2::surface_ptr {
             auto rwop = openTornieAsset(pngName, label);
             if(!rwop) {
                 SDL_Log("GFXManager: %s sprite '%s' missing", label, pngName);
@@ -1525,23 +1584,45 @@ GFXManager::GFXManager() {
             }
 
             auto raw = LoadPNG_RW(rwop.get());
-            if(!raw || raw->format->BitsPerPixel != 8 || !raw->format->palette) {
-                SDL_Log("GFXManager: %s sprite '%s' is not 8-bit indexed, refusing it", label, pngName);
+            if(!raw) {
+                SDL_Log("GFXManager: %s sprite '%s' could not be decoded", label, pngName);
                 return nullptr;
+            }
+
+            if(raw->format->BytesPerPixel != 1 || !raw->format->palette) {
+                SDL_Surface* paletteReference = objPic[ObjPic_Windtrap][HOUSE_HARKONNEN][0].get();
+                const SDL_Palette* targetPalette =
+                    (paletteReference && paletteReference->format)
+                        ? paletteReference->format->palette
+                        : nullptr;
+                auto indexed = convertTruecolorSurfaceToPalette(
+                    raw.get(),
+                    targetPalette,
+                    PALCOLOR_WINDTRAP_COLORCYCLE,
+                    SDL_Color{251, 108, 245, SDL_ALPHA_OPAQUE});
+                if(!indexed) {
+                    SDL_Log("GFXManager: %s sprite '%s' could not be converted to the indexed Windtrap palette",
+                            label, pngName);
+                    return nullptr;
+                }
+                raw = std::move(indexed);
+                SDL_Log("GFXManager: %s sprite '%s' converted from truecolor to the indexed Windtrap palette",
+                        label, pngName);
             }
 
             preserveOpaqueBlackIndex(raw.get());
             normalizeTransparentPaletteIndexes(raw.get());
             if(ibmPaletteLoaded) {
-                if(auto remapped = remapIndexedSurfaceToPalette(raw.get(), ibmPalette.getSDLPalette())) {
-                    raw = std::move(remapped);
-                } else {
-                    ibmPalette.applyToSurface(raw.get());
-                }
+                // Tornie structure PNGs encode team-paint brightness in their original
+                // palette indices. Apply IBM.PAL without reassigning those indices.
+                ibmPalette.applyToSurface(raw.get());
                 normalizeTransparentPaletteIndexes(raw.get());
             }
             normalizeHouseColorRangesToHarkonnen(raw.get());
-            normalizeHarkonnenTeamRed(raw.get());
+            if(!useAssetSpecificTeamPaint) {
+                normalizeHarkonnenTeamRed(raw.get());
+                normalizeLooseTeamPaintToHarkonnen(raw.get());
+            }
 
             return raw;
         };
@@ -1551,7 +1632,10 @@ GFXManager::GFXManager() {
                                                Coord footprint,
                                                const char* label,
                                                const char* buildSiteName = nullptr) {
-            auto raw = loadIndexedTornieAtlasSource(pngName, std::string("Advanced Windtrap ").append(label).c_str());
+            auto raw = loadIndexedTornieAtlasSource(
+                pngName,
+                std::string("Advanced Windtrap ").append(label).c_str(),
+                objPicEnum == ObjPic_AdvancedWindTrap);
             if(!raw) {
                 return false;
             }
@@ -1959,12 +2043,47 @@ GFXManager::GFXManager() {
                 }
                 normalizeTransparentPaletteIndexes(raw.get());
             }
-            normalizeHouseColorRangesToHarkonnen(raw.get());
-            if(normalizeTeamRed) {
-                normalizeHarkonnenTeamRed(raw.get());
+            // Jericho uses the eighth Harkonnen-range entry as decorative cyan,
+            // not team paint. Move those pixels to an identical global entry
+            // before the seven actual team shades are remapped.
+            if(objPicEnum == ObjPic_TechCenter && raw->format->palette != nullptr) {
+                SDL_Palette* palette = raw->format->palette;
+                const int decorativeCyanIndex = PALCOLOR_HARKONNEN + 7;
+                if(decorativeCyanIndex < palette->ncolors) {
+                    const SDL_Color cyan = palette->colors[decorativeCyanIndex];
+                    int safeCyanIndex = -1;
+                    for(int index = 1;
+                        index < PALCOLOR_HARKONNEN && index < palette->ncolors;
+                        ++index) {
+                        const SDL_Color candidate = palette->colors[index];
+                        if(candidate.r == cyan.r && candidate.g == cyan.g && candidate.b == cyan.b) {
+                            safeCyanIndex = index;
+                            break;
+                        }
+                    }
+                    if(safeCyanIndex >= 0) {
+                        sdl2::surface_lock lock{raw.get()};
+                        for(int y = 0; y < raw->h; ++y) {
+                            Uint8* pixels = static_cast<Uint8*>(lock.pixels()) + y * raw->pitch;
+                            for(int x = 0; x < raw->w; ++x) {
+                                if(pixels[x] == decorativeCyanIndex) {
+                                    pixels[x] = static_cast<Uint8>(safeCyanIndex);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            if(normalizeLooseTeamPaint) {
-                normalizeLooseTeamPaintToHarkonnen(raw.get());
+            normalizeHouseColorRangesToHarkonnen(raw.get());
+            const bool useAssetSpecificTeamPaint =
+                objPicEnum == ObjPic_TechCenter || objPicEnum == ObjPic_Scoutpost;
+            if(!useAssetSpecificTeamPaint) {
+                if(normalizeTeamRed) {
+                    normalizeHarkonnenTeamRed(raw.get());
+                }
+                if(normalizeLooseTeamPaint) {
+                    normalizeLooseTeamPaintToHarkonnen(raw.get());
+                }
             }
 
             const int frameWidth = footprint.x * D2_TILESIZE;
@@ -2012,7 +2131,8 @@ GFXManager::GFXManager() {
             SDL_Surface* buildSource = buildSite ? buildSite.get() : raw.get();
             const int buildFrameCount = getTornieFrameCount(buildSource, frameWidth, frameHeight);
 
-            sdl2::surface_ptr atlas{ SDL_CreateRGBSurface(0, 4 * frameWidth, frameHeight, 8, 0, 0, 0, 0) };
+            const int atlasFrameCount = objPicEnum == ObjPic_Worfinery ? 10 : (objPicEnum == ObjPic_LoveFactory ? 8 : 4);
+            sdl2::surface_ptr atlas{ SDL_CreateRGBSurface(0, atlasFrameCount * frameWidth, frameHeight, 8, 0, 0, 0, 0) };
             if(!atlas || !atlas->format->palette) {
                 return;
             }
@@ -2058,8 +2178,29 @@ GFXManager::GFXManager() {
 
             blitFrame(buildSource, &buildTop, 0);
             blitFrame(buildSource, &buildBottom, 1);
-            blitFrame(raw.get(), &srcTop, 2);
-            blitFrame(raw.get(), &srcBottom, 3);
+            if(objPicEnum == ObjPic_Worfinery) {
+                // Vanilla Refinery layout: 2-7 approach/idle and 8-9 loaded.
+                // The supplied vertical sheet contains five normal frames and
+                // two loaded frames; repeat frame 0 to complete the six-frame range.
+                const int sevenFrameMap[8] = { 0, 1, 2, 3, 4, 0, 5, 6 };
+                for(int atlasFrame = 2; atlasFrame <= 9; ++atlasFrame) {
+                    const int activeIndex = atlasFrame - 2;
+                    const int sourceIndex = rawFrameCount >= 8
+                        ? activeIndex
+                        : (rawFrameCount == 7 ? sevenFrameMap[activeIndex] : activeIndex % rawFrameCount);
+                    SDL_Rect activeFrame = getTornieFrameRect(raw.get(), frameWidth, frameHeight, sourceIndex);
+                    blitFrame(raw.get(), &activeFrame, atlasFrame);
+                }
+            } else if(objPicEnum == ObjPic_LoveFactory) {
+                for(int atlasFrame = 2; atlasFrame <= 7; ++atlasFrame) {
+                    SDL_Rect activeFrame = getTornieFrameRect(raw.get(), frameWidth, frameHeight,
+                                                                 (atlasFrame - 2) % rawFrameCount);
+                    blitFrame(raw.get(), &activeFrame, atlasFrame);
+                }
+            } else {
+                blitFrame(raw.get(), &srcTop, 2);
+                blitFrame(raw.get(), &srcBottom, 3);
+            }
             logTornieStructureSurfaceDiagnostics("atlas-built", label, atlas.get(), frameWidth, frameHeight);
 
             if(protectOpaqueBlack) {
@@ -2068,6 +2209,7 @@ GFXManager::GFXManager() {
                 atlas->format->palette->colors[PALCOLOR_BLACK] = atlasBlack;
             }
 
+            normalizeTornieStructureTeamPaintToHarkonnen(atlas.get(), objPicEnum);
             normalizeTransparentPaletteIndexes(atlas.get());
             logTornieStructureSurfaceDiagnostics("atlas-final", label, atlas.get(), frameWidth, frameHeight);
 
@@ -2086,18 +2228,16 @@ GFXManager::GFXManager() {
             SDL_Log("GFXManager: %s — %s sprite load failed, using vanilla fallback", e.what(), label);
         }
     };
-    loadTornieStructureSprite(ObjPic_Worfinery,  "Worfinery.png",  Coord(3,2), "BUILDING_3x2_prebuild.png", "Worfinery", true, true);
+    loadTornieStructureSprite(ObjPic_Worfinery,  "BUILDING_3x2_worfinery.png",  Coord(3,2), "BUILDING_3x2_prebuild.png", "Worfinery", true, true);
     loadTornieStructureSprite(ObjPic_TechCenter, "TechCenter.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "TechCenter", true);
     loadTornieStructureSprite(ObjPic_Scoutpost,  "Scoutpost.png",  Coord(1,1), "BUILDING_1x1_prebuild.png", "Scoutpost", true);
+    loadTornieStructureSprite(ObjPic_LoveFactory, "LoveFactory.png", Coord(2,3), nullptr, "LoveFactory", true, true);
 
-    // v1.0.173-compatible Tornie structure rendering path.
-    //
-    // The older working implementation converted custom building atlases to
-    // truecolor RGBA surfaces before SDL texture creation and populated every
-    // house slot up front. Keep that behavior here for all Tornie structures.
-    // This avoids renderer/backend differences when an 8-bit indexed PNG atlas
-    // is converted lazily after house remapping (the object remains selectable
-    // but its final texture can render as fully transparent on Direct3D11).
+    // Advanced Windtraps are installed per colour slot before their indexed
+    // source atlases are expanded into the 10x7 RGBA animation sheets.
+    // v1.0.173-compatible rendering for the remaining Tornie structures.
+    // Resolve every house palette while indexed, then freeze the final colors
+    // into RGBA before SDL texture creation.
     auto installTornieStructureTruecolorSlots = [&](unsigned int objPicEnum, const char* label) {
         SDL_Surface* base = objPic[objPicEnum][HOUSE_HARKONNEN][0].get();
         if(base == nullptr || base->format == nullptr || base->format->BytesPerPixel != 1
@@ -2120,10 +2260,10 @@ GFXManager::GFXManager() {
             } else {
                 indexed = mapSurfaceColorRange(indexedBase.get(),
                                                PALCOLOR_HARKONNEN,
-                                               getHouseColorPaletteIndexFromSlot(colorSlot));
+                                               getVisualRemapPaletteIndex(colorSlot));
                 if(indexed) {
                     applyCustomVisualColorRamp(indexed.get(), colorSlot);
-                    if(colorSlot == HOUSE_REBELS) {
+                    if(colorSlot == HOUSE_REBELS && objPicEnum != ObjPic_TechCenter) {
                         applyRebelsTint(indexed.get());
                     }
                 }
@@ -2164,12 +2304,10 @@ GFXManager::GFXManager() {
                 label, NUM_HOUSE_COLOR_SLOTS);
     };
 
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap,     "AdvancedWindTrap3x3");
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap2x3, "AdvancedWindTrap2x3");
-    installTornieStructureTruecolorSlots(ObjPic_AdvancedWindTrap3x2, "AdvancedWindTrap3x2");
     installTornieStructureTruecolorSlots(ObjPic_Worfinery,           "Worfinery");
     installTornieStructureTruecolorSlots(ObjPic_TechCenter,          "TechCenter");
     installTornieStructureTruecolorSlots(ObjPic_Scoutpost,           "Scoutpost");
+    installTornieStructureTruecolorSlots(ObjPic_LoveFactory,          "LoveFactory");
 
     SDL_Color fogTransparent = { 0, 0, 0, 96};
     SDL_SetPaletteColors(objPic[ObjPic_Terrain_HiddenFog][HOUSE_HARKONNEN][0]->format->palette, &fogTransparent, PALCOLOR_BLACK, 1);
@@ -2461,10 +2599,12 @@ GFXManager::GFXManager() {
         loadIcon(Picture_FlameTank,      "FlameTankIcon.png",      "HTANK.WSA");
         loadIcon(Picture_EliteLauncher,  "EliteLauncherIcon.png",  "HTANK.WSA");
         loadIcon(Picture_EliteSiegeTank, "EliteSiegeTankIcon.png", "HTANK.WSA");
+        loadIcon(Picture_ChemicalSiegeTank, "ChemicalSiegeTankIcon.png", "HTANK.WSA");
         loadIcon(Picture_AdvancedWindTrap, "Tornie_AdvancedWindtrap_icon.png", "WINDTRAP.WSA");
         loadIcon(Picture_Worfinery,      "WorfineryIcon.png",      "WOR.WSA");
         loadIcon(Picture_TechCenter,     "TechCenterIcon.png",     "PALACE.WSA");
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
+        loadIcon(Picture_LoveFactory,     "LoveFactoryIcon.png",     "HEAVYF.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
         loadIcon(Picture_Harvestank,     "HarvestankIcon.png",     "HARVEST.WSA");
     }
@@ -2668,44 +2808,8 @@ GFXManager::GFXManager() {
     PicFactory->drawFrame(uiGraphic[UI_DuneLegacy][HOUSE_HARKONNEN].get(),PictureFactory::SimpleFrame);
 
     const bool tornieActive = ModManager::instance().isInitialized()
-        && (ModManager::instance().getActiveModName() == "Tornie");
-    auto loadMentatBackgroundPng = [&](const char* filename) -> sdl2::surface_ptr {
-        if(!pFileManager->exists(filename)) {
-            return nullptr;
-        }
-
-        auto png = LoadPNG_RW(pFileManager->openFile(filename).get());
-        if(!png) {
-            return nullptr;
-        }
-
-        if(png->w <= SCREEN_MIN_WIDTH/2 && png->h <= SCREEN_MIN_HEIGHT/2) {
-            return Scaler::defaultDoubleSurface(png.get());
-        }
-
-        return png;
-    };
-
-    uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATH.CPS").get()).get());
-    auto vanillaAtreidesMentat = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATA.CPS").get()).get());
-    uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] = tornieActive ? loadMentatBackgroundPng("PaulAtreidesMentat.png") : nullptr;
-    if(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES] == nullptr) {
-        uiGraphic[UI_MentatBackground][HOUSE_ATREIDES] = copySurface(vanillaAtreidesMentat.get());
-    }
-    if(uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] == nullptr) {
-        uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] = copySurface(vanillaAtreidesMentat.get());
-    }
-    uiGraphic[UI_MentatBackground][HOUSE_ORDOS] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATO.CPS").get()).get());
-    uiGraphic[UI_MentatBackground][HOUSE_FREMEN] = PictureFactory::mapMentatSurfaceToFremen(vanillaAtreidesMentat.get());
-    uiGraphic[UI_MentatBackground][HOUSE_SARDAUKAR] = PictureFactory::mapMentatSurfaceToSardaukar(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get());
-    uiGraphic[UI_MentatBackground][HOUSE_MERCENARY] = PictureFactory::mapMentatSurfaceToMercenary(uiGraphic[UI_MentatBackground][HOUSE_ORDOS].get());
-    if(auto chaniMentat = loadMentatBackgroundPng("ChaniMentat.png")) {
-        uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = std::move(chaniMentat);
-        uiGraphic[UI_MentatBackground][HOUSE_REBELS] = loadMentatBackgroundPng("ChaniMentat.png");
-    } else {
-        uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[HOUSE_NEUTRAL]);
-        uiGraphic[UI_MentatBackground][HOUSE_REBELS] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get(), PALCOLOR_ATREIDES, houseToPaletteIndex[HOUSE_REBELS]);
-    }
+        && ModManager::instance().isTornieContentActive();
+    loadMentatGraphics();
 
     uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATM.CPS").get()).get());
     if(uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] != nullptr) {
@@ -2776,11 +2880,19 @@ GFXManager::GFXManager() {
                 }
             }
 
-            uiGraphic[UI_Herald_ColoredLarge][house] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][house].get());
+            SDL_Surface* heraldSurface = uiGraphic[UI_Herald_Colored][house].get();
+            uiGraphic[UI_Herald_ColoredLarge][house] =
+                heraldSurface->format->BytesPerPixel == 1
+                    ? Scaler::defaultDoubleSurface(heraldSurface)
+                    : Scaler::doubleSurfaceNN(heraldSurface);
         };
 
-        loadBonusHerald(HOUSE_NEUTRAL, "HeraldNeu.png", uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
-        loadBonusHerald(HOUSE_REBELS, "HeraldRebels.png", uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
+        const bool jerichoIdentity = ModManager::instance().isInitialized()
+            && ModManager::instance().getActiveModName() == "Jericho";
+        loadBonusHerald(HOUSE_NEUTRAL, jerichoIdentity ? "HeraldWildspade.png" : "HeraldNeu.png",
+                        uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
+        loadBonusHerald(HOUSE_REBELS, jerichoIdentity ? "HeraldKleshmersh.png" : "HeraldRebels.png",
+                        uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
     }
 
     uiGraphic[UI_Herald_Grey][HOUSE_HARKONNEN] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get());
@@ -2791,6 +2903,8 @@ GFXManager::GFXManager() {
     uiGraphic[UI_Herald_Grey][HOUSE_MERCENARY] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_MERCENARY].get());
     uiGraphic[UI_Herald_Grey][HOUSE_NEUTRAL] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_NEUTRAL].get());
     uiGraphic[UI_Herald_Grey][HOUSE_REBELS] = PicFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_REBELS].get());
+
+    loadCustomHouseHerald();
 
     uiGraphic[UI_Herald_ArrowLeft][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("ArrowLeft.png").get());
     uiGraphic[UI_Herald_ArrowLeftLarge][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_ArrowLeft][HOUSE_HARKONNEN].get());
@@ -3059,7 +3173,8 @@ GFXManager::GFXManager() {
         { UI_MapEditor_AdvancedWindTrapMK3, ObjPic_AdvancedWindTrap3x2, 2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_Worfinery,           ObjPic_Worfinery,           2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_TechCenter,          ObjPic_TechCenter,          2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
-        { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE   }
+        { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE   },
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
     for(const auto& preview : tornieEditorStructures) {
         for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
@@ -3120,6 +3235,8 @@ GFXManager::GFXManager() {
         selectEditorSprite(ObjPic_EliteLauncherGunTornie, ObjPic_Launcher_Gun);
     const unsigned int eliteSiegeTankEditorGun =
         selectEditorSprite(ObjPic_EliteSiegeTankGunTornie, ObjPic_Siegetank_Gun);
+    const unsigned int chemicalSiegeTankEditorGun =
+        selectEditorSprite(ObjPic_ChemicalSiegeTankGunTornie, ObjPic_Siegetank_Gun);
     uiGraphic[UI_MapEditor_Deviator][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[deviatorEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 3, 0);
     addMapEditorStar(UI_MapEditor_Deviator);
     // Tornie: dedicated sprites for the 3 mod units with their own .png sheets.
@@ -3140,6 +3257,8 @@ GFXManager::GFXManager() {
     addMapEditorStar(UI_MapEditor_EliteLauncher, true);
     uiGraphic[UI_MapEditor_EliteSiegeTank][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Siegetank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[eliteSiegeTankEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 2, -4);
     addMapEditorStar(UI_MapEditor_EliteSiegeTank, true);
+    uiGraphic[UI_MapEditor_ChemicalSiegeTank][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Siegetank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[chemicalSiegeTankEditorGun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 2, -4);
+    addMapEditorStar(UI_MapEditor_ChemicalSiegeTank, true);
 
     // Compose custom vehicle previews one part at a time for every visual
     // colour. This keeps fixed Tornie cannons in their authored colour while
@@ -3148,7 +3267,14 @@ GFXManager::GFXManager() {
     // in the editor instead of displaying a plain vanilla Harvester.
     auto getColoredEditorFrame = [&](unsigned int objPicID, int colorSlot,
                                      int frameX, int frameY, int framesX, int framesY) -> sdl2::surface_ptr {
-        SDL_Surface* atlas = objPic[objPicID][colorSlot][0].get();
+        // Tornie custom colour slots must be rebuilt from the indexed Harkonnen
+        // atlas. Reusing an eagerly cached custom slot can preserve the authored
+        // purple tint in both the map-editor button and sidebar portrait.
+        const bool forceCustomRemap = tornieActive
+            && (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot));
+        SDL_Surface* atlas = forceCustomRemap
+            ? nullptr
+            : objPic[objPicID][colorSlot][0].get();
         sdl2::surface_ptr remappedAtlas;
 
         if(!atlas) {
@@ -3159,7 +3285,7 @@ GFXManager::GFXManager() {
 
             if(colorSlot != HOUSE_HARKONNEN && harkonnenAtlas->format->BytesPerPixel == 1) {
                 remappedAtlas = mapSurfaceColorRange(
-                    harkonnenAtlas, PALCOLOR_HARKONNEN, getHouseColorPaletteIndexFromSlot(colorSlot));
+                    harkonnenAtlas, PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
                 applyCustomVisualColorRamp(remappedAtlas.get(), colorSlot);
                 if(colorSlot == HOUSE_REBELS) {
                     applyRebelsTint(remappedAtlas.get());
@@ -3258,6 +3384,13 @@ GFXManager::GFXManager() {
             uiGraphic[UI_MapEditor_EliteSiegeTank][colorSlot] =
                 decorateEditorVehicle(std::move(eliteSiegeTank), true);
         }
+        auto chemicalSiegeTank = composeEditorVehicle(
+            ObjPic_Siegetank_Base, colorSlot,
+            static_cast<int>(ObjPic_ChemicalSiegeTankGunTornie), colorSlot, 2, -4);
+        if(chemicalSiegeTank) {
+            uiGraphic[UI_MapEditor_ChemicalSiegeTank][colorSlot] =
+                decorateEditorVehicle(std::move(chemicalSiegeTank), true);
+        }
     }
 
     uiGraphic[UI_MapEditor_Saboteur][HOUSE_HARKONNEN] = getSubFrame(objPic[ObjPic_Saboteur][HOUSE_HARKONNEN][0].get(),0,0,4,3);
@@ -3347,10 +3480,6 @@ GFXManager::GFXManager() {
     animation[Anim_AtreidesBook] = menshpa->getAnimation(11,12,true,true,true);
     animation[Anim_AtreidesBook]->setNumLoops(1);
     animation[Anim_AtreidesBook]->setFrameRate(0.2);
-    if(tornieActive) {
-        animation[Anim_PaulAtreidesEyes] = loadPngStripAnimation("PaulAtreidesEyes.png", 5, 0.5, false, 196);
-        animation[Anim_PaulAtreidesMouth] = loadPngStripAnimation("PaulAtreidesMouth.png", 5, 5.0, false, 18);
-    }
     animation[Anim_OrdosEyes] = menshpo->getAnimation(0,4,true,true);
     animation[Anim_OrdosEyes]->setFrameRate(0.5);
     animation[Anim_OrdosMouth] = menshpo->getAnimation(5,9,true,true,true);
@@ -3371,15 +3500,6 @@ GFXManager::GFXManager() {
     animation[Anim_MercenaryMouth] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosMouth].get());
     animation[Anim_MercenaryShoulder] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosShoulder].get());
     animation[Anim_MercenaryRing] = PictureFactory::mapMentatAnimationToMercenary(animation[Anim_OrdosRing].get());
-
-    animation[Anim_ChaniEyes] = loadPngStripAnimation("ChaniMentatEyes.png", 5, 0.5);
-    if(animation[Anim_ChaniEyes] == nullptr) {
-        animation[Anim_ChaniEyes] = PictureFactory::mapMentatAnimationToFremen(animation[Anim_AtreidesEyes].get());
-    }
-    animation[Anim_ChaniMouth] = loadPngStripAnimation("ChaniMentatMouth.png", 5, 5.0);
-    if(animation[Anim_ChaniMouth] == nullptr) {
-        animation[Anim_ChaniMouth] = PictureFactory::mapMentatAnimationToFremen(animation[Anim_AtreidesMouth].get());
-    }
 
     animation[Anim_BeneEyes] = menshpm->getAnimation(0,4,true,true);
     if(animation[Anim_BeneEyes] != nullptr) {
@@ -3446,27 +3566,105 @@ static void applyRebelsTint(SDL_Surface* surface) {
     if(!surface || !surface->format || !surface->format->palette) {
         return;
     }
-    static const Uint8 rebelsGreyRamp[8] = { 82, 72, 62, 52, 42, 34, 27, 20 };
+    if(isJerichoHouseColorSlot(HOUSE_REBELS)) {
+        return;
+    }
     const int rebelsBase = houseToPaletteIndex[HOUSE_REBELS];
+    const Palette& sourcePalette = customPaletteLoaded ? customPalette : palette;
+    if(sourcePalette.getNumColors() < rebelsBase + 8) {
+        return;
+    }
     for(int k = 0; k < 8; k++) {
         SDL_Color& color = surface->format->palette->colors[rebelsBase + k];
-        color.r = rebelsGreyRamp[k];
-        color.g = rebelsGreyRamp[k];
-        color.b = rebelsGreyRamp[k];
+        color = sourcePalette[rebelsBase + k];
         color.a = 255;
     }
 }
 
 static void applyCustomVisualColorRamp(SDL_Surface* surface, int colorSlot) {
-    if(!isCustomHouseColorSlot(colorSlot) || !customPaletteLoaded || !surface || !surface->format || !surface->format->palette) {
+    if(!usesPrivateVisualColorRamp(colorSlot) || !customPaletteLoaded || !surface || !surface->format || !surface->format->palette) {
         return;
     }
 
-    const int paletteBase = getHouseColorPaletteIndexFromSlot(colorSlot);
-    customPalette.applyToSurface(surface, paletteBase, paletteBase + 7);
+    const int sourceBase = getHouseColorPaletteIndexFromSlot(colorSlot);
+    const int targetBase = getVisualRemapPaletteIndex(colorSlot);
+    if(sourceBase < 0 || sourceBase + 7 >= customPalette.getNumColors()
+       || targetBase < 0 || targetBase + 7 >= surface->format->palette->ncolors) {
+        return;
+    }
+
+    SDL_Color visualRamp[8];
+    for(int shade = 0; shade < 8; ++shade) {
+        visualRamp[shade] = customPalette[sourceBase + shade];
+    }
+    SDL_SetPaletteColors(surface->format->palette, visualRamp, targetBase, 8);
     normalizeTransparentPaletteIndexes(surface);
 }
 
+static sdl2::surface_ptr remapTruecolorHouseColorRange(SDL_Surface* source, int colorSlot, int shadeCount) {
+    if(!source || !source->format || source->format->BytesPerPixel == 1
+       || !isValidHouseColorSlot(colorSlot)) {
+        return nullptr;
+    }
+
+    const Palette& sourcePalette = palette;
+    const Palette& targetPalette = getPaletteForHouseColorSlot(colorSlot);
+    const int targetBase = getHouseColorPaletteIndexFromSlot(colorSlot);
+    if(shadeCount < 1 || shadeCount > 8) {
+        return nullptr;
+    }
+    if(sourcePalette.getNumColors() < PALCOLOR_HARKONNEN + shadeCount
+       || targetBase < 0 || targetPalette.getNumColors() < targetBase + shadeCount) {
+        return nullptr;
+    }
+
+    sdl2::surface_ptr remapped{
+        SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_RGBA32, 0)
+    };
+    if(!remapped || remapped->format->BytesPerPixel != 4) {
+        return nullptr;
+    }
+
+    const bool mustLock = SDL_MUSTLOCK(remapped.get());
+    if(mustLock && SDL_LockSurface(remapped.get()) != 0) {
+        return remapped;
+    }
+
+    for(int y = 0; y < remapped->h; ++y) {
+        auto* row = reinterpret_cast<Uint32*>(
+            static_cast<Uint8*>(remapped->pixels) + y * remapped->pitch);
+        for(int x = 0; x < remapped->w; ++x) {
+            Uint8 r = 0;
+            Uint8 g = 0;
+            Uint8 b = 0;
+            Uint8 a = 0;
+            SDL_GetRGBA(row[x], remapped->format, &r, &g, &b, &a);
+            if(a == 0) {
+                continue;
+            }
+
+            for(int shade = 0; shade < shadeCount; ++shade) {
+                const SDL_Color sourceColor = sourcePalette[PALCOLOR_HARKONNEN + shade];
+                if(r == sourceColor.r && g == sourceColor.g && b == sourceColor.b) {
+                    const SDL_Color targetColor = targetPalette[targetBase + shade];
+                    row[x] = SDL_MapRGBA(remapped->format,
+                                         targetColor.r,
+                                         targetColor.g,
+                                         targetColor.b,
+                                         a);
+                    break;
+                }
+            }
+        }
+    }
+
+    if(mustLock) {
+        SDL_UnlockSurface(remapped.get());
+    }
+    SDL_SetColorKey(remapped.get(), SDL_FALSE, 0);
+    SDL_SetSurfaceBlendMode(remapped.get(), SDL_BLENDMODE_BLEND);
+    return remapped;
+}
 static void preserveOpaqueBlackIndex(SDL_Surface* surface) {
     if(!surface || !surface->format || !surface->format->palette || surface->format->BytesPerPixel != 1) {
         return;
@@ -3730,7 +3928,7 @@ static bool isTornieStructureObjPic(unsigned int id) {
         || id == ObjPic_AdvancedWindTrap3x2
         || id == ObjPic_Worfinery
         || id == ObjPic_TechCenter
-        || id == ObjPic_Scoutpost;
+        || id == ObjPic_Scoutpost || id == ObjPic_LoveFactory;
 }
 
 static const char* getTornieStructureObjPicName(unsigned int id) {
@@ -3741,6 +3939,7 @@ static const char* getTornieStructureObjPicName(unsigned int id) {
         case ObjPic_Worfinery:           return "Worfinery";
         case ObjPic_TechCenter:          return "TechCenter";
         case ObjPic_Scoutpost:           return "Scoutpost";
+        case ObjPic_LoveFactory:         return "LoveFactory";
         default:                         return "Unknown";
     }
 }
@@ -3840,7 +4039,7 @@ static int findNearestPaletteIndex(const SDL_Palette* palette, const SDL_Color c
     return bestIndex;
 }
 
-static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette) {
+static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette, int reservedIndex, SDL_Color reservedColor) {
     if(!source || !source->format || source->format->BytesPerPixel == 1 || !targetPalette) {
         return nullptr;
     }
@@ -3868,15 +4067,135 @@ static sdl2::surface_ptr convertTruecolorSurfaceToPalette(SDL_Surface* source, c
                 const Uint32 pixel = readSurfacePixelUnchecked(source, x, y);
                 SDL_Color color{};
                 SDL_GetRGBA(pixel, source->format, &color.r, &color.g, &color.b, &color.a);
-                destination[x] = (color.a < 128)
-                    ? static_cast<Uint8>(PALCOLOR_TRANSPARENT)
-                    : static_cast<Uint8>(findNearestPaletteIndex(targetPalette, color));
+                if(color.a < 128) {
+                    destination[x] = static_cast<Uint8>(PALCOLOR_TRANSPARENT);
+                } else if(reservedIndex > PALCOLOR_TRANSPARENT
+                          && reservedIndex < targetPalette->ncolors
+                          && color.r == reservedColor.r
+                          && color.g == reservedColor.g
+                          && color.b == reservedColor.b) {
+                    destination[x] = static_cast<Uint8>(reservedIndex);
+                } else {
+                    destination[x] = static_cast<Uint8>(findNearestPaletteIndex(targetPalette, color));
+                }
             }
         }
     }
 
     SDL_SetColorKey(indexed.get(), SDL_TRUE, PALCOLOR_TRANSPARENT);
     return indexed;
+}
+static sdl2::surface_ptr generateTornieWindtrapAnimationFrames(SDL_Surface* windtrapPic) {
+    constexpr int sourceFrameCount = 4;
+    if(!windtrapPic || !windtrapPic->format || !windtrapPic->format->palette
+       || windtrapPic->format->BytesPerPixel != 1
+       || windtrapPic->w <= 0 || windtrapPic->h <= 0
+       || (windtrapPic->w % sourceFrameCount) != 0) {
+        SDL_Log("TornieGFX: cannot generate Advanced Windtrap animation from an invalid indexed atlas");
+        return nullptr;
+    }
+
+    const int frameWidth = windtrapPic->w / sourceFrameCount;
+    const int frameHeight = windtrapPic->h;
+    const int frameColumns = NUM_WINDTRAP_ANIMATIONS_PER_ROW;
+    const int totalFrames = 2 + NUM_WINDTRAP_ANIMATIONS;
+    const int frameRows = (totalFrames + frameColumns - 1) / frameColumns;
+    const int sizeX = frameColumns * frameWidth;
+    const int sizeY = frameRows * frameHeight;
+
+    sdl2::surface_ptr animation{
+        SDL_CreateRGBSurface(0, sizeX, sizeY, SCREEN_BPP, RMASK, GMASK, BMASK, AMASK)
+    };
+    if(!animation || animation->format->BytesPerPixel < 3) {
+        SDL_Log("TornieGFX: cannot allocate Advanced Windtrap animation atlas");
+        return nullptr;
+    }
+
+    SDL_SetSurfaceBlendMode(animation.get(), SDL_BLENDMODE_NONE);
+    SDL_FillRect(animation.get(), nullptr, SDL_MapRGBA(animation->format, 0, 0, 0, 0));
+
+    sdl2::surface_lock sourceLock{windtrapPic};
+    sdl2::surface_lock destinationLock{animation.get()};
+    const auto* sourcePixels = static_cast<const Uint8*>(sourceLock.pixels());
+    auto* destinationPixels = static_cast<Uint8*>(destinationLock.pixels());
+
+    const auto writePixel = [&](int x, int y, Uint32 pixel) {
+        Uint8* address = destinationPixels
+                       + y * animation->pitch
+                       + x * animation->format->BytesPerPixel;
+        switch(animation->format->BytesPerPixel) {
+            case 2:
+                *reinterpret_cast<Uint16*>(address) = static_cast<Uint16>(pixel);
+                break;
+            case 3:
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+                address[0] = static_cast<Uint8>((pixel >> 16) & 0xFF);
+                address[1] = static_cast<Uint8>((pixel >> 8) & 0xFF);
+                address[2] = static_cast<Uint8>(pixel & 0xFF);
+#else
+                address[0] = static_cast<Uint8>(pixel & 0xFF);
+                address[1] = static_cast<Uint8>((pixel >> 8) & 0xFF);
+                address[2] = static_cast<Uint8>((pixel >> 16) & 0xFF);
+#endif
+                break;
+            case 4:
+                *reinterpret_cast<Uint32*>(address) = pixel;
+                break;
+            default:
+                break;
+        }
+    };
+
+    const auto copyFrame = [&](int sourceFrame, int destinationFrame, const SDL_Color* cycleColor) {
+        const int sourceX = sourceFrame * frameWidth;
+        const int destinationX = (destinationFrame % frameColumns) * frameWidth;
+        const int destinationY = (destinationFrame / frameColumns) * frameHeight;
+
+        for(int y = 0; y < frameHeight; ++y) {
+            const Uint8* sourceRow = sourcePixels + y * windtrapPic->pitch + sourceX;
+            for(int x = 0; x < frameWidth; ++x) {
+                const Uint8 paletteIndex = sourceRow[x];
+                if(paletteIndex == PALCOLOR_TRANSPARENT
+                   || paletteIndex >= windtrapPic->format->palette->ncolors) {
+                    continue;
+                }
+
+                SDL_Color color = windtrapPic->format->palette->colors[paletteIndex];
+                if(cycleColor != nullptr && paletteIndex == PALCOLOR_WINDTRAP_COLORCYCLE) {
+                    color = *cycleColor;
+                }
+                const Uint32 pixel = SDL_MapRGBA(
+                    animation->format, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
+                writePixel(destinationX + x, destinationY + y, pixel);
+            }
+        }
+    };
+
+    copyFrame(0, 0, nullptr);
+    copyFrame(1, 1, nullptr);
+
+    const int colorQuantizer = 255 / std::max(1, (NUM_WINDTRAP_ANIMATIONS / 2) - 2);
+    for(int i = 0; i < NUM_WINDTRAP_ANIMATIONS; ++i) {
+        SDL_Color cycleColor{};
+        if(i < NUM_WINDTRAP_ANIMATIONS / 2) {
+            const int value = i * colorQuantizer;
+            cycleColor.r = static_cast<Uint8>(std::min(80, value));
+            cycleColor.g = static_cast<Uint8>(std::min(80, value));
+            cycleColor.b = static_cast<Uint8>(std::min(255, value));
+        } else {
+            const int value = (i - NUM_WINDTRAP_ANIMATIONS / 2) * colorQuantizer;
+            cycleColor.r = static_cast<Uint8>(std::max(0, 80 - value));
+            cycleColor.g = static_cast<Uint8>(std::max(0, 80 - value));
+            cycleColor.b = static_cast<Uint8>(std::max(0, 255 - value));
+        }
+        cycleColor.a = SDL_ALPHA_OPAQUE;
+
+        const int sourceFrame = ((i / 3) % 2 == 0) ? 2 : 3;
+        copyFrame(sourceFrame, 2 + i, &cycleColor);
+    }
+
+    SDL_SetSurfaceBlendMode(animation.get(), SDL_BLENDMODE_BLEND);
+    return animation;
 }
 
 static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const SDL_Palette* targetPalette) {
@@ -3935,19 +4254,105 @@ static sdl2::surface_ptr remapIndexedSurfaceToPalette(SDL_Surface* source, const
     return remapped;
 }
 
+static int getNearestHarkonnenShade(const SDL_Palette* palette, int brightness) {
+    if(!palette) {
+        return 0;
+    }
+
+    int bestShade = 0;
+    int bestDistance = 256;
+    for(int shade = 0; shade < 7; ++shade) {
+        const int paletteIndex = PALCOLOR_HARKONNEN + shade;
+        if(paletteIndex >= palette->ncolors) {
+            break;
+        }
+
+        const SDL_Color rampColor = palette->colors[paletteIndex];
+        const int rampBrightness = std::max(std::max(static_cast<int>(rampColor.r),
+                                                     static_cast<int>(rampColor.g)),
+                                            static_cast<int>(rampColor.b));
+        const int distance = std::abs(brightness - rampBrightness);
+        if(distance < bestDistance) {
+            bestDistance = distance;
+            bestShade = shade;
+        }
+    }
+
+    return bestShade;
+}
+
+static void normalizeTornieStructureTeamPaintToHarkonnen(SDL_Surface* surface, unsigned int objPicID) {
+    if(!surface || !surface->format || !surface->format->palette || surface->format->BytesPerPixel != 1) {
+        return;
+    }
+
+    SDL_Palette* palette = surface->format->palette;
+    sdl2::surface_lock lock{ surface };
+    for(int y = 0; y < surface->h; y++) {
+        Uint8* pixels = static_cast<Uint8*>(surface->pixels) + y * surface->pitch;
+        for(int x = 0; x < surface->w; x++) {
+            Uint8& index = pixels[x];
+            if(index == PALCOLOR_TRANSPARENT || index >= palette->ncolors) {
+                continue;
+            }
+            if(index >= PALCOLOR_HARKONNEN && index < PALCOLOR_HARKONNEN + 7) {
+                continue;
+            }
+
+            const SDL_Color color = palette->colors[index];
+            const int r = static_cast<int>(color.r);
+            const int g = static_cast<int>(color.g);
+            const int b = static_cast<int>(color.b);
+            bool teamPaint = false;
+
+            switch(objPicID) {
+                case ObjPic_Worfinery:
+                    // The refinery machinery uses an orange-to-brown team ramp.
+                    teamPaint = r >= 56 && r >= g + 24 && r >= b + 24;
+                    break;
+
+                case ObjPic_TechCenter:
+                    // Only the small red/brown Harkonnen flags are team paint.
+                    teamPaint = r >= 96 && r >= g + 40 && r >= b + 32;
+                    break;
+
+                case ObjPic_Scoutpost:
+                    // Preserve the green tower; recolor only its red/brown flags.
+                    teamPaint = r >= 96 && r >= g + 40 && r >= b + 32;
+                    break;
+
+                case ObjPic_AdvancedWindTrap:
+                    // Preserve the magenta machinery; only the Harkonnen-red flags vary.
+                    teamPaint = r >= 96 && r >= g + 40 && r >= b + 32;
+                    break;
+
+                case ObjPic_AdvancedWindTrap2x3:
+                case ObjPic_AdvancedWindTrap3x2:
+                    // The compact variants use red/magenta team paint.
+                    teamPaint = r >= 48 && r >= g + 24 && r >= b + 20;
+                    break;
+
+                default:
+                    break;
+            }
+
+            if(!teamPaint) {
+                continue;
+            }
+
+            const int brightness = std::max(std::max(r, g), b);
+            const int shade = getNearestHarkonnenShade(palette, brightness);
+            index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
+        }
+    }
+}
+
 static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface) {
     if(!surface || !surface->format || !surface->format->palette || surface->format->BytesPerPixel != 1) {
         return;
     }
 
-    static const int houseColorBases[] = {
-        PALCOLOR_HARKONNEN,
-        PALCOLOR_ATREIDES,
-        PALCOLOR_ORDOS,
-        PALCOLOR_FREMEN,
-        PALCOLOR_SARDAUKAR,
-        PALCOLOR_MERCENARY
-    };
+    static const int houseColorBases[] = { PALCOLOR_HARKONNEN };
 
     SDL_Palette* palette = surface->format->palette;
     sdl2::surface_lock lock{ surface };
@@ -3961,7 +4366,7 @@ static void normalizeHouseColorRangesToHarkonnen(SDL_Surface* surface) {
 
             for(const int colorBase : houseColorBases) {
                 if(index >= colorBase && index < colorBase + 7) {
-                    const int shade = std::clamp((index - colorBase) + 2, 0, 6);
+                    const int shade = index - colorBase;
                     index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
                     break;
                 }
@@ -3984,6 +4389,9 @@ static void normalizeHarkonnenTeamRed(SDL_Surface* surface) {
             if(index == PALCOLOR_TRANSPARENT || index >= palette->ncolors) {
                 continue;
             }
+            if(index >= PALCOLOR_HARKONNEN && index < PALCOLOR_HARKONNEN + 7) {
+                continue;
+            }
 
             const SDL_Color color = palette->colors[index];
             const int r = static_cast<int>(color.r);
@@ -3997,16 +4405,7 @@ static void normalizeHarkonnenTeamRed(SDL_Surface* surface) {
             }
 
             const int brightness = std::max(std::max(r, g), b);
-            int shade = 2;
-            if(brightness >= 210) {
-                shade = 6;
-            } else if(brightness >= 180) {
-                shade = 5;
-            } else if(brightness >= 150) {
-                shade = 4;
-            } else if(brightness >= 120) {
-                shade = 3;
-            }
+            const int shade = getNearestHarkonnenShade(palette, brightness);
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
         }
     }
@@ -4026,6 +4425,9 @@ static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface) {
             if(index == PALCOLOR_TRANSPARENT || index >= palette->ncolors) {
                 continue;
             }
+            if(index >= PALCOLOR_HARKONNEN && index < PALCOLOR_HARKONNEN + 7) {
+                continue;
+            }
 
             const SDL_Color color = palette->colors[index];
             const int r = static_cast<int>(color.r);
@@ -4038,16 +4440,7 @@ static void normalizeLooseTeamPaintToHarkonnen(SDL_Surface* surface) {
             }
 
             const int brightness = std::max(std::max(r, g), b);
-            int shade = 2;
-            if(brightness >= 210) {
-                shade = 6;
-            } else if(brightness >= 180) {
-                shade = 5;
-            } else if(brightness >= 150) {
-                shade = 4;
-            } else if(brightness >= 120) {
-                shade = 3;
-            }
+            const int shade = getNearestHarkonnenShade(palette, brightness);
             index = static_cast<Uint8>(PALCOLOR_HARKONNEN + shade);
         }
     }
@@ -4354,17 +4747,7 @@ void GFXManager::invalidateAllSpriteTextures() {
                || id == ObjPic_ZoneIndustrial || id == ObjPic_CityRoad
                || id == ObjPic_NuclearPlant || id == ObjPic_PoliceStation
                || id == ObjPic_Stadium || id == ObjPic_Airport
-               || id == ObjPic_Hospital || id == ObjPic_Church
-               // v1.0.173-compatible Tornie structure surfaces are prebuilt
-               // as truecolor RGBA for every visual colour slot. Keep them
-               // across renderer cache invalidation; discarding them would
-               // re-enter the newer lazy indexed remap path.
-               || id == ObjPic_AdvancedWindTrap
-               || id == ObjPic_AdvancedWindTrap2x3
-               || id == ObjPic_AdvancedWindTrap3x2
-               || id == ObjPic_Worfinery
-               || id == ObjPic_TechCenter
-               || id == ObjPic_Scoutpost;
+               || id == ObjPic_Hospital || id == ObjPic_Church;
     };
     for(int id = 0; id < NUM_OBJPICS; id++) {
         for(int h = 0; h < NUM_HOUSE_COLOR_SLOTS; h++) {
@@ -4376,21 +4759,27 @@ void GFXManager::invalidateAllSpriteTextures() {
             }
         }
     }
+
+    for(auto& hdOverride : hdObjPicOverrides) {
+        for(auto& texture : hdOverride.texture) {
+            texture.reset();
+        }
+        hdOverride.attempted = false;
+        hdOverride.loaded = false;
+    }
 }
 
-void GFXManager::reloadModDependentUiGraphics() {
-    SDL_Log("GFXManager::reloadModDependentUiGraphics(): reloading mentat backgrounds for active mod");
-
+void GFXManager::loadMentatGraphics() {
     for(int house = 0; house < NUM_HOUSE_COLOR_SLOTS; house++) {
         uiGraphic[UI_MentatBackground][house].reset();
-        uiGraphic[UI_MentatBackgroundPaul][house].reset();
         uiGraphicTex[UI_MentatBackground][house].reset();
-        uiGraphicTex[UI_MentatBackgroundPaul][house].reset();
+        modMentatForeground[house].reset();
+        modMentatForegroundTex[house].reset();
+        modMentatEyes[house].reset();
+        modMentatMouth[house].reset();
     }
 
-    const bool tornieActive = ModManager::instance().isInitialized()
-        && (ModManager::instance().getActiveModName() == "Tornie");
-    auto loadMentatBackgroundPng = [&](const char* filename) -> sdl2::surface_ptr {
+    auto loadMentatBackgroundPng = [&](const std::string& filename) -> sdl2::surface_ptr {
         if(!pFileManager->exists(filename)) {
             return nullptr;
         }
@@ -4410,27 +4799,270 @@ void GFXManager::reloadModDependentUiGraphics() {
     uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATH.CPS").get()).get());
     auto vanillaAtreidesMentat = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATA.CPS").get()).get());
     uiGraphic[UI_MentatBackground][HOUSE_ATREIDES] = copySurface(vanillaAtreidesMentat.get());
-    uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] = tornieActive ? loadMentatBackgroundPng("PaulAtreidesMentat.png") : nullptr;
-    if(uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] == nullptr) {
-        uiGraphic[UI_MentatBackgroundPaul][HOUSE_ATREIDES] = copySurface(vanillaAtreidesMentat.get());
-    }
-
     uiGraphic[UI_MentatBackground][HOUSE_ORDOS] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATO.CPS").get()).get());
     uiGraphic[UI_MentatBackground][HOUSE_FREMEN] = PictureFactory::mapMentatSurfaceToFremen(vanillaAtreidesMentat.get());
     uiGraphic[UI_MentatBackground][HOUSE_SARDAUKAR] = PictureFactory::mapMentatSurfaceToSardaukar(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get());
     uiGraphic[UI_MentatBackground][HOUSE_MERCENARY] = PictureFactory::mapMentatSurfaceToMercenary(uiGraphic[UI_MentatBackground][HOUSE_ORDOS].get());
+    uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[HOUSE_NEUTRAL]);
+    uiGraphic[UI_MentatBackground][HOUSE_REBELS] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get(), PALCOLOR_ATREIDES, houseToPaletteIndex[HOUSE_REBELS]);
 
-    if(auto chaniMentat = loadMentatBackgroundPng("ChaniMentat.png")) {
-        uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = std::move(chaniMentat);
-        auto rebelsChani = loadMentatBackgroundPng("ChaniMentat.png");
-        uiGraphic[UI_MentatBackground][HOUSE_REBELS] = rebelsChani ? std::move(rebelsChani)
-                                                                  : copySurface(uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL].get());
-    } else {
-        uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[HOUSE_NEUTRAL]);
-        uiGraphic[UI_MentatBackground][HOUSE_REBELS] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get(), PALCOLOR_ATREIDES, houseToPaletteIndex[HOUSE_REBELS]);
+    ModManager& modManager = ModManager::instance();
+    const int customFallback = modManager.isCustomHouseRegistered()
+        ? modManager.getActiveCustomHouseInfo().fallbackHouse
+        : HOUSE_HARKONNEN;
+    uiGraphic[UI_MentatBackground][HOUSE_CUSTOM] = copySurface(uiGraphic[UI_MentatBackground][customFallback].get());
+
+    for(int house = 0; house < NUM_HOUSE_COLOR_SLOTS; ++house) {
+        const ModMentatInfo& info = modManager.getActiveMentatInfo(house);
+        if(!info.enabled) continue;
+        const int identity = modManager.getEffectiveMentatIdentity(house);
+        if(identity >= 0 && identity < NUM_HOUSE_COLOR_SLOTS
+           && uiGraphic[UI_MentatBackground][identity] != nullptr) {
+            uiGraphic[UI_MentatBackground][house] = copySurface(uiGraphic[UI_MentatBackground][identity].get());
+        }
+    }
+
+    for(int house = 0; house < NUM_HOUSE_COLOR_SLOTS; ++house) {
+        const ModMentatInfo& info = modManager.getActiveMentatInfo(house);
+        if(!info.enabled) continue;
+
+        if(!info.backgroundAsset.empty()) {
+            auto background = loadMentatBackgroundPng(info.backgroundAsset);
+            if(background != nullptr) {
+                uiGraphic[UI_MentatBackground][house] = std::move(background);
+            } else {
+                SDL_Log("GFXManager: Mentat %d background '%s' unavailable; using fallback",
+                        house, info.backgroundAsset.c_str());
+            }
+        }
+        if(!info.foregroundAsset.empty()) {
+            auto foreground = loadMentatBackgroundPng(info.foregroundAsset);
+            if(foreground != nullptr) {
+                modMentatForeground[house] = std::move(foreground);
+            } else {
+                SDL_Log("GFXManager: Mentat %d foreground '%s' unavailable; using fallback",
+                        house, info.foregroundAsset.c_str());
+            }
+        }
+        if(!info.eyesAsset.empty()) {
+            modMentatEyes[house] = loadPngStripAnimation(
+                info.eyesAsset, info.eyesFrames, info.eyesFrameRate,
+                info.doubleEyes, info.eyesTransparentColor);
+            if(modMentatEyes[house] == nullptr) {
+                SDL_Log("GFXManager: Mentat %d eyes '%s' unavailable; using fallback",
+                        house, info.eyesAsset.c_str());
+            }
+        }
+        if(!info.mouthAsset.empty()) {
+            modMentatMouth[house] = loadPngStripAnimation(
+                info.mouthAsset, info.mouthFrames, info.mouthFrameRate,
+                info.doubleMouth, info.mouthTransparentColor);
+            if(modMentatMouth[house] == nullptr) {
+                SDL_Log("GFXManager: Mentat %d mouth '%s' unavailable; using fallback",
+                        house, info.mouthAsset.c_str());
+            }
+        }
     }
 }
 
+void GFXManager::loadCustomHouseHerald() {
+    constexpr unsigned int presentationIds[] = {
+        UI_Herald_Colored,
+        UI_Herald_ColoredLarge,
+        UI_Herald_Grey
+    };
+    for(const unsigned int id : presentationIds) {
+        uiGraphic[id][HOUSE_CUSTOM].reset();
+        uiGraphicTex[id][HOUSE_CUSTOM].reset();
+    }
+
+    ModManager& modManager = ModManager::instance();
+    if(!modManager.isCustomHouseRegistered()) {
+        return;
+    }
+
+    const CustomHouseInfo& info = modManager.getActiveCustomHouseInfo();
+    SDL_Surface* fallback = uiGraphic[UI_Herald_Colored][info.fallbackHouse].get();
+    sdl2::surface_ptr herald;
+
+    if(!info.heraldAsset.empty()) {
+        try {
+            if(pFileManager->exists(info.heraldAsset)) {
+                herald = LoadPNG_RW(pFileManager->openFile(info.heraldAsset).get());
+                if(herald != nullptr) {
+                    SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
+                }
+            } else {
+                SDL_Log("GFXManager: Custom-house herald '%s' unavailable; using fallback",
+                        info.heraldAsset.c_str());
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: Custom-house herald '%s' failed (%s); using fallback",
+                    info.heraldAsset.c_str(), e.what());
+        }
+    }
+
+    if(herald == nullptr && fallback != nullptr) {
+        herald = copySurface(fallback);
+    }
+    if(herald == nullptr) {
+        SDL_Log("GFXManager: No custom-house herald or fallback is available");
+        return;
+    }
+
+    uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM] = std::move(herald);
+    uiGraphic[UI_Herald_ColoredLarge][HOUSE_CUSTOM] =
+        Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM].get());
+    auto pictureFactory = std::make_unique<PictureFactory>();
+    uiGraphic[UI_Herald_Grey][HOUSE_CUSTOM] =
+        pictureFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM].get());
+}
+
+void GFXManager::reloadModDependentUiGraphics() {
+    // House-coloured interface borders are generated from the active palette.
+    // Keep the Harkonnen master surfaces: every other house is rebuilt from them.
+    for(int house = 0; house < NUM_HOUSES; ++house) {
+        uiGraphicTex[UI_TopBar][house].reset();
+        uiGraphicTex[UI_SideBar][house].reset();
+        if(house != HOUSE_HARKONNEN) {
+            uiGraphic[UI_TopBar][house].reset();
+            uiGraphic[UI_SideBar][house].reset();
+        }
+    }
+
+    SDL_Log("GFXManager::reloadModDependentUiGraphics(): reloading active-mod presentation");
+    for(auto& detailByHouse : houseSmallDetailPicTex) {
+        for(auto& texture : detailByHouse) {
+            texture.reset();
+        }
+    }
+
+    for(unsigned int piece = 0; piece < NUM_MAPCHOICEPIECES; ++piece) {
+        for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+            mapChoicePiecesTex[piece][colorSlot].reset();
+            if(colorSlot != HOUSE_HARKONNEN) {
+                mapChoicePieces[piece][colorSlot].reset();
+            }
+        }
+    }
+
+    for(unsigned int id = UI_MapChoiceArrow_None; id <= UI_MapChoiceArrow_Left; ++id) {
+        for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+            uiGraphicTex[id][colorSlot].reset();
+            if(colorSlot != HOUSE_HARKONNEN) {
+                uiGraphic[id][colorSlot].reset();
+            }
+        }
+    }
+
+    animation[Anim_NeutralPlanet].reset();
+    animation[Anim_RebelsPlanet].reset();
+    // Editor previews cache house-remapped surfaces. Drop every derived slot
+    // when the active mod changes so Rebels cannot retain Jericho colours.
+    for(unsigned int id = UI_MapEditor_SideBar; id <= UI_MapEditor_SonicTrike; ++id) {
+        for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+            uiGraphicTex[id][colorSlot].reset();
+            if(colorSlot != HOUSE_HARKONNEN) {
+                uiGraphic[id][colorSlot].reset();
+            }
+        }
+    }
+
+    auto pictureFactory = std::make_unique<PictureFactory>();
+    auto reloadBonusHerald = [&](int house, const char* filename) {
+        constexpr unsigned int presentationIds[] = {
+            UI_Herald_Colored,
+            UI_Herald_ColoredLarge,
+            UI_Herald_Grey
+        };
+        for(const unsigned int id : presentationIds) {
+            uiGraphic[id][house].reset();
+            uiGraphicTex[id][house].reset();
+        }
+
+        if(pFileManager->exists(filename)) {
+            auto herald = LoadPNG_RW(pFileManager->openFile(filename).get());
+            if(herald != nullptr) {
+                if(house != HOUSE_REBELS) {
+                    SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
+                }
+                uiGraphic[UI_Herald_Colored][house] = std::move(herald);
+            }
+        }
+
+        if(uiGraphic[UI_Herald_Colored][house] == nullptr) {
+            SDL_Surface* fallback = uiGraphic[UI_Herald_Colored][HOUSE_HARKONNEN].get();
+            if(fallback == nullptr) {
+                return;
+            }
+            if(house == HOUSE_REBELS) {
+                uiGraphic[UI_Herald_Colored][house] = copySurface(fallback);
+            } else {
+                uiGraphic[UI_Herald_Colored][house] =
+                    mapSurfaceColorRange(fallback, PALCOLOR_HARKONNEN,
+                                         getHousePaletteIndex(static_cast<HOUSETYPE>(house)));
+            }
+        }
+
+        SDL_Surface* heraldSurface = uiGraphic[UI_Herald_Colored][house].get();
+        uiGraphic[UI_Herald_ColoredLarge][house] =
+            heraldSurface->format->BytesPerPixel == 1
+                ? Scaler::defaultDoubleSurface(heraldSurface)
+                : Scaler::doubleSurfaceNN(heraldSurface);
+        uiGraphic[UI_Herald_Grey][house] =
+            pictureFactory->createGreyHouseChoice(heraldSurface);
+    };
+
+    const bool jerichoIdentity = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+    reloadBonusHerald(HOUSE_NEUTRAL,
+                      jerichoIdentity ? "HeraldWildspade.png" : "HeraldNeu.png");
+    reloadBonusHerald(HOUSE_REBELS,
+                      jerichoIdentity ? "HeraldKleshmersh.png" : "HeraldRebels.png");
+    loadCustomHouseHerald();
+    loadMentatGraphics();
+}
+
+Animation* GFXManager::getMentatEyesAnimation(int house) {
+    if(house >= 0 && house < NUM_HOUSE_COLOR_SLOTS && modMentatEyes[house] != nullptr) {
+        return modMentatEyes[house].get();
+    }
+
+    switch(ModManager::instance().getEffectiveMentatIdentity(house)) {
+        case HOUSE_ATREIDES: return getAnimation(Anim_AtreidesEyes);
+        case HOUSE_ORDOS: return getAnimation(Anim_OrdosEyes);
+        case HOUSE_FREMEN: return getAnimation(Anim_FremenEyes);
+        case HOUSE_SARDAUKAR: return getAnimation(Anim_SardaukarEyes);
+        case HOUSE_MERCENARY: return getAnimation(Anim_MercenaryEyes);
+        default: return getAnimation(Anim_HarkonnenEyes);
+    }
+}
+
+Animation* GFXManager::getMentatMouthAnimation(int house) {
+    if(house >= 0 && house < NUM_HOUSE_COLOR_SLOTS && modMentatMouth[house] != nullptr) {
+        return modMentatMouth[house].get();
+    }
+
+    switch(ModManager::instance().getEffectiveMentatIdentity(house)) {
+        case HOUSE_ATREIDES: return getAnimation(Anim_AtreidesMouth);
+        case HOUSE_ORDOS: return getAnimation(Anim_OrdosMouth);
+        case HOUSE_FREMEN: return getAnimation(Anim_FremenMouth);
+        case HOUSE_SARDAUKAR: return getAnimation(Anim_SardaukarMouth);
+        case HOUSE_MERCENARY: return getAnimation(Anim_MercenaryMouth);
+        default: return getAnimation(Anim_HarkonnenMouth);
+    }
+}
+
+SDL_Texture* GFXManager::getMentatForeground(int house) {
+    if(house < 0 || house >= NUM_HOUSE_COLOR_SLOTS || modMentatForeground[house] == nullptr) {
+        return nullptr;
+    }
+
+    if(modMentatForegroundTex[house] == nullptr) {
+        modMentatForegroundTex[house] = convertSurfaceToTexture(modMentatForeground[house].get());
+    }
+    return modMentatForegroundTex[house].get();
+}
 
 bool GFXManager::hasObjPic(unsigned int id, int house, unsigned int z) const {
     if(id >= NUM_OBJPICS || z >= NUM_ZOOMLEVEL) {
@@ -4464,14 +5096,15 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
             // their closest vanilla equivalent when the dedicated PNG is missing.
             static const unsigned int tornieModSpriteIds[] = {
                 ObjPic_RocketTrike, ObjPic_SonicTrike, ObjPic_FlameTankGunTornie,
-                ObjPic_EliteSiegeTankGunTornie, ObjPic_DeviatorGunTornie,
+                ObjPic_EliteSiegeTankGunTornie, ObjPic_ChemicalSiegeTankGunTornie, ObjPic_DeviatorGunTornie,
                 ObjPic_EliteLauncherGunTornie, ObjPic_RebelSonicTankGun,
                 ObjPic_HarvestankGunTornie,
                 ObjPic_AdvancedWindTrap, ObjPic_AdvancedWindTrap2x3, ObjPic_AdvancedWindTrap3x2,
                 ObjPic_RebelHarvester,  // falls back to vanilla Harvester
                 ObjPic_Worfinery,       // falls back to vanilla WOR
                 ObjPic_TechCenter,      // falls back to vanilla Palace
-                ObjPic_Scoutpost        // falls back to vanilla Rocket Turret
+                ObjPic_Scoutpost        , // falls back to vanilla Rocket Turret
+                ObjPic_LoveFactory      // falls back to vanilla Heavy Factory
             };
             bool isDuneCityCivic = false;
             for(auto cid : duneCityCivicIds) {
@@ -4497,7 +5130,8 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                           || id == ObjPic_FlameTankGunTornie
                           || id == ObjPic_EliteLauncherGunTornie) {
                     fallbackId = ObjPic_Launcher_Gun;
-                } else if(id == ObjPic_EliteSiegeTankGunTornie) {
+                } else if(id == ObjPic_EliteSiegeTankGunTornie
+                          || id == ObjPic_ChemicalSiegeTankGunTornie) {
                     fallbackId = ObjPic_Siegetank_Gun;
                 } else if(id == ObjPic_RebelSonicTankGun) {
                     fallbackId = ObjPic_Sonictank_Gun;
@@ -4511,6 +5145,8 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                     fallbackId = ObjPic_Windtrap;
                 } else if(id == ObjPic_Scoutpost) {
                     fallbackId = ObjPic_RocketTurret;
+                } else if(id == ObjPic_LoveFactory) {
+                    fallbackId = ObjPic_HeavyFactory;
                 }
                 if(objPic[fallbackId][HOUSE_HARKONNEN][z] == nullptr) {
                     return nullptr;
@@ -4526,7 +5162,7 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
         }
 
         if(objPic[id][HOUSE_HARKONNEN][z]->format->BytesPerPixel == 1) {
-            objPic[id][house][z] = mapSurfaceColorRange(objPic[id][HOUSE_HARKONNEN][z].get(), PALCOLOR_HARKONNEN, getHouseColorPaletteIndexFromSlot(house));
+            objPic[id][house][z] = mapSurfaceColorRange(objPic[id][HOUSE_HARKONNEN][z].get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(house));
             applyCustomVisualColorRamp(objPic[id][house][z].get(), house);
             if(house == HOUSE_REBELS) {
                 applyRebelsTint(objPic[id][house][z].get());
@@ -4539,7 +5175,12 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                 logTornieStructureSurfaceDiagnostics("house-remapped", getTornieStructureObjPicName(id), objPic[id][house][z].get(), frameWidth, frameHeight);
             }
         } else {
-            objPic[id][house][z] = copySurface(objPic[id][HOUSE_HARKONNEN][z].get());
+            objPic[id][house][z] =
+                remapTruecolorHouseColorRange(objPic[id][HOUSE_HARKONNEN][z].get(), house, id == ObjPic_TechCenter ? 7 : 8);
+            if(objPic[id][house][z] == nullptr) {
+                objPic[id][house][z] =
+                    copySurface(objPic[id][HOUSE_HARKONNEN][z].get());
+            }
         }
     }
 
@@ -4574,7 +5215,7 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
            || id == ObjPic_Hospital || id == ObjPic_Church
            || id == ObjPic_Windtrap || id == ObjPic_AdvancedWindTrap
            || id == ObjPic_AdvancedWindTrap2x3 || id == ObjPic_AdvancedWindTrap3x2
-           || id == ObjPic_Worfinery || id == ObjPic_TechCenter || id == ObjPic_Scoutpost
+           || id == ObjPic_Worfinery || id == ObjPic_TechCenter || id == ObjPic_Scoutpost || id == ObjPic_LoveFactory
            || id == ObjPic_Star) {
             if(objPicTex[id][house][z]) {
                 SDL_SetTextureBlendMode(objPicTex[id][house][z].get(), SDL_BLENDMODE_BLEND);
@@ -4646,6 +5287,80 @@ SDL_Texture* GFXManager::getSmallDetailPic(unsigned int id) {
 }
 
 
+SDL_Texture* GFXManager::getSmallDetailPic(unsigned int id, int house) {
+    if(id >= NUM_SMALLDETAILPICS) {
+        return nullptr;
+    }
+
+    const int visualHouse = getHouseVisualHouse(house);
+    if(!isValidHouseColorSlot(visualHouse)
+       || (visualHouse != HOUSE_CUSTOM && !isCustomHouseColorSlot(visualHouse))) {
+        return smallDetailPicTex[id].get();
+    }
+
+    unsigned int editorGraphic = NUM_UIGRAPHICS;
+    switch(id) {
+        case Picture_Carryall:         editorGraphic = UI_MapEditor_Carryall;          break;
+        case Picture_Devastator:       editorGraphic = UI_MapEditor_Devastator;        break;
+        case Picture_Deviator:         editorGraphic = UI_MapEditor_Deviator;          break;
+        case Picture_Harvester:        editorGraphic = UI_MapEditor_Harvester;         break;
+        case Picture_Harvestank:       editorGraphic = UI_MapEditor_RebelHarvester;    break;
+        case Picture_Launcher:         editorGraphic = UI_MapEditor_Launcher;          break;
+        case Picture_MCV:              editorGraphic = UI_MapEditor_MCV;               break;
+        case Picture_Ornithopter:      editorGraphic = UI_MapEditor_Ornithopter;       break;
+        case Picture_Quad:             editorGraphic = UI_MapEditor_Quad;              break;
+        case Picture_RaiderTrike:      editorGraphic = UI_MapEditor_Raider;            break;
+        case Picture_SiegeTank:        editorGraphic = UI_MapEditor_SiegeTank;         break;
+        case Picture_SonicTank:        editorGraphic = UI_MapEditor_SonicTank;         break;
+        case Picture_Tank:             editorGraphic = UI_MapEditor_Tank;              break;
+        case Picture_Trike:            editorGraphic = UI_MapEditor_Trike;             break;
+        case Picture_RocketTrike:      editorGraphic = UI_MapEditor_RocketTrike;       break;
+        case Picture_SonicTrike:       editorGraphic = UI_MapEditor_SonicTrike;        break;
+        case Picture_FlameTank:        editorGraphic = UI_MapEditor_FlameTank;         break;
+        case Picture_EliteLauncher:    editorGraphic = UI_MapEditor_EliteLauncher;     break;
+        case Picture_EliteSiegeTank:   editorGraphic = UI_MapEditor_EliteSiegeTank;    break;
+        case Picture_ChemicalSiegeTank: editorGraphic = UI_MapEditor_ChemicalSiegeTank; break;
+        default:                                                                    break;
+    }
+
+    if(editorGraphic == NUM_UIGRAPHICS) {
+        return smallDetailPicTex[id].get();
+    }
+
+    auto& cachedTexture = houseSmallDetailPicTex[id][visualHouse];
+    if(cachedTexture == nullptr) {
+        SDL_Surface* icon = getUIGraphicSurface(editorGraphic, visualHouse);
+        if(icon == nullptr || icon->w <= 0 || icon->h <= 0) {
+            return smallDetailPicTex[id].get();
+        }
+
+        sdl2::surface_ptr canvas{
+            SDL_CreateRGBSurface(0, 91, 55, SCREEN_BPP, RMASK, GMASK, BMASK, AMASK)
+        };
+        if(canvas == nullptr) {
+            return smallDetailPicTex[id].get();
+        }
+
+        SDL_SetSurfaceBlendMode(canvas.get(), SDL_BLENDMODE_BLEND);
+        SDL_FillRect(canvas.get(), nullptr, SDL_MapRGBA(canvas->format, 0, 0, 0, 0));
+
+        int width = 87;
+        int height = icon->h * width / icon->w;
+        if(height > 51) {
+            height = 51;
+            width = icon->w * height / icon->h;
+        }
+
+        SDL_Rect destination = { (91 - width) / 2, (55 - height) / 2, width, height };
+        if(SDL_BlitScaled(icon, nullptr, canvas.get(), &destination) != 0) {
+            return smallDetailPicTex[id].get();
+        }
+
+        cachedTexture = convertSurfaceToTexture(canvas.get());
+    }
+
+    return cachedTexture ? cachedTexture.get() : smallDetailPicTex[id].get();
+}
 SDL_Texture* GFXManager::getTinyPicture(unsigned int id) {
     if(id >= NUM_TINYPICTURE) {
         return nullptr;
@@ -4658,7 +5373,13 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphicSurface(): UI Graphic with ID %u is not available!", id);
     }
-    house = getHouseVisualHouse(house);
+    const bool useHouseIdentity =
+        id == UI_Herald_Colored
+        || id == UI_Herald_ColoredLarge
+        || id == UI_Herald_Grey;
+    if(!useHouseIdentity) {
+        house = getHouseVisualHouse(house);
+    }
     if(!isValidHouseColorSlot(house)) {
         house = HOUSE_HARKONNEN;
     }
@@ -4672,15 +5393,18 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
         SDL_Surface* base = uiGraphic[id][HOUSE_HARKONNEN].get();
         if(base->format->BytesPerPixel == 1) {
             uiGraphic[id][house] = mapSurfaceColorRange(base, PALCOLOR_HARKONNEN,
-                                                       getHouseColorPaletteIndexFromSlot(house));
+                                                       getVisualRemapPaletteIndex(house));
             applyCustomVisualColorRamp(uiGraphic[id][house].get(), house);
             if(house == HOUSE_REBELS) {
                 applyRebelsTint(uiGraphic[id][house].get());
             }
         } else {
-            // Truecolor custom icons use alpha and do not contain palette
-            // indices. Byte-wise palette remapping corrupts their RGBA data.
-            uiGraphic[id][house] = copySurface(base);
+            // Truecolor icons need a pixel-safe team-ramp remap. Recolour only
+            // exact Harkonnen team shades and preserve every other RGBA pixel.
+            uiGraphic[id][house] = remapTruecolorHouseColorRange(base, house, id == UI_MapEditor_TechCenter ? 7 : 8);
+            if(uiGraphic[id][house] == nullptr) {
+                uiGraphic[id][house] = copySurface(base);
+            }
         }
     }
 
@@ -4691,7 +5415,13 @@ SDL_Texture* GFXManager::getUIGraphic(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphic(): UI Graphic with ID %u is not available!", id);
     }
-    house = getHouseVisualHouse(house);
+    const bool useHouseIdentity =
+        id == UI_Herald_Colored
+        || id == UI_Herald_ColoredLarge
+        || id == UI_Herald_Grey;
+    if(!useHouseIdentity) {
+        house = getHouseVisualHouse(house);
+    }
     if(!isValidHouseColorSlot(house)) {
         house = HOUSE_HARKONNEN;
     }
@@ -4724,7 +5454,7 @@ SDL_Surface* GFXManager::getMapChoicePieceSurface(unsigned int num, int house) {
             THROW(std::runtime_error, "GFXManager::getMapChoicePieceSurface(): Map Piece with number %u is not loaded!", num);
         }
 
-        mapChoicePieces[num][house] = mapSurfaceColorRange(mapChoicePieces[num][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, getHouseColorPaletteIndexFromSlot(house));
+        mapChoicePieces[num][house] = mapSurfaceColorRange(mapChoicePieces[num][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(house));
         applyCustomVisualColorRamp(mapChoicePieces[num][house].get(), house);
         if(house == HOUSE_REBELS) {
             applyRebelsTint(mapChoicePieces[num][house].get());

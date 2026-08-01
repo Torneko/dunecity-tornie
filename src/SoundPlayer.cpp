@@ -54,6 +54,14 @@ SoundPlayer::~SoundPlayer() = default;
 
 void SoundPlayer::playVoice(Voice_enum id, int houseID) {
     if(soundOn) {
+        constexpr Uint32 wormWarningCooldownMs = 5000;
+        const bool isWormWarning = id == WarningWormSign;
+        const Uint32 currentTick = isWormWarning ? SDL_GetTicks() : 0;
+        if(isWormWarning && wormWarningPlayed
+            && (currentTick - lastWormWarningTick < wormWarningCooldownMs)) {
+            return;
+        }
+
         Mix_Chunk* tmp;
 
         if((tmp = pSFXManager->getVoice(id,houseID)) == nullptr) {
@@ -63,6 +71,10 @@ void SoundPlayer::playVoice(Voice_enum id, int houseID) {
         int channel = Mix_PlayChannel(Mix_GroupAvailable(static_cast<int>(ChannelGroup::Voice)), tmp, 0);
         if(channel != -1) {
             Mix_Volume(channel, sfxVolume);
+            if(isWormWarning) {
+                wormWarningPlayed = true;
+                lastWormWarningTick = currentTick;
+            }
         }
     }
 }

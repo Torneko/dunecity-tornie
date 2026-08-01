@@ -28,6 +28,7 @@
 #include <SoundPlayer.h>
 
 #include <players/HumanPlayer.h>
+#include <mod/ModManager.h>
 
 #include <units/InfantryBase.h>
 #include <units/UnitBase.h>
@@ -98,12 +99,49 @@ void Palace::handleDeathhandClick(int xPos, int yPos) {
     }
 }
 
+bool Palace::usesJerichoOrnithopterStrike() const {
+    return originalHouseID == HOUSE_NEUTRAL
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+}
+
+bool Palace::usesLightVehicleCall() const {
+    const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(originalHouseID);
+    const bool jerichoActive = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+
+    if(jerichoActive && (originalHouse == HOUSE_REBELS || originalHouse == HOUSE_CUSTOM)) {
+        return true;
+    }
+    if(usesJerichoOrnithopterStrike()) {
+        return false;
+    }
+
+    const HOUSETYPE fallbackHouse = getHouseFallbackHouse(originalHouse);
+    return fallbackHouse == HOUSE_NEUTRAL || fallbackHouse == HOUSE_REBELS;
+}
+
 void Palace::doSpecialWeapon() {
     if(!isSpecialWeaponReady()) {
         return;
     }
 
-    switch (getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID))) {
+    const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(originalHouseID);
+    if(usesJerichoOrnithopterStrike()) {
+        if(callOrnithopterStrike()) {
+            specialWeaponTimer = getMaxSpecialWeaponTimer();
+        }
+        return;
+    }
+
+    if(usesLightVehicleCall()) {
+        if(callLightVehicles()) {
+            specialWeaponTimer = getMaxSpecialWeaponTimer();
+        }
+        return;
+    }
+
+    switch (getHouseFallbackHouse(originalHouse)) {
         case HOUSE_HARKONNEN:
         case HOUSE_SARDAUKAR: {
             // wrong house (see DoLaunchDeathhand)
@@ -353,6 +391,38 @@ bool Palace::callLightVehicles() {
 
     if(spawned <= 0 && getOwner() == pLocalHouse) {
         currentGame->addToNewsTicker(_("Unable to spawn vehicles"));
+    }
+
+    return spawned > 0;
+}
+bool Palace::callOrnithopterStrike() {
+    int spawned = 0;
+
+    for(int i = 0; i < 3; ++i) {
+        UnitBase* ornithopter = getOwner()->createUnit(Unit_Ornithopter);
+        if(ornithopter == nullptr) {
+            continue;
+        }
+
+        const Coord deployPos = currentGameMap->findDeploySpot(
+            ornithopter, getLocation(), currentGame->randomGen, getDestination(), getStructureSize());
+        if(!deployPos.isValid()) {
+            delete ornithopter;
+            continue;
+        }
+
+        ornithopter->deploy(deployPos);
+        ornithopter->setGuardPoint(deployPos);
+        ornithopter->doSetAttackMode(HUNT);
+        ++spawned;
+    }
+
+    if(getOwner() == pLocalHouse) {
+        if(spawned == 3) {
+            currentGame->addToNewsTicker(_("Three Ornithopters deployed in hunt mode"));
+        } else {
+            currentGame->addToNewsTicker(_("Unable to deploy all three Ornithopters"));
+        }
     }
 
     return spawned > 0;

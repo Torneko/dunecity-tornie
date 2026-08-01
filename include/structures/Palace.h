@@ -61,8 +61,11 @@ public:
 
     inline bool isSpecialWeaponReady() const { return (specialWeaponTimer == 0); }
     inline int getSpecialWeaponTimer() const { return specialWeaponTimer; }
+    bool usesJerichoOrnithopterStrike() const;
+    bool usesLightVehicleCall() const;
     inline int getMaxSpecialWeaponTimer() const {
-        if(originalHouseID == HOUSE_HARKONNEN || originalHouseID == HOUSE_SARDAUKAR) {
+        if(originalHouseID == HOUSE_HARKONNEN || originalHouseID == HOUSE_SARDAUKAR
+           || usesJerichoOrnithopterStrike()) {
             // 10 min
             return MILLI2CYCLES(10*60*1000);
         } else {
@@ -74,6 +77,7 @@ public:
 protected:
     bool callFremen();
     bool callLightVehicles();
+    bool callOrnithopterStrike();
     bool spawnSaboteur();
 
     /**

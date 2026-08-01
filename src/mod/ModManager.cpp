@@ -17,7 +17,9 @@
 
 #include <mod/ModManager.h>
 #include <mod/CustomHouseConfig.h>
+#include <mod/ModMentatConfig.h>
 #include <FileClasses/GFXManager.h>
+#include <FileClasses/SFXManager.h>
 #include <FileClasses/TextManager.h>
 #include <misc/fnkdat.h>
 #include <misc/FileSystem.h>
@@ -118,7 +120,9 @@ void ModManager::initialize() {
         saveActiveMod();
     }
     
-    activeCustomHouse = readModIni(getModPath(activeMod)).customHouse;
+    const ModInfo activeInfo = readModIni(getModPath(activeMod));
+    activeCustomHouse = activeInfo.customHouse;
+    activeMentats = activeInfo.mentats;
     initialized = true;
     SDL_Log("ModManager: Initialized with active mod '%s'", activeMod.c_str());
 }
@@ -133,6 +137,41 @@ const CustomHouseInfo& ModManager::getActiveCustomHouseInfo() const {
 
 bool ModManager::isCustomHouseRegistered() const {
     return initialized && activeCustomHouse.enabled;
+}
+
+const ModMentatInfo& ModManager::getActiveMentatInfo(int house) const {
+    static const ModMentatInfo noOverride;
+    if(!initialized || house < 0 || static_cast<std::size_t>(house) >= activeMentats.size()) {
+        return noOverride;
+    }
+    return activeMentats[house];
+}
+
+int ModManager::getEffectiveMentatIdentity(int house) const {
+    const ModMentatInfo& overrideInfo = getActiveMentatInfo(house);
+    int identity = overrideInfo.enabled && overrideInfo.identityHouse >= 0
+        ? overrideInfo.identityHouse
+        : house;
+
+    if(identity == HOUSE_CUSTOM) {
+        identity = activeCustomHouse.enabled ? activeCustomHouse.fallbackHouse : HOUSE_HARKONNEN;
+    }
+
+    switch(identity) {
+        case HOUSE_HARKONNEN:
+        case HOUSE_ATREIDES:
+        case HOUSE_ORDOS:
+        case HOUSE_FREMEN:
+        case HOUSE_SARDAUKAR:
+        case HOUSE_MERCENARY:
+            return identity;
+        case HOUSE_NEUTRAL:
+            return HOUSE_HARKONNEN;
+        case HOUSE_REBELS:
+            return HOUSE_ATREIDES;
+        default:
+            return HOUSE_HARKONNEN;
+    }
 }
 
 bool ModManager::isCityModeActive() const {
@@ -152,15 +191,27 @@ bool ModManager::setActiveMod(const std::string& name) {
     }
     
     activeMod = name;
-    activeCustomHouse = readModIni(getModPath(activeMod)).customHouse;
+    const ModInfo activeInfo = readModIni(getModPath(activeMod));
+    activeCustomHouse = activeInfo.customHouse;
+    activeMentats = activeInfo.mentats;
     checksumsDirty = true;
     saveActiveMod();
+
+    // Active-mod palettes and runtime visual slots must change atomically.
+    // Otherwise cached Jericho ramps leak into Tornie and other mods.
+    resetHouseVisualHouseMapping();
+    loadCustomPalette();
+    applyCustomPaletteRuntimeHouseRamps();
+
     if(pTextManager != nullptr) {
         pTextManager->loadData();
     }
     if(pGFXManager != nullptr) {
         pGFXManager->invalidateAllSpriteTextures();
         pGFXManager->reloadModDependentUiGraphics();
+    }
+    if(pSFXManager != nullptr) {
+        pSFXManager->reloadVoices();
     }
     
     SDL_Log("ModManager: Activated mod '%s'", name.c_str());
@@ -890,56 +941,24 @@ void ModManager::seedTornieFromDefaults() {
     }
     SDL_Log("ModManager: Tornie install source: %s", installModsPath.c_str());
 
-    createDir(torniePath);
-
-    // Copy mod.ini (the [Mod] section is required for the mod
-    // to appear in the Mods menu)
-    std::string srcModIni = installModsPath + "/" + MOD_INI_FILE;
-    std::string dstModIni = torniePath + "/" + MOD_INI_FILE;
-    if (existsFile(srcModIni)) {
-        copyFile(srcModIni, dstModIni);
-        SDL_Log("ModManager: Copied %s (Tornie)", MOD_INI_FILE);
-    } else {
-        SDL_Log("ModManager: Warning - %s not found at %s", MOD_INI_FILE, srcModIni.c_str());
+    if(!std::filesystem::is_directory(installModsPath)) {
+        SDL_Log("ModManager: Warning - bundled Tornie mod not found at %s", installModsPath.c_str());
+        return;
     }
 
-    // Copy ObjectData.ini (units + structures config for the mod)
-    std::string srcObjectData = installModsPath + "/" + OBJECT_DATA_FILE;
-    std::string dstObjectData = torniePath + "/" + OBJECT_DATA_FILE;
-    if (existsFile(srcObjectData)) {
-        copyFile(srcObjectData, dstObjectData);
-        SDL_Log("ModManager: Copied %s (Tornie)", OBJECT_DATA_FILE);
-    } else {
-        SDL_Log("ModManager: Warning - %s not found at %s", OBJECT_DATA_FILE, srcObjectData.c_str());
+    try {
+        // Tornie is a bundled, selectable payload. Copy the complete directory:
+        // campaigns, custom-house registration, Mentat declarations, graphics,
+        // sounds, and integrity metadata are all required for the mod to work.
+        // Preserve the bundled mod.ini verbatim instead of rewriting it and
+        // discarding its version and [Mentat] sections.
+        std::filesystem::copy(installModsPath, torniePath,
+            std::filesystem::copy_options::recursive |
+            std::filesystem::copy_options::overwrite_existing);
+        SDL_Log("ModManager: Tornie mod seeded successfully from %s", installModsPath.c_str());
+    } catch(const std::exception& e) {
+        SDL_Log("ModManager: Warning - Tornie mod seed failed: %s", e.what());
     }
-
-    // Copy QuantBot Config.ini
-    std::string srcQuantBot = installModsPath + "/" + QUANTBOT_CONFIG_FILE;
-    std::string dstQuantBot = torniePath + "/" + QUANTBOT_CONFIG_FILE;
-    if (existsFile(srcQuantBot)) {
-        copyFile(srcQuantBot, dstQuantBot);
-        SDL_Log("ModManager: Copied %s (Tornie)", QUANTBOT_CONFIG_FILE);
-    }
-
-    // Copy GameOptions.ini
-    std::string srcGameOptions = installModsPath + "/" + GAME_OPTIONS_FILE;
-    std::string dstGameOptions = torniePath + "/" + GAME_OPTIONS_FILE;
-    if (existsFile(srcGameOptions)) {
-        copyFile(srcGameOptions, dstGameOptions);
-        SDL_Log("ModManager: Copied %s (Tornie)", GAME_OPTIONS_FILE);
-    }
-
-    // Register the mod in the mod list
-    ModInfo info;
-    info.name = TORNIE_MOD_NAME;
-    info.displayName = "Tornie";
-    info.author = "Tornie_Panther";
-    info.description = "Tornie Mod: New units, new building, 2 additional campaigns with two custom factions, extra features in the editor. Special vehicles reviewed for sub-factions and the two new houses.";
-    info.gameVersion = VERSION;
-    info.enablesCityMode = false;
-    writeModInfo(torniePath, info);
-
-    SDL_Log("ModManager: Tornie mod seeded successfully");
 }
 
 void ModManager::seedDune2RFromDefaults() {
@@ -1022,6 +1041,9 @@ bool ModManager::tornieNeedsReseed() const {
     std::string modIniPath = torniePath + "/" + MOD_INI_FILE;
     std::string objectDataPath = torniePath + "/" + OBJECT_DATA_FILE;
     std::string gameOptionsPath = torniePath + "/" + GAME_OPTIONS_FILE;
+    std::string customHousePath = torniePath + "/" + CUSTOM_HOUSE_CONFIG;
+    std::string manifestPath = torniePath + "/manifest.json";
+    std::string checksumsPath = torniePath + "/checksums.sha256";
 
     if (!existsFile(modIniPath)) {
         SDL_Log("ModManager: Tornie missing %s, needs reseed", MOD_INI_FILE);
@@ -1034,6 +1056,30 @@ bool ModManager::tornieNeedsReseed() const {
     if (!existsFile(gameOptionsPath)) {
         SDL_Log("ModManager: Tornie missing %s, needs reseed", GAME_OPTIONS_FILE);
         return true;
+    }
+    if (!existsFile(customHousePath) || !existsFile(manifestPath) || !existsFile(checksumsPath)
+        || !std::filesystem::is_directory(std::filesystem::path(torniePath) / "campaign")
+        || !std::filesystem::is_directory(std::filesystem::path(torniePath) / "data")) {
+        SDL_Log("ModManager: Tornie payload is incomplete, needs reseed");
+        return true;
+    }
+
+    const std::string candidatePaths[] = {
+        getDuneLegacyDataDir() + "/mods/" + TORNIE_MOD_NAME,
+        getDuneLegacyDataDir() + "/../mods/" + TORNIE_MOD_NAME,
+        getDuneLegacyDataDir() + "/../../mods/" + TORNIE_MOD_NAME,
+        getDuneLegacyDataDir() + "/../../../mods/" + TORNIE_MOD_NAME
+    };
+    for(const std::string& candidatePath : candidatePaths) {
+        const std::string bundledChecksums = candidatePath + "/checksums.sha256";
+        if(existsFile(bundledChecksums)
+           && hashFileCanonical(checksumsPath) != hashFileCanonical(bundledChecksums)) {
+            SDL_Log("ModManager: Tornie bundled payload changed, needs reseed");
+            return true;
+        }
+        if(existsFile(bundledChecksums)) {
+            break;
+        }
     }
 
     // Check if installed Tornie ObjectData.ini differs from defaults
@@ -1172,6 +1218,96 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
     
     file.close();
 
+    info.mentats.resize(NUM_HOUSE_COLOR_SLOTS);
+    std::vector<bool> requestedMentatEnabled(NUM_HOUSE_COLOR_SLOTS, false);
+    std::vector<bool> mentatFieldsValid(NUM_HOUSE_COLOR_SLOTS, true);
+    std::ifstream mentatFile(iniPath);
+    if(mentatFile.is_open()) {
+        int mentatHouse = -1;
+        while(std::getline(mentatFile, line)) {
+            trim(line);
+            if(line.empty() || line[0] == '#' || line[0] == ';') continue;
+
+            if(line.front() == '[' && line.back() == ']') {
+                std::string section = line.substr(1, line.size() - 2);
+                trim(section);
+                mentatHouse = -1;
+                const std::string prefix = "Mentat ";
+                if(section.rfind(prefix, 0) == 0) {
+                    int parsedHouse = -1;
+                    if(CustomHouseConfig::parseInteger(section.substr(prefix.size()), parsedHouse)
+                       && parsedHouse >= 0 && parsedHouse < NUM_HOUSE_COLOR_SLOTS) {
+                        mentatHouse = parsedHouse;
+                    }
+                }
+                continue;
+            }
+
+            if(mentatHouse < 0) continue;
+            const size_t mentatEqualsPos = line.find('=');
+            if(mentatEqualsPos == std::string::npos) continue;
+
+            std::string mentatKey = line.substr(0, mentatEqualsPos);
+            std::string mentatValue = line.substr(mentatEqualsPos + 1);
+            trim(mentatKey);
+            trim(mentatValue);
+            ModMentatInfo& mentat = info.mentats[mentatHouse];
+
+            auto parseIntegerField = [&](int& destination) {
+                if(!CustomHouseConfig::parseInteger(mentatValue, destination)) {
+                    mentatFieldsValid[mentatHouse] = false;
+                }
+            };
+            auto parseDoubleField = [&](double& destination) {
+                if(!ModMentatConfig::parseDouble(mentatValue, destination)) {
+                    mentatFieldsValid[mentatHouse] = false;
+                }
+            };
+            auto parseBooleanField = [&](bool& destination) {
+                if(!ModMentatConfig::parseBoolean(mentatValue, destination)) {
+                    mentatFieldsValid[mentatHouse] = false;
+                }
+            };
+
+            if(mentatKey == "Enabled") {
+                bool requestedEnabled = false;
+                if(ModMentatConfig::parseBoolean(mentatValue, requestedEnabled)) {
+                    requestedMentatEnabled[mentatHouse] = requestedEnabled;
+                } else {
+                    mentatFieldsValid[mentatHouse] = false;
+                }
+            }
+            else if(mentatKey == "Identity House") parseIntegerField(mentat.identityHouse);
+            else if(mentatKey == "Background") mentat.backgroundAsset = mentatValue;
+            else if(mentatKey == "Foreground") mentat.foregroundAsset = mentatValue;
+            else if(mentatKey == "Eyes") mentat.eyesAsset = mentatValue;
+            else if(mentatKey == "Eyes Frames") parseIntegerField(mentat.eyesFrames);
+            else if(mentatKey == "Eyes Frame Rate") parseDoubleField(mentat.eyesFrameRate);
+            else if(mentatKey == "Eyes Double") parseBooleanField(mentat.doubleEyes);
+            else if(mentatKey == "Eyes Transparent Color") parseIntegerField(mentat.eyesTransparentColor);
+            else if(mentatKey == "Eyes X") parseIntegerField(mentat.eyesX);
+            else if(mentatKey == "Eyes Y") parseIntegerField(mentat.eyesY);
+            else if(mentatKey == "Mouth") mentat.mouthAsset = mentatValue;
+            else if(mentatKey == "Mouth Frames") parseIntegerField(mentat.mouthFrames);
+            else if(mentatKey == "Mouth Frame Rate") parseDoubleField(mentat.mouthFrameRate);
+            else if(mentatKey == "Mouth Double") parseBooleanField(mentat.doubleMouth);
+            else if(mentatKey == "Mouth Transparent Color") parseIntegerField(mentat.mouthTransparentColor);
+            else if(mentatKey == "Mouth X") parseIntegerField(mentat.mouthX);
+            else if(mentatKey == "Mouth Y") parseIntegerField(mentat.mouthY);
+            else if(mentatKey == "Use Base Extras") parseBooleanField(mentat.useBaseExtras);
+        }
+    }
+
+    for(int house = 0; house < NUM_HOUSE_COLOR_SLOTS; ++house) {
+        ModMentatInfo& mentat = info.mentats[house];
+        mentat.enabled = requestedMentatEnabled[house]
+            && mentatFieldsValid[house]
+            && ModMentatConfig::isValid(mentat);
+        if(requestedMentatEnabled[house] && !mentat.enabled) {
+            SDL_Log("ModManager: Ignoring invalid Mentat %d configuration in %s", house, modPath.c_str());
+        }
+    }
+
     std::ifstream customFile(modPath + "/" + CUSTOM_HOUSE_CONFIG);
     if(customFile.is_open()) {
         std::string section;
@@ -1213,6 +1349,35 @@ ModInfo ModManager::readModIni(const std::string& modPath) const {
             } else if(customKey == "Fallback House") {
                 if(!CustomHouseConfig::parseInteger(customValue, info.customHouse.fallbackHouse)) {
                     numericFieldsValid = false;
+                }
+            } else if(customKey == "Herald") {
+                if(CustomHouseConfig::isSafeAssetPath(customValue)) {
+                    info.customHouse.heraldAsset = customValue;
+                } else {
+                    SDL_Log("ModManager: Ignoring unsafe custom-house herald path in %s", modPath.c_str());
+                }
+            } else if(customKey == "House Name Voice") {
+                if(CustomHouseConfig::isSafeAssetPath(customValue)) {
+                    info.customHouse.houseNameVoiceAsset = customValue;
+                } else {
+                    SDL_Log("ModManager: Ignoring unsafe custom-house voice path in %s", modPath.c_str());
+                }
+            } else if(customKey == "Voice Playback Rate") {
+                double parsedValue = info.customHouse.voicePlaybackRate;
+                if(CustomHouseConfig::parseDouble(customValue, parsedValue)
+                   && CustomHouseConfig::isValidVoicePlaybackRate(parsedValue)) {
+                    info.customHouse.voicePlaybackRate = parsedValue;
+                } else {
+                    SDL_Log("ModManager: Ignoring invalid custom-house voice playback rate in %s",
+                            modPath.c_str());
+                }
+            } else if(customKey == "Voice Gain") {
+                double parsedValue = info.customHouse.voiceGain;
+                if(CustomHouseConfig::parseDouble(customValue, parsedValue)
+                   && CustomHouseConfig::isValidVoiceGain(parsedValue)) {
+                    info.customHouse.voiceGain = parsedValue;
+                } else {
+                    SDL_Log("ModManager: Ignoring invalid custom-house voice gain in %s", modPath.c_str());
                 }
             }
         }

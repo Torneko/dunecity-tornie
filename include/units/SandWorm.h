@@ -95,7 +95,7 @@ private:
     Sint32      kills;                      ///< How many units does this sandworm alreay killed?
     Sint32      attackFrameTimer;           ///< When to show the next attack frame
     Sint32      sleepTimer;                 ///< How long has this sandworm slept?
-    Uint8       warningWormSignPlayedFlags; ///< Was the "Worm Sign" warning played? If yes, the corresponding flag is the for the local house
+    Uint16      warningWormSignPlayedFlags; ///< Was the "Worm Sign" warning played? One bit per supported house.
 
     // drawing information
     Sint32 shimmerOffsetIndex;

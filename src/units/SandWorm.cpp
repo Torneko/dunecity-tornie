@@ -37,6 +37,19 @@
 
 #define SANDWORM_ATTACKFRAMETIME 10
 
+namespace {
+
+constexpr Uint16 warningWormSignMaskForHouse(int houseID) {
+    return houseID >= 0 && houseID < NUM_HOUSES
+        ? static_cast<Uint16>(1u << static_cast<unsigned int>(houseID))
+        : 0;
+}
+
+static_assert(warningWormSignMaskForHouse(HOUSE_CUSTOM) != 0,
+              "The worm-sign warning mask must represent the custom house");
+
+} // namespace
+
 Sandworm::Sandworm(House* newOwner) : GroundUnit(newOwner) {
 
     Sandworm::init();
@@ -96,7 +109,9 @@ void Sandworm::save(OutputStream& stream) const {
     stream.writeSint32(kills);
     stream.writeSint32(attackFrameTimer);
     stream.writeSint32(sleepTimer);
-    stream.writeUint8(warningWormSignPlayedFlags);
+    // Preserve the legacy one-byte save layout. The ninth-house warning bit is
+    // transient and may be announced once again after loading a saved game.
+    stream.writeUint8(static_cast<Uint8>(warningWormSignPlayedFlags & 0xFFu));
     stream.writeSint32(shimmerOffsetIndex);
     for(int i = 0; i < SANDWORM_SEGMENTS; i++) {
         stream.writeSint32(lastLocs[i].x);
@@ -314,10 +329,13 @@ bool Sandworm::sleepOrDie() {
 void Sandworm::setTarget(const ObjectBase* newTarget) {
     GroundUnit::setTarget(newTarget);
 
+    const int localHouseID = pLocalHouse->getHouseID();
+    const Uint16 localHouseMask = warningWormSignMaskForHouse(localHouseID);
     if( (newTarget != nullptr) && (newTarget->getOwner() == pLocalHouse)
-        && ((warningWormSignPlayedFlags & (1 << pLocalHouse->getHouseID())) == 0) ) {
-        soundPlayer->playVoice(WarningWormSign, pLocalHouse->getHouseID());
-        warningWormSignPlayedFlags |= (1 << pLocalHouse->getHouseID());
+        && (localHouseMask != 0)
+        && ((warningWormSignPlayedFlags & localHouseMask) == 0) ) {
+        soundPlayer->playVoice(WarningWormSign, localHouseID);
+        warningWormSignPlayedFlags |= localHouseMask;
     }
 }
 

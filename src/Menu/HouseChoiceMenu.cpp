@@ -16,6 +16,7 @@
  */
 
 #include <Menu/HouseChoiceMenu.h>
+#include <mod/ModManager.h>
 
 #include <globals.h>
 
@@ -42,6 +43,10 @@ const int houseOrder[] = {
 
 constexpr int kVisibleHouseButtons = 3;
 int getHouseChoiceCount() {
+    if(ModManager::instance().isTornieLiteActive()) {
+        return 6;
+    }
+
     const int capacity = sizeof(houseOrder) / sizeof(houseOrder[0]);
     return isHouseAvailable(HOUSE_CUSTOM) ? capacity : capacity - 1;
 }
@@ -201,6 +206,23 @@ void HouseChoiceMenu::onHouseButton(int button) {
         case HOUSE_MERCENARY:   soundPlayer->playVoice(HouseOrdos, selectedHouse);         break;
         case HOUSE_NEUTRAL:     soundPlayer->playVoice(HouseAtreides, selectedHouse);      break;
         case HOUSE_REBELS:      soundPlayer->playVoice(HouseHarkonnen, selectedHouse);     break;
+        case HOUSE_CUSTOM: {
+            const HOUSETYPE fallbackHouse = getHouseFallbackHouse(HOUSE_CUSTOM);
+            switch(fallbackHouse) {
+                case HOUSE_ATREIDES:
+                case HOUSE_FREMEN:
+                case HOUSE_NEUTRAL:
+                    soundPlayer->playVoice(HouseAtreides, selectedHouse);
+                    break;
+                case HOUSE_ORDOS:
+                case HOUSE_MERCENARY:
+                    soundPlayer->playVoice(HouseOrdos, selectedHouse);
+                    break;
+                default:
+                    soundPlayer->playVoice(HouseHarkonnen, selectedHouse);
+                    break;
+            }
+        } break;
         default:                /* no sounds for the other houses avail.*/  break;
 
     }

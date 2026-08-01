@@ -54,6 +54,10 @@
 #define PLAYER_CLOSED       -2
 
 namespace {
+int getTornieLiteHouseCount() {
+    return ModManager::instance().isTornieLiteActive() ? 6 : getNumAvailableHouses();
+}
+
 Uint32 getMenuColorForHouse(int house) {
     if(house == HOUSE_REBELS) {
         return COLOR_RGB(58, 58, 62);
@@ -87,8 +91,14 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
             colorDropDown.addEntry(getCustomColorName(h), h);
         }
     } else {
-        for(int h = 0; h < getNumAvailableHouses(); h++) {
+        for(int h = 0; h < getTornieLiteHouseCount(); h++) {
             colorDropDown.addEntry(getHouseNameByNumber(static_cast<HOUSETYPE>(h)), h);
+        }
+
+        if(ModManager::instance().isTornieLiteActive()) {
+            colorDropDown.addEntry(_("Light Grey"), HOUSE_NEUTRAL);
+            colorDropDown.addEntry(_("Dark Grey"), HOUSE_REBELS);
+            colorDropDown.addEntry(_("Cyan"), HOUSE_CUSTOM);
         }
     }
 
@@ -255,7 +265,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
 
     bool bLoadMultiplayer = (gameInitSettings.getGameType() == GameType::LoadMultiplayer);
     const bool bBonusHouseColorsAvailable = bLoadMultiplayer
-        || ModManager::instance().getActiveModName() == "Tornie";
+        || ModManager::instance().isTornieContentActive();
 
     buttonHBox.addWidget(Spacer::create(), 0.0625);
 
@@ -318,7 +328,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
             curHouseInfo.teamDropDown.setEnabled(false);
             curHouseInfo.teamDropDown.setOnClickEnabled(false);
         } else {
-            for(int team = 0 ; team < getNumAvailableHouses() ; team++) {
+            for(int team = 0 ; team < getTornieLiteHouseCount() ; team++) {
                 curHouseInfo.teamDropDown.addEntry(_("Team") + " " + std::to_string(team+1), team+1);
             }
             curHouseInfo.teamDropDown.setSelectedItem(slotToTeam[i]);
@@ -1481,7 +1491,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 
 
     boundHousesOnMap.clear();
-    for(int h = 0; h < getNumAvailableHouses(); h++) {
+    for(int h = 0; h < getTornieLiteHouseCount(); h++) {
         const HOUSETYPE house = static_cast<HOUSETYPE>(h);
         if(pMap->hasSection(getHouseNameByNumber(house))) {
             boundHousesOnMap.push_back(house);
@@ -1490,7 +1500,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 
     const int boundHouseCount = static_cast<int>(boundHousesOnMap.size());
     const int numberedPlayerCount = MapPlayerSectionUtils::countNumberedPlayerSections(
-        getNumAvailableHouses(),
+        getTornieLiteHouseCount(),
         [&pMap](int playerNumber) {
             return pMap->hasSection("Player" + std::to_string(playerNumber));
         });
@@ -1621,7 +1631,7 @@ void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int house
 
         addToHouseDropDown(curHouseInfo.houseDropDown, HOUSE_INVALID);
 
-        for(int h=0;h<getNumAvailableHouses();h++) {
+        for(int h=0;h<getTornieLiteHouseCount();h++) {
             bool bAddHouse;
 
             bool bCheck;
@@ -2000,7 +2010,7 @@ void CustomGamePlayers::addToHouseDropDown(DropDownBox& houseDropDownBox, int ho
 
             int currentItemIndex = (houseDropDownBox.getEntryIntData(0) == HOUSE_INVALID) ? 1 : 0;
 
-            for(int h = 0; h < getNumAvailableHouses(); h++) {
+            for(int h = 0; h < getTornieLiteHouseCount(); h++) {
                 if(currentItemIndex < houseDropDownBox.getNumEntries() && houseDropDownBox.getEntryIntData(currentItemIndex) == h) {
                     if(h == house) {
                         if(bSelect) {

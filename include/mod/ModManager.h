@@ -67,8 +67,18 @@ public:
      * \return Mod name (e.g., "vanilla")
      */
     std::string getActiveModName() const;
+    bool isTornieContentActive() const {
+        const std::string activeModName = getActiveModName();
+        return activeModName == "Tornie" || activeModName == "TornieLite" || activeModName == "Jericho";
+    }
+
+    bool isTornieLiteActive() const {
+        return getActiveModName() == "TornieLite";
+    }
     const CustomHouseInfo& getActiveCustomHouseInfo() const;
     bool isCustomHouseRegistered() const;
+    const ModMentatInfo& getActiveMentatInfo(int house) const;
+    int getEffectiveMentatIdentity(int house) const;
 
     /**
      * \return true if the active mod opts into DuneCity city-sim features
@@ -270,6 +280,7 @@ private:
     std::string modsBasePath;        ///< Base path for mods directory
     std::string activeMod;
     CustomHouseInfo activeCustomHouse;           ///< Currently active mod name
+    std::vector<ModMentatInfo> activeMentats;     ///< Mentat overrides owned by the active mod
     mutable ModChecksums cachedChecksums;  ///< Cached checksums
     mutable bool checksumsDirty;     ///< Do checksums need recalculation?
     bool initialized;                ///< Has initialize() been called?

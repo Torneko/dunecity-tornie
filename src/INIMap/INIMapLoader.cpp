@@ -42,14 +42,27 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     }
 
     const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
-    const auto pool = getSpecialVehiclePoolForHouse(getHouseFallbackHouse(static_cast<HOUSETYPE>(houseID)), tornieActive);
+        && ModManager::instance().isTornieContentActive();
+    std::vector<int> objectDataIxCandidates;
+    if(houseID == HOUSE_CUSTOM) {
+        objectDataIxCandidates = discoverCustomHouseSpecialVehicleCandidates([&](int candidate) {
+            const auto& data = pGame->objectData.data[candidate][houseID];
+            return CustomHouseSpecialVehicleCandidateData{
+                data.enabled,
+                data.builder,
+                data.prerequisiteStructuresSet[Structure_IX]
+            };
+        });
+    }
+
+    const auto pool = resolveSpecialVehiclePoolForHouse(
+        houseID, tornieActive, objectDataIxCandidates);
 
     std::vector<int> enabledPool;
     enabledPool.reserve(pool.size());
 
     for(const int candidate : pool) {
-        if(isUnit(candidate) && pGame->objectData.data[candidate][houseID].enabled) {
+        if(isSpecialVehicleSelectionCandidate(candidate) && pGame->objectData.data[candidate][houseID].enabled) {
             enabledPool.push_back(candidate);
         }
     }

@@ -16,6 +16,7 @@
  */
 
 #include <Menu/SinglePlayerSkirmishMenu.h>
+#include <mod/ModManager.h>
 
 #include <globals.h>
 
@@ -42,6 +43,10 @@ const int houseOrder[] = {
 
 constexpr int kVisibleHouseButtons = 3;
 int getHouseChoiceCount() {
+    if(ModManager::instance().isTornieLiteActive()) {
+        return 6;
+    }
+
     const int capacity = sizeof(houseOrder) / sizeof(houseOrder[0]);
     return isHouseAvailable(HOUSE_CUSTOM) ? capacity : capacity - 1;
 }

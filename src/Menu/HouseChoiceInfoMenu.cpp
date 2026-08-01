@@ -23,6 +23,9 @@
 #include <FileClasses/GFXManager.h>
 #include <FileClasses/TextManager.h>
 #include <FileClasses/Palfile.h>
+#include <misc/draw_util.h>
+
+#include <algorithm>
 
 HouseChoiceInfoMenu::HouseChoiceInfoMenu(int newHouse) : MentatMenu(HOUSE_INVALID)
 {
@@ -40,11 +43,39 @@ HouseChoiceInfoMenu::HouseChoiceInfoMenu(int newHouse) : MentatMenu(HOUSE_INVALI
         case HOUSE_FREMEN:      anim = pGFXManager->getAnimation(Anim_FremenPlanet);    break;
         case HOUSE_SARDAUKAR:   anim = pGFXManager->getAnimation(Anim_SardaukarPlanet); break;
         case HOUSE_MERCENARY:   anim = pGFXManager->getAnimation(Anim_MercenaryPlanet); break;
-        case HOUSE_NEUTRAL:     anim = pGFXManager->getAnimation(Anim_NeutralPlanet);   break;
-        case HOUSE_REBELS:      anim = pGFXManager->getAnimation(Anim_RebelsPlanet);    break;
+        case HOUSE_NEUTRAL:     anim = pGFXManager->getAnimation(Anim_HarkonnenPlanet);   break;
+        case HOUSE_REBELS:      anim = pGFXManager->getAnimation(Anim_AtreidesPlanet);    break;
         default: {
             THROW(std::invalid_argument, "HouseChoiceInfoMenu::HouseChoiceInfoMenu(): Invalid house id '%d'.", newHouse);
         } break;
+    }
+
+    if((newHouse == HOUSE_CUSTOM || displayHouse == HOUSE_NEUTRAL || displayHouse == HOUSE_REBELS)
+       && anim != nullptr) {
+        SDL_Surface* registeredHerald = pGFXManager->getUIGraphicSurface(UI_Herald_ColoredLarge, static_cast<HOUSETYPE>(newHouse));
+        auto opaqueHerald = copySurface(registeredHerald);
+        if(opaqueHerald != nullptr) {
+            SDL_SetColorKey(opaqueHerald.get(), SDL_FALSE, 0);
+            customPlanetAnimation = std::make_unique<Animation>();
+            for(const auto& frame : anim->getFrames()) {
+                auto customFrame = copySurface(frame.get());
+                if(customFrame == nullptr) {
+                    continue;
+                }
+
+                SDL_Rect sourceRect{0, 0,
+                                    std::min(opaqueHerald->w, customFrame->w - 12),
+                                    std::min(126, opaqueHerald->h)};
+                SDL_Rect destinationRect{12, 66, sourceRect.w, sourceRect.h};
+                if(sourceRect.w > 0 && sourceRect.h > 0) {
+                    SDL_BlitSurface(opaqueHerald.get(), &sourceRect, customFrame.get(), &destinationRect);
+                }
+                customPlanetAnimation->addFrame(std::move(customFrame));
+            }
+            customPlanetAnimation->setFrameDurationTime(anim->getFrameDurationTime());
+            customPlanetAnimation->setNumLoops(anim->getLoopsLeft());
+            anim = customPlanetAnimation.get();
+        }
     }
 
     planetAnimation.setAnimation(anim);
