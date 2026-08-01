@@ -894,23 +894,22 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Unit_EliteSiegeTank:           newObject = new EliteSiegeTank(Owner); break;
         case Unit_ChemicalSiegeTank:        newObject = new ChemicalSiegeTank(Owner); break;
         case Unit_Special: {
-            const bool tornieActive = ModManager::instance().isInitialized()
-                && ModManager::instance().isTornieContentActive();
+            const bool modInitialized = ModManager::instance().isInitialized();
+            const bool tornieActive = modInitialized && ModManager::instance().isTornieContentActive();
+            const bool jerichoActive = modInitialized
+                && ModManager::instance().getActiveModName() == "Jericho";
             const int houseID = Owner->getHouseID();
-            std::vector<int> objectDataIxCandidates;
-            if(houseID == HOUSE_CUSTOM) {
-                objectDataIxCandidates = discoverCustomHouseSpecialVehicleCandidates([&](int candidate) {
-                    const auto& data = currentGame->objectData.data[candidate][houseID];
-                    return CustomHouseSpecialVehicleCandidateData{
-                        data.enabled,
-                        data.builder,
-                        data.prerequisiteStructuresSet[Structure_IX]
-                    };
-                });
-            }
+            const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
+                const auto& data = currentGame->objectData.data[candidate][houseID];
+                return HouseSpecialVehicleCandidateData{
+                    data.enabled,
+                    data.builder,
+                    data.prerequisiteStructuresSet[Structure_IX]
+                };
+            });
 
             const auto pool = resolveSpecialVehiclePoolForHouse(
-                houseID, tornieActive, objectDataIxCandidates);
+                houseID, tornieActive, jerichoActive, objectDataIxCandidates);
             std::vector<int> enabledPool;
             for(const int candidate : pool) {
                 if(isSpecialVehicleSelectionCandidate(candidate) && currentGame->objectData.data[candidate][houseID].enabled) {

@@ -36,6 +36,16 @@ SDL_Texture*         screenTexture = nullptr;
 Palette              palette;
 Palette              customPalette;
 bool                 customPaletteLoaded = false;
+std::array<SDL_Color, 8> rebelsColorRamp{{
+    SDL_Color{ 82, 82, 82, 255 },
+    SDL_Color{ 72, 72, 72, 255 },
+    SDL_Color{ 62, 62, 62, 255 },
+    SDL_Color{ 52, 52, 52, 255 },
+    SDL_Color{ 42, 42, 42, 255 },
+    SDL_Color{ 34, 34, 34, 255 },
+    SDL_Color{ 27, 27, 27, 255 },
+    SDL_Color{ 20, 20, 20, 255 }
+}};
 int                  drawnMouseX = 0;
 int                  drawnMouseY = 0;
 int                  currentZoomlevel = 0;
@@ -101,26 +111,32 @@ bool isJerichoHouseColorSlot(int colorSlot) {
 }
 
 void applyCustomPaletteRuntimeHouseRamps() {
-    if(palette.getNumColors() < 256) {
-        return;
-    }
-
-    // Jericho faction colors are private per-surface ramps. Never copy them
-    // into the global palette, where shared indexes would tint unrelated art.
-    if(isJerichoHouseColorSlot(HOUSE_NEUTRAL)) {
-        return;
-    }
-
     static const Uint8 rebelsGreyRamp[8] = { 82, 72, 62, 52, 42, 34, 27, 20 };
+    const bool swapTornieRebelsWithDarkGreen =
+        ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Tornie"
+        && customPaletteLoaded
+        && customPalette.getNumColors() >= PALCOLOR_SARDAUKAR + 8;
+
     for(int k = 0; k < 8; ++k) {
-        SDL_Color& color = palette[PALCOLOR_REBELS + k];
-        color.r = rebelsGreyRamp[k];
-        color.g = rebelsGreyRamp[k];
-        color.b = rebelsGreyRamp[k];
-        color.a = 255;
+        const SDL_Color greyColor{
+            rebelsGreyRamp[k], rebelsGreyRamp[k], rebelsGreyRamp[k], 255
+        };
+        SDL_Color rebelsColor = greyColor;
+
+        if(swapTornieRebelsWithDarkGreen) {
+            const SDL_Color customRebelsColor = customPalette[PALCOLOR_SARDAUKAR + k];
+            const bool customSlotAlreadySwapped = customRebelsColor.r == greyColor.r
+                && customRebelsColor.g == greyColor.g
+                && customRebelsColor.b == greyColor.b;
+            rebelsColor = customSlotAlreadySwapped ? rebelsColorRamp[k] : customRebelsColor;
+            rebelsColor.a = 255;
+            customPalette[PALCOLOR_SARDAUKAR + k] = greyColor;
+        }
+
+        rebelsColorRamp[k] = rebelsColor;
     }
 }
-
 bool isHouseAvailable(HOUSETYPE house) {
     if(house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) return true;
     return house == HOUSE_CUSTOM

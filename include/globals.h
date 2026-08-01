@@ -67,6 +67,7 @@ EXTERN SDL_Texture*         screenTexture;              ///< the texture
 EXTERN Palette              palette;                    ///< the palette for the screen
 EXTERN Palette              customPalette;              ///< optional Custom_IBM.PAL for extra visual color ramps
 EXTERN bool                 customPaletteLoaded;        ///< true when Custom_IBM.PAL is available
+EXTERN std::array<SDL_Color, 8> rebelsColorRamp;         ///< private Rebels ramp; never written into IBM.PAL
 EXTERN int                  drawnMouseX;                ///< the current mouse position (x coordinate)
 EXTERN int                  drawnMouseY;                ///< the current mouse position (y coordinate)
 EXTERN int                  currentZoomlevel;           ///< 0 = the smallest zoom level, 1 = medium zoom level, 2 = maximum zoom level
@@ -160,6 +161,13 @@ inline const Palette& getPaletteForHouseColorSlot(int colorSlot) {
 }
 
 inline SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset = 3) {
+    if(colorSlot == HOUSE_REBELS && !isJerichoHouseColorSlot(colorSlot)) {
+        if(shadeOffset >= 0 && shadeOffset < static_cast<int>(rebelsColorRamp.size())) {
+            return rebelsColorRamp[shadeOffset];
+        }
+        return SDL_Color{ 0, 0, 0, 255 };
+    }
+
     const Palette& sourcePalette = getPaletteForHouseColorSlot(colorSlot);
     const int paletteIndex = getHouseColorPaletteIndexFromSlot(colorSlot) + shadeOffset;
     if(paletteIndex >= 0 && paletteIndex < sourcePalette.getNumColors()) {
@@ -168,7 +176,6 @@ inline SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset = 3) {
 
     return SDL_Color{ 0, 0, 0, 255 };
 }
-
 inline Uint32 getHouseColorRGB(int colorSlot, int shadeOffset = 3) {
     return SDL2RGB(getHouseColorSDL(colorSlot, shadeOffset));
 }

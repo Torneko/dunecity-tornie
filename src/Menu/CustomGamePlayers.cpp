@@ -54,15 +54,32 @@
 #define PLAYER_CLOSED       -2
 
 namespace {
-int getTornieLiteHouseCount() {
-    return ModManager::instance().isTornieLiteActive() ? 6 : getNumAvailableHouses();
+bool isTornieMainActive() {
+    return ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Tornie";
+}
+
+bool addedFactionColorsAreBonus() {
+    if(!ModManager::instance().isInitialized()) {
+        return false;
+    }
+
+    return ModManager::instance().isTornieLiteActive()
+        || ModManager::instance().getActiveModName() == "Jericho";
+}
+
+int getCustomGameHouseCount() {
+    return getNumAvailableHouses();
+}
+
+bool isBonusColorSlot(int colorSlot) {
+    return isCustomHouseColorSlot(colorSlot)
+        || (addedFactionColorsAreBonus()
+            && colorSlot >= HOUSE_NEUTRAL
+            && colorSlot < getNumAvailableHouses());
 }
 
 Uint32 getMenuColorForHouse(int house) {
-    if(house == HOUSE_REBELS) {
-        return COLOR_RGB(58, 58, 62);
-    }
-
     if(isValidHouseColorSlot(house)) {
         return getHouseColorRGB(house, 3);
     }
@@ -76,7 +93,7 @@ const char* getCustomColorName(int colorSlot) {
         case HOUSECOLOR_CUSTOM_FUCHSIA:       return "Fuchsia";
         case HOUSECOLOR_CUSTOM_TEAL:          return "Teal";
         case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW: return "Bright Yellow";
-        case HOUSECOLOR_CUSTOM_APPLE_GREEN:   return "Dark Green";
+        case HOUSECOLOR_CUSTOM_APPLE_GREEN:   return isTornieMainActive() ? "Dark Grey" : "Dark Green";
         case HOUSECOLOR_CUSTOM_LIGHT_PINK:    return "Light Pink";
         default:                              return "Custom";
     }
@@ -87,18 +104,21 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
     colorDropDown.addEntry(_("Original"), HOUSE_INVALID);
 
     if(bonusColors) {
-        for(int h = NUM_HOUSES; h < NUM_HOUSE_COLOR_SLOTS; h++) {
+        if(addedFactionColorsAreBonus()) {
+            for(int h = HOUSE_NEUTRAL; h < getNumAvailableHouses(); ++h) {
+                colorDropDown.addEntry(getHouseNameByNumber(static_cast<HOUSETYPE>(h)), h);
+            }
+        }
+
+        for(int h = NUM_HOUSES; h < NUM_HOUSE_COLOR_SLOTS; ++h) {
             colorDropDown.addEntry(getCustomColorName(h), h);
         }
     } else {
-        for(int h = 0; h < getTornieLiteHouseCount(); h++) {
+        const int standardHouseColorCount = addedFactionColorsAreBonus()
+            ? HOUSE_NEUTRAL
+            : getNumAvailableHouses();
+        for(int h = 0; h < standardHouseColorCount; ++h) {
             colorDropDown.addEntry(getHouseNameByNumber(static_cast<HOUSETYPE>(h)), h);
-        }
-
-        if(ModManager::instance().isTornieLiteActive()) {
-            colorDropDown.addEntry(_("Light Grey"), HOUSE_NEUTRAL);
-            colorDropDown.addEntry(_("Dark Grey"), HOUSE_REBELS);
-            colorDropDown.addEntry(_("Cyan"), HOUSE_CUSTOM);
         }
     }
 
@@ -328,7 +348,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
             curHouseInfo.teamDropDown.setEnabled(false);
             curHouseInfo.teamDropDown.setOnClickEnabled(false);
         } else {
-            for(int team = 0 ; team < getTornieLiteHouseCount() ; team++) {
+            for(int team = 0 ; team < getCustomGameHouseCount() ; team++) {
                 curHouseInfo.teamDropDown.addEntry(_("Team") + " " + std::to_string(team+1), team+1);
             }
             curHouseInfo.teamDropDown.setSelectedItem(slotToTeam[i]);
@@ -344,7 +364,7 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
                 selectedColor = houseInfoListSetup.at(i).colorOfHouse;
             }
             curHouseInfo.bonusColorCheckbox.setText(_("Bonus"));
-            curHouseInfo.bonusColorCheckbox.setChecked(isCustomHouseColorSlot(selectedColor));
+            curHouseInfo.bonusColorCheckbox.setChecked(isBonusColorSlot(selectedColor));
             addColorDropDownEntries(curHouseInfo.colorDropDown, selectedColor, curHouseInfo.bonusColorCheckbox.isChecked());
             curHouseInfo.bonusColorCheckbox.setEnabled(false);
             curHouseInfo.colorDropDown.setEnabled(false);
@@ -1491,7 +1511,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 
 
     boundHousesOnMap.clear();
-    for(int h = 0; h < getTornieLiteHouseCount(); h++) {
+    for(int h = 0; h < getCustomGameHouseCount(); h++) {
         const HOUSETYPE house = static_cast<HOUSETYPE>(h);
         if(pMap->hasSection(getHouseNameByNumber(house))) {
             boundHousesOnMap.push_back(house);
@@ -1500,7 +1520,7 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 
     const int boundHouseCount = static_cast<int>(boundHousesOnMap.size());
     const int numberedPlayerCount = MapPlayerSectionUtils::countNumberedPlayerSections(
-        getTornieLiteHouseCount(),
+        getCustomGameHouseCount(),
         [&pMap](int playerNumber) {
             return pMap->hasSection("Player" + std::to_string(playerNumber));
         });
@@ -1631,7 +1651,7 @@ void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int house
 
         addToHouseDropDown(curHouseInfo.houseDropDown, HOUSE_INVALID);
 
-        for(int h=0;h<getTornieLiteHouseCount();h++) {
+        for(int h=0;h<getCustomGameHouseCount();h++) {
             bool bAddHouse;
 
             bool bCheck;
@@ -2010,7 +2030,7 @@ void CustomGamePlayers::addToHouseDropDown(DropDownBox& houseDropDownBox, int ho
 
             int currentItemIndex = (houseDropDownBox.getEntryIntData(0) == HOUSE_INVALID) ? 1 : 0;
 
-            for(int h = 0; h < getTornieLiteHouseCount(); h++) {
+            for(int h = 0; h < getCustomGameHouseCount(); h++) {
                 if(currentItemIndex < houseDropDownBox.getNumEntries() && houseDropDownBox.getEntryIntData(currentItemIndex) == h) {
                     if(h == house) {
                         if(bSelect) {

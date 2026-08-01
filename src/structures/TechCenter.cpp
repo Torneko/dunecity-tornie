@@ -146,23 +146,24 @@ bool TechCenter::houseHasIxUnlocked() const {
 }
 
 int TechCenter::spawnRandomVehicles(int count) {
-    // Keep Tech Center spawns aligned with Unit_Special scenario entries.
-    const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().isTornieContentActive();
-    std::vector<int> objectDataIxCandidates;
-    if(originalHouseID == HOUSE_CUSTOM) {
-        objectDataIxCandidates = discoverCustomHouseSpecialVehicleCandidates([&](int candidate) {
-            const auto& data = currentGame->objectData.data[candidate][originalHouseID];
-            return CustomHouseSpecialVehicleCandidateData{
-                data.enabled,
-                data.builder,
-                data.prerequisiteStructuresSet[Structure_IX]
-            };
-        });
-    }
+    // Keep Tech Center, Unit_Special maps and factory unlocks on the same
+    // active-mod ObjectData table. This prevents Jericho's W/K aliases from
+    // leaking into Tornie's N/R special-vehicle pairs.
+    const bool modInitialized = ModManager::instance().isInitialized();
+    const bool tornieActive = modInitialized && ModManager::instance().isTornieContentActive();
+    const bool jerichoActive = modInitialized
+        && ModManager::instance().getActiveModName() == "Jericho";
+    const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
+        const auto& data = currentGame->objectData.data[candidate][originalHouseID];
+        return HouseSpecialVehicleCandidateData{
+            data.enabled,
+            data.builder,
+            data.prerequisiteStructuresSet[Structure_IX]
+        };
+    });
 
     const auto specialVehiclePool = resolveSpecialVehiclePoolForHouse(
-        originalHouseID, tornieActive, objectDataIxCandidates);
+        originalHouseID, tornieActive, jerichoActive, objectDataIxCandidates);
     const bool useGenericCustomFallback =
         originalHouseID == HOUSE_CUSTOM && objectDataIxCandidates.empty();
     std::vector<int> vehiclePool;

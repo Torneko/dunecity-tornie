@@ -595,10 +595,10 @@ Uint32 getColorByTerrainType(int terrainType) {
         case Terrain_Spice:         color = COLOR_SPICE;       break;
         case Terrain_ThickSpice:    color = COLOR_THICKSPICE;  break;
         case Terrain_GreenSpice:    color = COLOR_RGB(28, 124, 48); break;
-        case Terrain_ThickGreenSpice: color = COLOR_RGB(20, 92, 42); break;
+        case Terrain_ThickGreenSpice: color = COLOR_RGB(28, 124, 48); break;
         case Terrain_GreenSpiceBloom: color = COLOR_RGB(28, 124, 48); break;
         case Terrain_RedSpice:      color = COLOR_RGB(154, 48, 38); break;
-        case Terrain_ThickRedSpice: color = COLOR_RGB(104, 32, 28); break;
+        case Terrain_ThickRedSpice: color = COLOR_RGB(154, 48, 38); break;
         case Terrain_RedSpiceBloom: color = COLOR_RGB(154, 48, 38); break;
         case Terrain_SpiceBloom:    color = COLOR_BLOOM;       break;
         case Terrain_SpecialBloom:  color = COLOR_BLOOM;       break;

@@ -1983,7 +1983,7 @@ void Mentat::handleSpecialWeapon(const StructureBase* pStructure, MentatBuildCon
 	const Palace* pPalace = static_cast<const Palace*>(pStructure);
 	if (!pPalace->isSpecialWeaponReady()) return;
 
-	if (ctx.houseID != HOUSE_HARKONNEN && ctx.houseID != HOUSE_SARDAUKAR) {
+	if (!pPalace->usesTargetedSpecialWeapon()) {
 		doSpecialWeapon(pPalace);
 	}
 	else {
@@ -1999,7 +1999,7 @@ void Mentat::handleSpecialWeapon(const StructureBase* pStructure, MentatBuildCon
 			}
 		}
 
-		if ((enemyHouseID != -1) && (ctx.houseID == HOUSE_HARKONNEN || ctx.houseID == HOUSE_SARDAUKAR)) {
+		if (enemyHouseID != -1) {
 			Coord target = findBestDeathHandTarget(enemyHouseID);
 			if (target.isValid()) {
 				doLaunchDeathhand(pPalace, target.x, target.y);
