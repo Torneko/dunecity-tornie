@@ -729,7 +729,10 @@ void INIMapLoader::loadUnits()
 
             itemID = replaceJerichoWildspadeUnit(pGame, houseID, itemID);
 
-            if(!pGame->objectData.data[itemID][houseID].enabled) {
+            // Editor-placed Chemical Carryalls are valid for every faction;
+            // production availability remains controlled separately by the builder rules.
+            const bool editorPlacedChemicalCarryall = itemID == Unit_ChemicalCarryall;
+            if(!pGame->objectData.data[itemID][houseID].enabled && !editorPlacedChemicalCarryall) {
                 continue;
             }
 

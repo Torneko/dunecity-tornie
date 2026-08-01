@@ -87,6 +87,11 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Structure_PowerLine:          newPicID = Picture_PowerLine;          break;
 
         case Unit_Carryall:                 newPicID = Picture_Carryall;            break;
+        case Unit_ChemicalCarryall:         newPicID = Picture_ChemicalCarryall;    break;
+        case Delivery_Small:                newPicID = Picture_Trooper;             break;
+        case Delivery_Medium:               newPicID = Picture_Quad;                break;
+        case Delivery_Heavy:                newPicID = Picture_Tank;                break;
+        case Delivery_Support:              newPicID = Picture_Carryall;            break;
         case Unit_Devastator:               newPicID = Picture_Devastator;          break;
         case Unit_Deviator:                 newPicID = Picture_Deviator;            break;
         case Unit_Frigate:                  newPicID = Picture_Frigate;             break;
@@ -288,6 +293,11 @@ Uint32  getItemIDByName(const std::string& name) {
     else if((lowerName == "scoutpost") || (lowerName == "scout post") || (lowerName == "green post") || (lowerName == "sentinel post") || (lowerName == "avant-poste") || (lowerName == "avant poste")) return Structure_Scoutpost;
     else if((lowerName == "love factory") || (lowerName == "lovefactory"))       return Structure_LoveFactory;
     else if((lowerName == "carryall") || (lowerName == "carry-all"))            return Unit_Carryall;
+    else if((lowerName == "chemical carryall") || (lowerName == "chemicalcarryall")) return Unit_ChemicalCarryall;
+    else if((lowerName == "small delivery") || (lowerName == "delivery small")) return Delivery_Small;
+    else if((lowerName == "medium delivery") || (lowerName == "delivery medium")) return Delivery_Medium;
+    else if((lowerName == "heavy delivery") || (lowerName == "delivery heavy")) return Delivery_Heavy;
+    else if((lowerName == "support delivery") || (lowerName == "delivery support")) return Delivery_Support;
     else if((lowerName == "devastator") || (lowerName == "devistator"))         return Unit_Devastator;
     else if(lowerName == "deviator")                                            return Unit_Deviator;
     else if(lowerName == "frigate")                                             return Unit_Frigate;
@@ -367,6 +377,11 @@ std::string getItemNameByID(Uint32 itemID) {
         case Structure_LoveFactory:         return "Love Factory";      break;
 
         case Unit_Carryall:                 return "Carryall";          break;
+        case Unit_ChemicalCarryall:         return "Chemical Carryall"; break;
+        case Delivery_Small:                return "Small Delivery"; break;
+        case Delivery_Medium:               return "Medium Delivery"; break;
+        case Delivery_Heavy:                return "Heavy Delivery"; break;
+        case Delivery_Support:              return "Support Delivery"; break;
         case Unit_Devastator:               return "Devastator";        break;
         case Unit_Deviator:                 return "Deviator";          break;
         case Unit_Frigate:                  return "Frigate";          break;
@@ -448,6 +463,11 @@ std::string resolveItemName(int itemID) {
         case Structure_LoveFactory:         return _("Love Factory");             break;
 
         case Unit_Carryall:                 return _("@DUNE.ENG|195#Carryall");            break;
+        case Unit_ChemicalCarryall:         return _("Chemical Carryall");                   break;
+        case Delivery_Small:                return _("Small Delivery"); break;
+        case Delivery_Medium:               return _("Medium Delivery"); break;
+        case Delivery_Heavy:                return _("Heavy Delivery"); break;
+        case Delivery_Support:              return _("Support Delivery"); break;
         case Unit_Devastator:               return _("@DUNE.ENG|217#Devastator");          break;
         case Unit_Deviator:                 return _("@DUNE.ENG|211#Deviator");            break;
         case Unit_Frigate:                  return _("Frigate");                           break;

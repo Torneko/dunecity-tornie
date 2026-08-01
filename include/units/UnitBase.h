@@ -74,6 +74,7 @@ public:
         \param  yPos    the y position on the map
     */
     virtual void handleAttackClick(int xPos, int yPos);
+    virtual void handleHealClick(int xPos, int yPos);
 
     /**
         This method is called when an unit is ordered to move

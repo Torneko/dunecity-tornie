@@ -420,7 +420,7 @@ void House::incrementUnits(int itemID) {
 
     if(itemID != Unit_Saboteur
        && itemID != Unit_Frigate
-       && itemID != Unit_Carryall
+       && !isCarryallUnit(itemID)
        && itemID != Unit_MCV
        && itemID != Unit_Harvester
        && itemID != Unit_RebelHarvester
@@ -450,7 +450,7 @@ void House::decrementUnits(int itemID) {
 
     if(itemID != Unit_Saboteur
        && itemID != Unit_Frigate
-       && itemID != Unit_Carryall
+       && !isCarryallUnit(itemID)
        && itemID != Unit_MCV
        && itemID != Unit_Harvester
        && itemID != Unit_RebelHarvester
@@ -564,7 +564,7 @@ void House::informHasKilled(Uint32 itemID) {
 
         if(itemID != Unit_Saboteur
            && itemID != Unit_Frigate
-           && itemID != Unit_Carryall
+           && !isCarryallUnit(itemID)
            && itemID != Unit_MCV
            && itemID != Unit_Harvester
            && itemID != Unit_Sandworm

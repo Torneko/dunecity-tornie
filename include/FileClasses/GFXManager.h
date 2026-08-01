@@ -142,6 +142,7 @@ typedef enum {
     ObjPic_EliteLauncherGunTornie, ///< Tornie: elite Launcher turret overlay
     ObjPic_RebelSonicTankGun,      ///< Tornie: Rebels-only violet Sonic Tank turret
     ObjPic_HarvestankGunTornie,     ///< Tornie: Harvestank turret overlay
+    ObjPic_ChemicalCarryall,        ///< Jericho: dedicated 8x2 healing Carryall atlas
     NUM_OBJPICS
 } ObjPic_enum;
 
@@ -158,7 +159,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost", "LoveFactory",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
-    "HarvestankGunTornie" } };
+    "HarvestankGunTornie", "ChemicalCarryall" } };
 
 #define GROUNDUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+3)|TILE_FLIPV, (i+4)|TILE_NORMAL,(i+3)|TILE_NORMAL
 #define AIRUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+1)|TILE_ROTATE, i|TILE_FLIPH,(i+1)|TILE_FLIPH
@@ -235,6 +236,7 @@ typedef enum {
     Picture_PalaceLightVehicles,   ///< Tornie: Neutral/Rebels Palace Trike/Quad call icon
     Picture_SonicTrike,            ///< Tornie: portrait from SonicTrikeIcon.png
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
+    Picture_ChemicalCarryall,      ///< Jericho: Chemical Carryall portrait
     NUM_SMALLDETAILPICS
 } SmallDetailPics_Enum;
 
@@ -294,6 +296,7 @@ typedef enum {
     UI_CursorLeft,
     UI_CursorMove_Zoomlevel0,
     UI_CursorAttack_Zoomlevel0,
+    UI_CursorHeal_Zoomlevel0,
     UI_CursorCapture_Zoomlevel0,
     UI_CursorCarryallDrop_Zoomlevel0,
     UI_SendToRepairIcon,
@@ -499,6 +502,7 @@ typedef enum {
     UI_MapEditor_NuclearPlant,      ///< DuneCity: map-editor icon for nuclear plant
     UI_MapEditor_Road,              ///< DuneCity: map-editor icon for road tile
     UI_MapEditor_SonicTrike,        ///< Tornie: Rebels-only light sonic vehicle
+    UI_MapEditor_ChemicalCarryall,  ///< Jericho: healing Carryall with special-unit star
     NUM_UIGRAPHICS
 } UIGraphics_Enum;
 

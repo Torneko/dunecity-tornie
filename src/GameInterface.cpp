@@ -118,6 +118,17 @@ GameInterface::GameInterface() : Window(0,0,0,0) {
     );
     ornithopterSelectButton.resize(ornithopterButtonSize.x, ornithopterButtonSize.y);
     windowWidget.addWidget(&ornithopterSelectButton, ornithopterButtonPos, ornithopterButtonSize);
+    chemicalCarryallSelectButton.setText(_("Chemical Carryall"));
+    chemicalCarryallSelectButton.setTooltipText(_("Select all chemical carryalls"));
+    chemicalCarryallSelectButton.setOnClick(std::bind(&Game::selectAllChemicalCarryalls, currentGame));
+    const int chemicalCarryallButtonHeight = std::max(chemicalCarryallSelectButton.getMinimumSize().y, 36);
+    const Point chemicalCarryallButtonSize(ornithopterButtonWidth, chemicalCarryallButtonHeight);
+    const Point chemicalCarryallButtonPos(
+        getRendererWidth() - sideBar.getSize().x + 24,
+        146 + ornithopterButtonHeight + 4
+    );
+    chemicalCarryallSelectButton.resize(chemicalCarryallButtonSize.x, chemicalCarryallButtonSize.y);
+    windowWidget.addWidget(&chemicalCarryallSelectButton, chemicalCarryallButtonPos, chemicalCarryallButtonSize);
 
     // add chat manager
     windowWidget.addWidget(&chatManager, Point(20, 60), Point(getRendererWidth() - sideBar.getSize().x, 360));
@@ -332,11 +343,13 @@ void GameInterface::updateObjectInterface() {
 
     if(selection.empty()) {
         ornithopterSelectButton.setVisible(true);
+        chemicalCarryallSelectButton.setVisible(true);
         removeOldContainer();
         return;
     }
 
     ornithopterSelectButton.setVisible(false);
+    chemicalCarryallSelectButton.setVisible(false);
 
     if(selection.size() == 1) {
         ObjectBase* pObject = currentGame->getObjectManager().getObject(*selection.begin());

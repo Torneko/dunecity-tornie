@@ -183,7 +183,7 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             return true;
 
         case Structure_LoveFactory:
-            preview = { ObjPic_LoveFactory, 8, 1, TornieStructureFrame_BuildSite, -1 };
+            preview = { ObjPic_LoveFactory, 10, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
         default:
@@ -2038,6 +2038,14 @@ void Game::doInput()
 
                                 } break;
 
+case CursorMode_Heal: {
+
+                                    if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
+                                        handleSelectedObjectsHealClick(screenborder->screen2MapX(mouse->x), screenborder->screen2MapY(mouse->y));
+                                    }
+
+                                } break;
+
                                 case CursorMode_Move: {
 
                                     if(screenborder->isScreenCoordInsideMap(mouse->x, mouse->y) == true) {
@@ -3867,6 +3875,42 @@ void Game::selectAllOrnithopters()
     screenborder->setNewScreenCenter(averagePosition * TILESIZE);
 }
 
+void Game::selectAllChemicalCarryalls()
+{
+    std::set<Uint32> chemicalCarryallIDs;
+    Coord summedPosition;
+
+    for(UnitBase* pUnit : unitList) {
+        if((pUnit->getOwner() == pLocalHouse) &&
+           (pUnit->getItemID() == Unit_ChemicalCarryall) &&
+           pUnit->isRespondable()) {
+            chemicalCarryallIDs.insert(pUnit->getObjectID());
+            summedPosition += pUnit->getLocation();
+        }
+    }
+
+    if(chemicalCarryallIDs.empty()) {
+        return;
+    }
+
+    unselectAll(selectedList);
+    selectedList.clear();
+
+    for(Uint32 objectID : chemicalCarryallIDs) {
+        ObjectBase* pObject = objectManager.getObject(objectID);
+        if(pObject != nullptr) {
+            pObject->setSelected(true);
+            selectedList.insert(objectID);
+        }
+    }
+
+    selectionChanged();
+    currentCursorMode = CursorMode_Normal;
+
+    Coord averagePosition = summedPosition / static_cast<int>(chemicalCarryallIDs.size());
+    screenborder->setNewScreenCenter(averagePosition * TILESIZE);
+}
+
 
 void Game::unselectAll(const std::set<Uint32>& aList)
 {
@@ -3978,6 +4022,11 @@ bool Game::onRadarClick(Coord worldPosition, bool bRightMouseButton, bool bDrag)
             switch(currentCursorMode) {
                 case CursorMode_Attack: {
                     handleSelectedObjectsAttackClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
+                    return false;
+                } break;
+
+case CursorMode_Heal: {
+                    handleSelectedObjectsHealClick(worldPosition.x / TILESIZE, worldPosition.y / TILESIZE);
                     return false;
                 } break;
 
@@ -4582,6 +4631,25 @@ bool Game::handlePlacementClick(int xPos, int yPos) {
     }
 }
 
+
+bool Game::handleSelectedObjectsHealClick(int xPos, int yPos) {
+    UnitBase* pResponder = nullptr;
+    for(Uint32 objectID : selectedList) {
+        ObjectBase* pObject = objectManager.getObject(objectID);
+        if(pObject != nullptr && pObject->isAUnit() && pObject->getOwner() == pLocalHouse
+                && pObject->isRespondable() && pObject->canHeal()) {
+            pResponder = static_cast<UnitBase*>(pObject);
+            pResponder->handleHealClick(xPos, yPos);
+        }
+    }
+
+    setCursorMode(CursorMode_Normal);
+    if(pResponder != nullptr) {
+        pResponder->playConfirmSound();
+        return true;
+    }
+    return false;
+}
 
 bool Game::handleSelectedObjectsAttackClick(int xPos, int yPos) {
     UnitBase* pResponder = nullptr;

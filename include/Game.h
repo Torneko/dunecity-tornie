@@ -307,6 +307,7 @@ public:
         Selects all currently active ornithopters owned by the local house.
     */
     void selectAllOrnithopters();
+    void selectAllChemicalCarryalls();
 
     /**
         This method unselects all units/structures in the list aList.
@@ -520,6 +521,7 @@ private:
         \return true if attack is possible
     */
     bool handleSelectedObjectsAttackClick(int xPos, int yPos);
+    bool handleSelectedObjectsHealClick(int xPos, int yPos);
 
     /**
         Performs a move click for the currently selected units/structures.
@@ -580,6 +582,7 @@ public:
     enum {
         CursorMode_Normal,
         CursorMode_Attack,
+        CursorMode_Heal,
         CursorMode_Move,
         CursorMode_Capture,
         CursorMode_CarryallDrop,

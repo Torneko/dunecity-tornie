@@ -292,6 +292,7 @@ private:
     SymbolButton        editorModeUnits_EliteSiegeTank;
     HBox                editorModeUnits_HBoxTornieChemical;
     SymbolButton        editorModeUnits_ChemicalSiegeTank;
+    SymbolButton        editorModeUnits_ChemicalCarryall;
     HBox                editorModeUnits_HBox4;
     SymbolButton        editorModeUnits_Tank;
     SymbolButton        editorModeUnits_SiegeTank;

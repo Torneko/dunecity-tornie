@@ -77,17 +77,34 @@ Finale::Finale(int house) {
     if(pPlanetDuneInHouseColorSurface == nullptr) {
         THROW(std::runtime_error, "Finale::Finale(): Cannot open MAPPLAN.CPS!");
     }
-    pPlanetDuneInHouseColorSurface = mapSurfaceColorRange(pPlanetDuneInHouseColorSurface.get(), houseToPaletteIndex[HOUSE_HARKONNEN], getHousePaletteIndex(static_cast<HOUSETYPE>(house)));
-    if(house == HOUSE_CUSTOM && customPaletteLoaded
+    const int colorSlot = getHouseVisualHouse(house);
+    const bool usesPrivateVisualRamp = customPaletteLoaded
+        && (colorSlot == HOUSE_CUSTOM
+            || isCustomHouseColorSlot(colorSlot)
+            || isJerichoHouseColorSlot(colorSlot));
+    const int targetPaletteBase = usesPrivateVisualRamp
+        ? houseToPaletteIndex[HOUSE_HARKONNEN]
+        : getHouseColorPaletteIndexFromSlot(colorSlot);
+
+    pPlanetDuneInHouseColorSurface = mapSurfaceColorRange(
+        pPlanetDuneInHouseColorSurface.get(),
+        houseToPaletteIndex[HOUSE_HARKONNEN],
+        targetPaletteBase);
+
+    if(usesPrivateVisualRamp
         && pPlanetDuneInHouseColorSurface->format != nullptr
         && pPlanetDuneInHouseColorSurface->format->palette != nullptr) {
-        const int customPaletteBase = getHousePaletteIndex(HOUSE_CUSTOM);
-        if(customPaletteBase >= 0 && customPaletteBase + 7 < customPalette.getNumColors()) {
+        const Palette& sourcePalette = getPaletteForHouseColorSlot(colorSlot);
+        const int sourcePaletteBase = getHouseColorPaletteIndexFromSlot(colorSlot);
+        if(sourcePaletteBase >= 0 && sourcePaletteBase + 7 < sourcePalette.getNumColors()
+           && targetPaletteBase >= 0
+           && targetPaletteBase + 7 < pPlanetDuneInHouseColorSurface->format->palette->ncolors) {
+            SDL_Color visualRamp[8];
             for(int shade = 0; shade < 8; ++shade) {
-                const SDL_Color customColor = customPalette[customPaletteBase + shade];
-                SDL_SetPaletteColors(pPlanetDuneInHouseColorSurface->format->palette,
-                                     &customColor, customPaletteBase + shade, 1);
+                visualRamp[shade] = sourcePalette[sourcePaletteBase + shade];
             }
+            SDL_SetPaletteColors(pPlanetDuneInHouseColorSurface->format->palette,
+                                 visualRamp, targetPaletteBase, 8);
         }
     }
 

@@ -276,6 +276,7 @@ target_sources(dunecity
         units/TrackedUnit.cpp
         units/TankBase.cpp
         units/Carryall.cpp
+    units/ChemicalCarryall.cpp
         units/Devastator.cpp
         units/Deviator.cpp
         units/Frigate.cpp

@@ -65,6 +65,7 @@
 
 //units
 #include <units/Carryall.h>
+#include <units/ChemicalCarryall.h>
 #include <units/Devastator.h>
 #include <units/Deviator.h>
 #include <units/Frigate.h>
@@ -441,7 +442,7 @@ namespace {
 
 // 0 = normal, 1 = walls (slightly deprioritized), 2 = carryalls (heavily deprioritized)
 int getTargetDeprioritizationLevel(const ObjectBase& candidate) {
-    if(candidate.getItemID() == Unit_Carryall) return 2;
+    if(isCarryallUnit(candidate.getItemID())) return 2;
     if(candidate.getItemID() == Structure_Wall) return 1;
     return 0;
 }
@@ -865,6 +866,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Structure_Airport:             newObject = new Airport(Owner); break;
 
         case Unit_Carryall:                 newObject = new Carryall(Owner); break;
+        case Unit_ChemicalCarryall:         newObject = new ChemicalCarryall(Owner); break;
         case Unit_Devastator:               newObject = new Devastator(Owner); break;
         case Unit_Deviator:                 newObject = new Deviator(Owner); break;
         case Unit_Frigate:                  newObject = new Frigate(Owner); break;
@@ -987,6 +989,7 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Structure_Airport:             newObject = new Airport(stream); break;
 
         case Unit_Carryall:                 newObject = new Carryall(stream); break;
+        case Unit_ChemicalCarryall:         newObject = new ChemicalCarryall(stream); break;
         case Unit_Devastator:               newObject = new Devastator(stream); break;
         case Unit_Deviator:                 newObject = new Deviator(stream); break;
         case Unit_Frigate:                  newObject = new Frigate(stream); break;
