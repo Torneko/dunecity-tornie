@@ -34,9 +34,9 @@
 #include <units/HarvesterHelpers.h>
 #include <units/GroundUnit.h>
 
-Carryall::Carryall(House* newOwner) : AirUnit(newOwner)
+Carryall::Carryall(House* newOwner, int unitItemID) : AirUnit(newOwner)
 {
-    Carryall::init();
+    Carryall::init(unitItemID);
 
     setHealth(getMaxHealth());
 
@@ -47,9 +47,9 @@ Carryall::Carryall(House* newOwner) : AirUnit(newOwner)
     respondable = false;
 }
 
-Carryall::Carryall(InputStream& stream) : AirUnit(stream)
+Carryall::Carryall(InputStream& stream, int unitItemID) : AirUnit(stream)
 {
-    Carryall::init();
+    Carryall::init(unitItemID);
 
     pickedUpUnitList = stream.readUint32List();
     if(!pickedUpUnitList.empty()) {
@@ -59,9 +59,9 @@ Carryall::Carryall(InputStream& stream) : AirUnit(stream)
     stream.readBools(&owned, &aDropOfferer, &droppedOffCargo);
 }
 
-void Carryall::init()
+void Carryall::init(int unitItemID)
 {
-    itemID = Unit_Carryall;
+    itemID = unitItemID;
     owner->incrementUnits(itemID);
 
     canAttackStuff = false;

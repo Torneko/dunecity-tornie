@@ -282,6 +282,7 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
 
     // setup default choam
     choam[Unit_Carryall] = 2;
+    choam[Unit_ChemicalCarryall] = 0;
     choam[Unit_Harvester] = 4;
     choam[Unit_Launcher] = 5;
     choam[Unit_MCV] = 2;
@@ -1910,7 +1911,8 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
         int objectPicGunHouse = unit.house;
         const Coord* gunOffset = nullptr;
         switch(unit.itemID) {
-            case Unit_Carryall:         objectPicBase = ObjPic_Carryall;        framesY = 2;                                                                    break;
+            case Unit_Carryall:         objectPicBase = ObjPic_Carryall;         framesY = 2;                                                                    break;
+            case Unit_ChemicalCarryall: objectPicBase = ObjPic_ChemicalCarryall; framesY = 2;                                                                    break;
             case Unit_Devastator:       objectPicBase = ObjPic_Devastator_Base; objectPicGun = ObjPic_Devastator_Gun;   gunOffset = devastatorTurretOffset;     break;
             case Unit_Deviator:         objectPicBase = ObjPic_Tank_Base;       objectPicGun = tornieActive ? ObjPic_DeviatorGunTornie : ObjPic_Launcher_Gun; objectPicGunHouse = tornieActive ? HOUSE_HARKONNEN : unit.house; gunOffset = launcherTurretOffset; break;
             case Unit_Frigate:          objectPicBase = ObjPic_Frigate;                                                                                         break;
@@ -1972,7 +1974,8 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                                        || unit.itemID == Unit_Deviator);
         const bool customStarMarker = (unit.itemID == Unit_RocketTrike || unit.itemID == Unit_SonicTrike
                                        || unit.itemID == Unit_FlameTank || unit.itemID == Unit_EliteLauncher
-                                       || unit.itemID == Unit_EliteSiegeTank || unit.itemID == Unit_ChemicalSiegeTank || unit.itemID == Unit_RebelHarvester);
+                                       || unit.itemID == Unit_EliteSiegeTank || unit.itemID == Unit_ChemicalSiegeTank
+                                       || unit.itemID == Unit_ChemicalCarryall || unit.itemID == Unit_RebelHarvester);
         if(yellowStarMarker || customStarMarker) {
             SDL_Texture* pStarSprite = pGFXManager->getZoomedObjPic(ObjPic_Star, currentZoomlevel);
 

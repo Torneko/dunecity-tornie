@@ -28,7 +28,7 @@
 #include <FileClasses/GFXManager.h>
 #include <FileClasses/TextManager.h>
 
-static const ItemID_enum choamUnits[] = { Unit_Carryall,  Unit_Ornithopter,
+static const ItemID_enum choamUnits[] = { Unit_Carryall, Unit_ChemicalCarryall, Unit_Ornithopter,
                                            Unit_Harvester, Unit_MCV,
                                            Unit_Trike,     Unit_RaiderTrike,
                                            Unit_Quad,      Unit_Tank,

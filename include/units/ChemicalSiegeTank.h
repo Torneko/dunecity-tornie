@@ -20,10 +20,21 @@ public:
     explicit ChemicalSiegeTank(InputStream& stream);
     void init();
     virtual ~ChemicalSiegeTank();
+    bool update() override;
+    bool canHeal() const override { return true; }
+    void doAttackObject(Uint32 targetObjectID, bool bForced) override;
 
     void blitToScreen() override;
     void destroy() override;
     void playAttackSound() override;
-};
+
+private:
+    UnitBase* findDamagedAlly() const;
+    bool isValidHealTarget(const ObjectBase* pObject) const;
+    void fireHealingMissile(UnitBase* pTarget);
+
+    ObjectPointer healingTarget;
+    bool manualHealing = false;
+    int healingReloadTimer = 0;};
 
 #endif // CHEMICALSIEGETANK_H

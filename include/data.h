@@ -32,7 +32,8 @@ typedef enum {
     Bullet_Sonic = 9,
     Bullet_Sandworm = 10,
     Bullet_Flame = 11,            ///< Tornie: launcher-like fire missile with flame area damage
-    Bullet_SonicTrike = 12        ///< Tornie: shorter and weaker Sonic Trike wave
+    Bullet_SonicTrike = 12,        ///< Tornie: shorter and weaker Sonic Trike wave
+    Bullet_Heal = 13              ///< Jericho: Deviator-style healing missile with direct flight
 } BulletID_enum;
 
 typedef enum {
@@ -145,8 +146,13 @@ typedef enum {
     Unit_SonicTrike = 63,               ///< Tornie: Rebels-only light sonic vehicle
     Unit_ChemicalSiegeTank = 64,        ///< Tornie: custom-house chemical Siege Tank
     Structure_LoveFactory = 65,         ///< Tornie: animated 2x3 Love Factory
+    Unit_ChemicalCarryall = 66,         ///< Jericho: Wildspade healing transport
+    Delivery_Small = 67,               ///< Love Factory small reinforcement delivery
+    Delivery_Medium = 68,              ///< Love Factory medium reinforcement delivery
+    Delivery_Heavy = 69,               ///< Love Factory heavy reinforcement delivery
+    Delivery_Support = 70,             ///< Love Factory support reinforcement delivery
 
-    ItemID_LastID = 65,
+    ItemID_LastID = 70,
 
     Num_ItemID
 } ItemID_enum;
@@ -193,7 +199,7 @@ typedef enum {
     \param itemID   the ID of the item (e.g. Unit_Harvester)
     \return true if it is an unit, false otherwise
 */
-inline bool isUnit(int itemID) { return (itemID >= Unit_FirstID && itemID <= Unit_LastID) || (itemID >= Unit_AmbientAirplane && itemID <= Unit_ExtLastID) || itemID == Unit_RebelHarvester || itemID == Unit_SonicTrike || itemID == Unit_ChemicalSiegeTank; }
+inline bool isUnit(int itemID) { return (itemID >= Unit_FirstID && itemID <= Unit_LastID) || (itemID >= Unit_AmbientAirplane && itemID <= Unit_ExtLastID) || itemID == Unit_RebelHarvester || itemID == Unit_SonicTrike || itemID == Unit_ChemicalSiegeTank || itemID == Unit_ChemicalCarryall; }
 
 /**
     This function determines if the specified itemID is a structure or not.
@@ -215,7 +221,10 @@ inline bool isZoneStructure(int itemID) { return (itemID == Structure_ZoneReside
     \param itemID   the ID of the item (e.g. Unit_Carryall)
     \return true if it is a flying unit, false otherwise
 */
-inline bool isFlyingUnit(int itemID) { return (itemID == Unit_Carryall) || (itemID == Unit_Ornithopter) || (itemID == Unit_Frigate) || (itemID == Unit_AmbientAirplane) || (itemID == Unit_AmbientHelicopter); }
+inline bool isFlyingUnit(int itemID) { return (itemID == Unit_Carryall) || (itemID == Unit_ChemicalCarryall) || (itemID == Unit_Ornithopter) || (itemID == Unit_Frigate) || (itemID == Unit_AmbientAirplane) || (itemID == Unit_AmbientHelicopter); }
+inline bool isCarryallUnit(int itemID) {
+    return (itemID == Unit_Carryall) || (itemID == Unit_ChemicalCarryall);
+}
 
 /**
     This function determines if the specified itemID is an ambient city aircraft.

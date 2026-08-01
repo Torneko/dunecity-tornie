@@ -172,7 +172,20 @@ void Command::executeCommand() const {
             pUnit->doAttackObject((int) parameter[1], true);
         } break;
 
-        case CMD_INFANTRY_CAPTURE: {
+                case CMD_UNIT_HEAL: {
+            if(parameter.size() != 2) {
+                THROW(std::invalid_argument, "Command::executeCommand(): CMD_UNIT_HEAL needs 2 Parameters!");
+            }
+            UnitBase* pUnit = dynamic_cast<UnitBase*>(currentGame->getObjectManager().getObject(parameter[0]));
+            ObjectBase* pTarget = currentGame->getObjectManager().getObject(parameter[1]);
+            if(pUnit == nullptr || pTarget == nullptr || !pUnit->canHeal() || !pTarget->isAUnit()
+                    || pTarget->getOwner()->getTeamID() != pUnit->getOwner()->getTeamID()
+                    || pTarget->getHealth() >= pTarget->getMaxHealth()) {
+                return;
+            }
+            pUnit->doAttackObject((int) parameter[1], true);
+        } break;
+case CMD_INFANTRY_CAPTURE: {
             if(parameter.size() != 2) {
                 THROW(std::invalid_argument, "Command::executeCommand(): CMD_INFANTRY_CAPTURE needs 2 Parameters!");
             }

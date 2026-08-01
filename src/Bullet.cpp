@@ -180,7 +180,14 @@ void Bullet::init()
             graphic = pGFXManager->getObjPic(ObjPic_Bullet_MediumRocket, houseID);
         } break;
 
-        case Bullet_LargeRocket: {
+                case Bullet_Heal: {
+            damageRadius = 0;
+            speed = 19.2_fix;
+            detonationTimer = -1;
+            numFrames = 16;
+            graphic = pGFXManager->getObjPic(ObjPic_Bullet_MediumRocket, houseID);
+        } break;
+case Bullet_LargeRocket: {
             damageRadius = TILESIZE;
             speed = 32.0_fix;
             detonationTimer = -1;
@@ -412,7 +419,7 @@ void Bullet::update()
         ySpeed = speed * -FixPoint::sin(Deg256ToRad(angle));
 
         drawnAngle = lround(numFrames*angle/256) % numFrames;
-    } else if(bulletID == Bullet_TurretRocket) {
+    } else if(bulletID == Bullet_TurretRocket || bulletID == Bullet_Heal) {
 
         // Dynasty: Turret rockets actively track their moving target
         ObjectBase* pTarget = target.getObjPointer();
@@ -577,7 +584,17 @@ void Bullet::destroy()
             currentGame->getExplosionList().push_back(new Explosion(Explosion_Gas,position,houseID));
         } break;
 
-        case Bullet_LargeRocket: {
+                case Bullet_Heal: {
+            ObjectBase* pTarget = target.getObjPointer();
+            if(pTarget != nullptr && pTarget->getHealth() > 0
+                    && pTarget->getHealth() < pTarget->getMaxHealth()
+                    && pTarget->getOwner()->getTeamID() == owner->getTeamID()) {
+                pTarget->setHealth(std::min(FixPoint(pTarget->getMaxHealth()), pTarget->getHealth() + FixPoint(damage)));
+            }
+            soundPlayer->playSoundAt(Sound_ExplosionGas, position);
+            currentGame->getExplosionList().push_back(new Explosion(Explosion_Gas, position, houseID));
+        } break;
+case Bullet_LargeRocket: {
             soundPlayer->playSoundAt(Sound_ExplosionLarge, position);
 
             for(int i = 0; i < 5; i++) {
