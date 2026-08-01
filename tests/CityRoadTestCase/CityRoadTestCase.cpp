@@ -51,8 +51,7 @@ TEST_CASE("CityRoad: All DuneCity commands are contiguous after CMD_TEST_SYNC", 
     REQUIRE(CMD_CITY_SET_BUDGET == CMD_TEST_SYNC + 3);
     REQUIRE(CMD_CITY_TOOL == CMD_TEST_SYNC + 4);
     REQUIRE(CMD_TECHCENTER_SPAWN == CMD_CITY_TOOL + 1);
-    REQUIRE(CMD_CHEMICAL_HEALOBJECT == CMD_TECHCENTER_SPAWN + 1);
-    REQUIRE(CMD_MAX == CMD_CHEMICAL_HEALOBJECT + 1);
+    REQUIRE(CMD_MAX == CMD_TECHCENTER_SPAWN + 1);
 }
 
 // =============================================================================
