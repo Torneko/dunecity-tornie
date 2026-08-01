@@ -160,7 +160,7 @@ static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
 
 static void applyRebelsTint(SDL_Surface* surface);
 static bool usesPrivateVisualColorRamp(int colorSlot) {
-    return colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
+    return colorSlot == HOUSE_REBELS || colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
 }
 static int getVisualRemapPaletteIndex(int colorSlot) {
     return usesPrivateVisualColorRamp(colorSlot)
@@ -1281,11 +1281,11 @@ GFXManager::GFXManager() {
     objPic[ObjPic_Terrain_GreenSpice][HOUSE_HARKONNEN][0] =
         createTintedTerrainSpiceSurface(objPic[ObjPic_Terrain][HOUSE_HARKONNEN][0].get(),
                                         SDL_Color{ 24, 112, 48, 255 },
-                                        SDL_Color{ 20, 84, 42, 255 });
+                                        SDL_Color{ 24, 112, 48, 255 });
     objPic[ObjPic_Terrain_RedSpice][HOUSE_HARKONNEN][0] =
         createTintedTerrainSpiceSurface(objPic[ObjPic_Terrain][HOUSE_HARKONNEN][0].get(),
                                         SDL_Color{ 136, 48, 40, 255 },
-                                        SDL_Color{ 96, 32, 30, 255 });
+                                        SDL_Color{ 136, 48, 40, 255 });
     objPic[ObjPic_DestroyedStructure][HOUSE_HARKONNEN][0] = icon->getPictureRow2(14, 33, 125, 213, 214, 215, 223, 224, 225, 232, 233, 234, 240, 246, 247);
     objPic[ObjPic_RockDamage][HOUSE_HARKONNEN][0] = icon->getPictureRow(1,6);
     objPic[ObjPic_SandDamage][HOUSE_HARKONNEN][0] = icon->getPictureRow(7,12);
@@ -1317,7 +1317,15 @@ GFXManager::GFXManager() {
     auto openTornieAsset = [&](const char* filename, const char* label) -> sdl2::RWops_ptr {
         const bool tornieActive = ModManager::instance().isInitialized()
             && ModManager::instance().isTornieContentActive();
-        if(!tornieActive) {
+        const std::string assetName{filename};
+        const bool sharedChemicalCarryallAsset =
+            assetName == "ChemicalCarryall.png"
+            || assetName == "ChemicalCarryallIcon.png";
+
+        // These graphics are shared by every mod that can use the unit. Load
+        // them from base data even when Jericho was not the first active mod,
+        // before the one-time object-picture cache records a vanilla fallback.
+        if(!tornieActive && !sharedChemicalCarryallAsset) {
             return nullptr;
         }
 
@@ -2695,6 +2703,7 @@ GFXManager::GFXManager() {
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
         loadIcon(Picture_LoveFactory,     "LoveFactoryIcon.png",     "STARPORT.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
+        loadIcon(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA");
         loadIcon(Picture_Harvestank,     "HarvestankIcon.png",     "HARVEST.WSA");
     }
 
@@ -3129,7 +3138,7 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapEditor_ThickGreenSpice][HOUSE_HARKONNEN] =
         createTintedMapEditorIcon(uiGraphic[UI_MapEditor_ThickSpice][HOUSE_HARKONNEN].get(),
                                   uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(),
-                                  SDL_Color{ 20, 84, 42, 255 });
+                                  SDL_Color{ 24, 112, 48, 255 });
     uiGraphic[UI_MapEditor_RedSpice][HOUSE_HARKONNEN] =
         createTintedMapEditorIcon(uiGraphic[UI_MapEditor_Spice][HOUSE_HARKONNEN].get(),
                                   uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(),
@@ -3137,7 +3146,7 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapEditor_ThickRedSpice][HOUSE_HARKONNEN] =
         createTintedMapEditorIcon(uiGraphic[UI_MapEditor_ThickSpice][HOUSE_HARKONNEN].get(),
                                   uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(),
-                                  SDL_Color{ 96, 32, 30, 255 });
+                                  SDL_Color{ 136, 48, 40, 255 });
     uiGraphic[UI_MapEditor_SpiceBloom][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon->getPicture(208).get());
     uiGraphic[UI_MapEditor_GreenSpiceBloom][HOUSE_HARKONNEN] =
         createTintedMapEditorIcon(uiGraphic[UI_MapEditor_SpiceBloom][HOUSE_HARKONNEN].get(),
@@ -3666,20 +3675,23 @@ static void applyRebelsTint(SDL_Surface* surface) {
     if(isJerichoHouseColorSlot(HOUSE_REBELS)) {
         return;
     }
-    const int rebelsBase = houseToPaletteIndex[HOUSE_REBELS];
-    const Palette& sourcePalette = customPaletteLoaded ? customPalette : palette;
-    if(sourcePalette.getNumColors() < rebelsBase + 8) {
+
+    const int rebelsBase = getVisualRemapPaletteIndex(HOUSE_REBELS);
+    if(rebelsBase < 0 || rebelsBase + 7 >= surface->format->palette->ncolors) {
         return;
     }
-    for(int k = 0; k < 8; k++) {
-        SDL_Color& color = surface->format->palette->colors[rebelsBase + k];
-        color = sourcePalette[rebelsBase + k];
-        color.a = 255;
-    }
-}
 
+    SDL_Color visualRamp[8];
+    for(int k = 0; k < 8; ++k) {
+        visualRamp[k] = getHouseColorSDL(HOUSE_REBELS, k);
+        visualRamp[k].a = 255;
+    }
+    SDL_SetPaletteColors(surface->format->palette, visualRamp, rebelsBase, 8);
+}
 static void applyCustomVisualColorRamp(SDL_Surface* surface, int colorSlot) {
-    if(!usesPrivateVisualColorRamp(colorSlot) || !customPaletteLoaded || !surface || !surface->format || !surface->format->palette) {
+    if((colorSlot == HOUSE_REBELS && !isJerichoHouseColorSlot(colorSlot))
+       || !usesPrivateVisualColorRamp(colorSlot) || !customPaletteLoaded
+       || !surface || !surface->format || !surface->format->palette) {
         return;
     }
 
@@ -3705,13 +3717,10 @@ static sdl2::surface_ptr remapTruecolorHouseColorRange(SDL_Surface* source, int 
     }
 
     const Palette& sourcePalette = palette;
-    const Palette& targetPalette = getPaletteForHouseColorSlot(colorSlot);
-    const int targetBase = getHouseColorPaletteIndexFromSlot(colorSlot);
     if(shadeCount < 1 || shadeCount > 8) {
         return nullptr;
     }
-    if(sourcePalette.getNumColors() < PALCOLOR_HARKONNEN + shadeCount
-       || targetBase < 0 || targetPalette.getNumColors() < targetBase + shadeCount) {
+    if(sourcePalette.getNumColors() < PALCOLOR_HARKONNEN + shadeCount) {
         return nullptr;
     }
 
@@ -3743,7 +3752,7 @@ static sdl2::surface_ptr remapTruecolorHouseColorRange(SDL_Surface* source, int 
             for(int shade = 0; shade < shadeCount; ++shade) {
                 const SDL_Color sourceColor = sourcePalette[PALCOLOR_HARKONNEN + shade];
                 if(r == sourceColor.r && g == sourceColor.g && b == sourceColor.b) {
-                    const SDL_Color targetColor = targetPalette[targetBase + shade];
+                    const SDL_Color targetColor = getHouseColorSDL(colorSlot, shade);
                     row[x] = SDL_MapRGBA(remapped->format,
                                          targetColor.r,
                                          targetColor.g,
@@ -4571,97 +4580,74 @@ static bool paletteColorsEqual(SDL_Surface* aSurface, Uint8 aIndex, SDL_Surface*
     return a.r == b.r && a.g == b.g && a.b == b.b;
 }
 
-static void collectUsedPaletteIndices(SDL_Surface* surface, bool used[256]) {
-    for(int i = 0; i < 256; i++) {
-        used[i] = false;
+static sdl2::surface_ptr createIndependentRGBACopy(SDL_Surface* source) {
+    if(!source) {
+        return nullptr;
     }
 
-    if(!surface || !surface->format || surface->format->BytesPerPixel != 1) {
-        return;
+    sdl2::surface_ptr converted{ SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_RGBA32, 0) };
+    if(!converted) {
+        return copySurface(source);
     }
 
-    sdl2::surface_lock lock{ surface };
-    for(int y = 0; y < surface->h; y++) {
-        const Uint8* pixels = static_cast<const Uint8*>(surface->pixels) + y * surface->pitch;
-        for(int x = 0; x < surface->w; x++) {
-            used[pixels[x]] = true;
-        }
+    SDL_BlendMode blendMode;
+    if(SDL_GetSurfaceBlendMode(source, &blendMode) == 0) {
+        SDL_SetSurfaceBlendMode(converted.get(), blendMode);
     }
+    return converted;
 }
 
-static int allocatePaletteIndex(SDL_Surface* surface, bool used[256]) {
-    if(!surface || !surface->format || !surface->format->palette) {
-        return -1;
-    }
-
-    const int colorCount = std::min(surface->format->palette->ncolors, 256);
-    for(int i = colorCount - 1; i > PALCOLOR_TRANSPARENT; i--) {
-        if(!used[i]) {
-            used[i] = true;
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-static void remapPixelToTint(SDL_Surface* surface, Uint8& pixel, SDL_Color tint, bool used[256], int remap[256]) {
-    if(!surface || !surface->format || !surface->format->palette
-       || pixel == PALCOLOR_TRANSPARENT || pixel >= surface->format->palette->ncolors) {
-        return;
-    }
-
-    if(remap[pixel] < 0) {
-        const SDL_Color color = createSpiceTintColor(surface->format->palette->colors[pixel], tint);
-        const int paletteIndex = allocatePaletteIndex(surface, used);
-        if(paletteIndex >= 0) {
-            SDL_SetPaletteColors(surface->format->palette, &color, paletteIndex, 1);
-            remap[pixel] = paletteIndex;
-        } else {
-            SDL_SetPaletteColors(surface->format->palette, &color, pixel, 1);
-            remap[pixel] = pixel;
-        }
-    }
-
-    pixel = static_cast<Uint8>(remap[pixel]);
-}
-
-static void tintTerrainSpiceTiles(SDL_Surface* surface,
+static void tintTerrainSpiceTiles(SDL_Surface* source,
+                                  SDL_Surface* target,
                                   int firstTile,
                                   int tileCount,
-                                  SDL_Color tint,
-                                  bool used[256],
-                                  int remap[256]) {
-    if(!surface || !surface->format || surface->format->BytesPerPixel != 1
-       || surface->w <= 0 || surface->h <= 0) {
+                                  SDL_Color tint) {
+    if(!source || !target || !source->format || !source->format->palette
+       || source->format->BytesPerPixel != 1 || target->format->BytesPerPixel != 4
+       || source->w <= 0 || source->h <= 0) {
         return;
     }
 
     constexpr int TerrainTile_Sand = 0x03;
-    const int tileWidth = surface->w / NUM_TERRAIN_TILES_X;
-    const int tileHeight = surface->h / NUM_TERRAIN_TILES_Y;
+    const int tileWidth = source->w / NUM_TERRAIN_TILES_X;
+    const int tileHeight = source->h / NUM_TERRAIN_TILES_Y;
     if(tileWidth <= 0 || tileHeight <= 0) {
         return;
     }
 
     const int sandX = (TerrainTile_Sand % NUM_TERRAIN_TILES_X) * tileWidth;
     const int sandY = (TerrainTile_Sand / NUM_TERRAIN_TILES_X) * tileHeight;
+    Uint32 sourceColorKey = 0;
+    const bool hasColorKey = SDL_GetColorKey(source, &sourceColorKey) == 0;
 
-    sdl2::surface_lock lock{ surface };
+    sdl2::surface_lock sourceLock{ source };
+    sdl2::surface_lock targetLock{ target };
     for(int tileOffset = 0; tileOffset < tileCount; tileOffset++) {
         const int tile = firstTile + tileOffset;
         const int tileX = (tile % NUM_TERRAIN_TILES_X) * tileWidth;
         const int tileY = (tile / NUM_TERRAIN_TILES_X) * tileHeight;
 
         for(int y = 0; y < tileHeight; y++) {
-            Uint8* row = static_cast<Uint8*>(surface->pixels) + (tileY + y) * surface->pitch;
-            const Uint8* sandRow = static_cast<const Uint8*>(surface->pixels) + (sandY + y) * surface->pitch;
+            const Uint8* sourceRow = static_cast<const Uint8*>(source->pixels) + (tileY + y) * source->pitch;
+            const Uint8* sandRow = static_cast<const Uint8*>(source->pixels) + (sandY + y) * source->pitch;
+            Uint32* targetRow = reinterpret_cast<Uint32*>(static_cast<Uint8*>(target->pixels)
+                                                          + (tileY + y) * target->pitch);
             for(int x = 0; x < tileWidth; x++) {
-                Uint8& pixel = row[tileX + x];
+                const Uint8 pixel = sourceRow[tileX + x];
                 const Uint8 sandPixel = sandRow[sandX + x];
-                if(pixel != PALCOLOR_TRANSPARENT && !paletteColorsEqual(surface, pixel, surface, sandPixel)) {
-                    remapPixelToTint(surface, pixel, tint, used, remap);
+                if(pixel == PALCOLOR_TRANSPARENT || (hasColorKey && pixel == sourceColorKey)
+                   || pixel >= source->format->palette->ncolors
+                   || paletteColorsEqual(source, pixel, source, sandPixel)) {
+                    continue;
                 }
+
+                const SDL_Color color = createSpiceTintColor(source->format->palette->colors[pixel], tint);
+                Uint8 oldR = 0;
+                Uint8 oldG = 0;
+                Uint8 oldB = 0;
+                Uint8 oldA = 255;
+                SDL_GetRGBA(targetRow[tileX + x], target->format, &oldR, &oldG, &oldB, &oldA);
+                targetRow[tileX + x] = SDL_MapRGBA(target->format, color.r, color.g, color.b, oldA);
             }
         }
     }
@@ -4669,87 +4655,63 @@ static void tintTerrainSpiceTiles(SDL_Surface* surface,
 
 static sdl2::surface_ptr createTintedTerrainSpiceSurface(SDL_Surface* source, SDL_Color thinTint, SDL_Color thickTint) {
     // Thick-spice artwork already supplies its darker depth. Reusing the thin
-    // tint prevents a second brightness reduction when the custom tint is applied.
+    // tint avoids a second brightness reduction while preserving that texture.
     thickTint = thinTint;
-    if(!source) {
-        return nullptr;
-    }
-
-    auto tinted = copySurface(source);
-    if(!tinted || !tinted->format || !tinted->format->palette || tinted->format->BytesPerPixel != 1) {
+    auto tinted = createIndependentRGBACopy(source);
+    if(!tinted || !source || !source->format || source->format->BytesPerPixel != 1
+       || tinted->format->BytesPerPixel != 4) {
         return tinted;
-    }
-
-    bool used[256];
-    collectUsedPaletteIndices(tinted.get(), used);
-    int remap[256];
-    for(int& value : remap) {
-        value = -1;
     }
 
     constexpr int TerrainTile_Spice = 0x34;
     constexpr int TerrainTile_ThickSpice = 0x44;
     constexpr int TerrainTile_SpiceBloom = 0x54;
-    tintTerrainSpiceTiles(tinted.get(), TerrainTile_Spice, 16, thinTint, used, remap);
-    for(int& value : remap) {
-        value = -1;
-    }
-    tintTerrainSpiceTiles(tinted.get(), TerrainTile_ThickSpice, 16, thickTint, used, remap);
-    for(int& value : remap) {
-        value = -1;
-    }
-    tintTerrainSpiceTiles(tinted.get(), TerrainTile_SpiceBloom, 1, thinTint, used, remap);
-
-    Uint32 colorKey = 0;
-    if(SDL_GetColorKey(source, &colorKey) == 0) {
-        SDL_SetColorKey(tinted.get(), SDL_TRUE, colorKey);
-    }
-
+    tintTerrainSpiceTiles(source, tinted.get(), TerrainTile_Spice, 16, thinTint);
+    tintTerrainSpiceTiles(source, tinted.get(), TerrainTile_ThickSpice, 16, thickTint);
+    tintTerrainSpiceTiles(source, tinted.get(), TerrainTile_SpiceBloom, 1, thinTint);
     return tinted;
 }
 
 static sdl2::surface_ptr createTintedMapEditorIcon(SDL_Surface* source, SDL_Surface* sand, SDL_Color tint) {
-    if(!source) {
-        return nullptr;
-    }
-
-    auto tinted = copySurface(source);
-    if(!tinted || !tinted->format || !tinted->format->palette || tinted->format->BytesPerPixel != 1
-       || !sand || !sand->format || sand->format->BytesPerPixel != 1) {
+    auto tinted = createIndependentRGBACopy(source);
+    if(!tinted || !source || !source->format || !source->format->palette
+       || source->format->BytesPerPixel != 1 || tinted->format->BytesPerPixel != 4
+       || !sand || !sand->format || !sand->format->palette || sand->format->BytesPerPixel != 1) {
         return tinted;
     }
 
-    bool used[256];
-    collectUsedPaletteIndices(tinted.get(), used);
-    int remap[256];
-    for(int& value : remap) {
-        value = -1;
-    }
-
-    sdl2::surface_lock tintedLock{ tinted.get() };
+    Uint32 sourceColorKey = 0;
+    const bool hasColorKey = SDL_GetColorKey(source, &sourceColorKey) == 0;
+    sdl2::surface_lock sourceLock{ source };
     sdl2::surface_lock sandLock{ sand };
-    const int width = std::min(tinted->w, sand->w);
-    const int height = std::min(tinted->h, sand->h);
+    sdl2::surface_lock targetLock{ tinted.get() };
+    const int width = std::min(std::min(source->w, sand->w), tinted->w);
+    const int height = std::min(std::min(source->h, sand->h), tinted->h);
     for(int y = 0; y < height; y++) {
-        Uint8* row = static_cast<Uint8*>(tinted->pixels) + y * tinted->pitch;
+        const Uint8* sourceRow = static_cast<const Uint8*>(source->pixels) + y * source->pitch;
         const Uint8* sandRow = static_cast<const Uint8*>(sand->pixels) + y * sand->pitch;
+        Uint32* targetRow = reinterpret_cast<Uint32*>(static_cast<Uint8*>(tinted->pixels) + y * tinted->pitch);
         for(int x = 0; x < width; x++) {
-            Uint8& pixel = row[x];
+            const Uint8 pixel = sourceRow[x];
             const Uint8 sandPixel = sandRow[x];
-            if(pixel != PALCOLOR_TRANSPARENT && !paletteColorsEqual(tinted.get(), pixel, sand, sandPixel)) {
-                remapPixelToTint(tinted.get(), pixel, tint, used, remap);
+            if(pixel == PALCOLOR_TRANSPARENT || (hasColorKey && pixel == sourceColorKey)
+               || pixel >= source->format->palette->ncolors
+               || paletteColorsEqual(source, pixel, sand, sandPixel)) {
+                continue;
             }
-        }
-    }
 
-    Uint32 colorKey = 0;
-    if(SDL_GetColorKey(source, &colorKey) == 0) {
-        SDL_SetColorKey(tinted.get(), SDL_TRUE, colorKey);
+            const SDL_Color color = createSpiceTintColor(source->format->palette->colors[pixel], tint);
+            Uint8 oldR = 0;
+            Uint8 oldG = 0;
+            Uint8 oldB = 0;
+            Uint8 oldA = 255;
+            SDL_GetRGBA(targetRow[x], tinted->format, &oldR, &oldG, &oldB, &oldA);
+            targetRow[x] = SDL_MapRGBA(tinted->format, color.r, color.g, color.b, oldA);
+        }
     }
 
     return tinted;
 }
-
 static sdl2::surface_ptr resizeSurfaceNearest(SDL_Surface* source, int width, int height) {
     if(!source || width <= 0 || height <= 0) {
         return nullptr;
@@ -4805,35 +4767,40 @@ static sdl2::surface_ptr createCustomMapEditorStar(SDL_Surface* source) {
     if(!source) {
         return nullptr;
     }
-    auto star = copySurface(source);
+
+    // Keep the special-unit marker outside indexed house palettes. Its RGBA
+    // pixels remain blue when the active mod or editor house changes.
+    sdl2::surface_ptr star{ SDL_CreateRGBSurfaceWithFormat(
+        0, source->w, source->h, 32, SDL_PIXELFORMAT_RGBA32) };
     if(!star) {
         return nullptr;
     }
 
-    if(star->format->BytesPerPixel == 1) {
-        sdl2::surface_lock lock{ star.get() };
-        for(int y = 0; y < star->h; y++) {
-            Uint8* p = static_cast<Uint8*>(star->pixels) + y * star->pitch;
-            for(int x = 0; x < star->w; x++, p++) {
-                if(*p != PALCOLOR_TRANSPARENT) {
-                    *p = PALCOLOR_LIGHTBLUE;
-                }
-            }
-        }
-    } else {
-        const Uint32 lightBlue = MapRGBA(star->format, COLOR_LIGHTBLUE);
-        sdl2::surface_lock lock{ star.get() };
-        for(int y = 0; y < star->h; y++) {
-            for(int x = 0; x < star->w; x++) {
+    Uint32 sourceColorKey = 0;
+    const bool hasSourceColorKey = SDL_GetColorKey(source, &sourceColorKey) == 0;
+    const Uint32 transparent = SDL_MapRGBA(star->format, 0, 0, 0, 0);
+    const Uint32 fixedBlue = SDL_MapRGBA(star->format, 24, 152, 255, 255);
+    SDL_FillRect(star.get(), nullptr, transparent);
+
+    {
+        sdl2::surface_lock sourceLock{ source };
+        sdl2::surface_lock starLock{ star.get() };
+        for(int y = 0; y < source->h; ++y) {
+            for(int x = 0; x < source->w; ++x) {
+                const Uint32 sourcePixel = getPixel(source, x, y);
                 Uint8 r = 0, g = 0, b = 0, a = 0;
-                SDL_GetRGBA(getPixel(star.get(), x, y), star->format, &r, &g, &b, &a);
-                if(a != 0) {
-                    putPixel(star.get(), x, y, lightBlue);
+                SDL_GetRGBA(sourcePixel, source->format, &r, &g, &b, &a);
+                const bool visible = source->format->BytesPerPixel == 1
+                    ? sourcePixel != PALCOLOR_TRANSPARENT
+                    : (hasSourceColorKey ? sourcePixel != sourceColorKey : a != 0);
+                if(visible) {
+                    putPixel(star.get(), x, y, fixedBlue);
                 }
             }
         }
     }
 
+    SDL_SetSurfaceBlendMode(star.get(), SDL_BLENDMODE_BLEND);
     return star;
 }
 
@@ -4904,7 +4871,12 @@ void GFXManager::loadMentatGraphics() {
     uiGraphic[UI_MentatBackground][HOUSE_SARDAUKAR] = PictureFactory::mapMentatSurfaceToSardaukar(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get());
     uiGraphic[UI_MentatBackground][HOUSE_MERCENARY] = PictureFactory::mapMentatSurfaceToMercenary(uiGraphic[UI_MentatBackground][HOUSE_ORDOS].get());
     uiGraphic[UI_MentatBackground][HOUSE_NEUTRAL] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, houseToPaletteIndex[HOUSE_NEUTRAL]);
-    uiGraphic[UI_MentatBackground][HOUSE_REBELS] = mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get(), PALCOLOR_ATREIDES, houseToPaletteIndex[HOUSE_REBELS]);
+    uiGraphic[UI_MentatBackground][HOUSE_REBELS] =
+        mapSurfaceColorRange(uiGraphic[UI_MentatBackground][HOUSE_ATREIDES].get(),
+                             PALCOLOR_ATREIDES,
+                             getVisualRemapPaletteIndex(HOUSE_REBELS));
+    applyCustomVisualColorRamp(uiGraphic[UI_MentatBackground][HOUSE_REBELS].get(), HOUSE_REBELS);
+    applyRebelsTint(uiGraphic[UI_MentatBackground][HOUSE_REBELS].get());
 
     ModManager& modManager = ModManager::instance();
     const int customFallback = modManager.isCustomHouseRegistered()

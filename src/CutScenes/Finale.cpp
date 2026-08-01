@@ -78,10 +78,12 @@ Finale::Finale(int house) {
         THROW(std::runtime_error, "Finale::Finale(): Cannot open MAPPLAN.CPS!");
     }
     const int colorSlot = getHouseVisualHouse(house);
-    const bool usesPrivateVisualRamp = customPaletteLoaded
-        && (colorSlot == HOUSE_CUSTOM
-            || isCustomHouseColorSlot(colorSlot)
-            || isJerichoHouseColorSlot(colorSlot));
+    const bool usesPrivateVisualRamp =
+        colorSlot == HOUSE_REBELS
+        || (customPaletteLoaded
+            && (colorSlot == HOUSE_CUSTOM
+                || isCustomHouseColorSlot(colorSlot)
+                || isJerichoHouseColorSlot(colorSlot)));
     const int targetPaletteBase = usesPrivateVisualRamp
         ? houseToPaletteIndex[HOUSE_HARKONNEN]
         : getHouseColorPaletteIndexFromSlot(colorSlot);
@@ -93,21 +95,17 @@ Finale::Finale(int house) {
 
     if(usesPrivateVisualRamp
         && pPlanetDuneInHouseColorSurface->format != nullptr
-        && pPlanetDuneInHouseColorSurface->format->palette != nullptr) {
-        const Palette& sourcePalette = getPaletteForHouseColorSlot(colorSlot);
-        const int sourcePaletteBase = getHouseColorPaletteIndexFromSlot(colorSlot);
-        if(sourcePaletteBase >= 0 && sourcePaletteBase + 7 < sourcePalette.getNumColors()
-           && targetPaletteBase >= 0
-           && targetPaletteBase + 7 < pPlanetDuneInHouseColorSurface->format->palette->ncolors) {
-            SDL_Color visualRamp[8];
-            for(int shade = 0; shade < 8; ++shade) {
-                visualRamp[shade] = sourcePalette[sourcePaletteBase + shade];
-            }
-            SDL_SetPaletteColors(pPlanetDuneInHouseColorSurface->format->palette,
-                                 visualRamp, targetPaletteBase, 8);
+        && pPlanetDuneInHouseColorSurface->format->palette != nullptr
+        && targetPaletteBase >= 0
+        && targetPaletteBase + 7 < pPlanetDuneInHouseColorSurface->format->palette->ncolors) {
+        SDL_Color visualRamp[8];
+        for(int shade = 0; shade < 8; ++shade) {
+            visualRamp[shade] = getHouseColorSDL(colorSlot, shade);
+            visualRamp[shade].a = 255;
         }
+        SDL_SetPaletteColors(pPlanetDuneInHouseColorSurface->format->palette,
+                             visualRamp, targetPaletteBase, 8);
     }
-
     if(house == HOUSE_HARKONNEN || house == HOUSE_ATREIDES || house == HOUSE_ORDOS) {
         lizard = getChunkFromFile("LIZARD1.VOC");
         glass = getChunkFromFile("GLASS6.VOC");

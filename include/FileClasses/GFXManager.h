@@ -234,6 +234,7 @@ typedef enum {
     Picture_Scoutpost,             ///< Tornie: portrait from ScoutpostIcon.png
     Picture_LoveFactory,          ///< Tornie: portrait from LoveFactoryIcon.png
     Picture_PalaceLightVehicles,   ///< Tornie: Neutral/Rebels Palace Trike/Quad call icon
+    Picture_PalaceRebelsCharging,  ///< Tornie main Rebels: random Palace ability charging icon
     Picture_SonicTrike,            ///< Tornie: portrait from SonicTrikeIcon.png
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
     Picture_ChemicalCarryall,      ///< Jericho: Chemical Carryall portrait

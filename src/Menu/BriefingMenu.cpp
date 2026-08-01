@@ -34,13 +34,32 @@ std::unique_ptr<Animation> createTornieHouseAnimation(Animation* source, int hou
         return nullptr;
     }
 
-    const int destination = getHouseColorPaletteIndexFromSlot(house);
+    const int colorSlot = getHouseVisualHouse(house);
+    const bool usesPrivateVisualRamp =
+        colorSlot == HOUSE_REBELS
+        || (customPaletteLoaded
+            && (colorSlot == HOUSE_CUSTOM
+                || isCustomHouseColorSlot(colorSlot)
+                || isJerichoHouseColorSlot(colorSlot)));
+    const int destination = usesPrivateVisualRamp
+        ? PALCOLOR_HARKONNEN
+        : getHouseColorPaletteIndexFromSlot(colorSlot);
     auto result = std::make_unique<Animation>();
 
     for(const auto& frame : source->getFrames()) {
         auto recolored = mapSurfaceColorRange(frame.get(), PALCOLOR_HARKONNEN, destination);
         recolored = mapSurfaceColorRange(recolored.get(), PALCOLOR_ATREIDES, destination);
         recolored = mapSurfaceColorRange(recolored.get(), PALCOLOR_ORDOS, destination);
+        if(usesPrivateVisualRamp && recolored && recolored->format
+           && recolored->format->palette
+           && destination >= 0 && destination + 7 < recolored->format->palette->ncolors) {
+            SDL_Color visualRamp[8];
+            for(int shade = 0; shade < 8; ++shade) {
+                visualRamp[shade] = getHouseColorSDL(colorSlot, shade);
+                visualRamp[shade].a = 255;
+            }
+            SDL_SetPaletteColors(recolored->format->palette, visualRamp, destination, 8);
+        }
         result->addFrame(std::move(recolored));
     }
 
@@ -50,7 +69,6 @@ std::unique_ptr<Animation> createTornieHouseAnimation(Animation* source, int hou
 }
 
 }
-
 BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHouse) {
     this->mission = mission;
     this->type = type;

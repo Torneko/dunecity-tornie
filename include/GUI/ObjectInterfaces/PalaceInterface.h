@@ -98,7 +98,36 @@ protected:
             int picID;
             const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(pPalace->getOriginalHouseID());
 
-            if(pPalace->usesJerichoOrnithopterStrike()) {
+            if(pPalace->usesTornieMainRebelsRandomSpecial()) {
+                if(!pPalace->isSpecialWeaponReady()) {
+                    picID = Picture_PalaceRebelsCharging;
+                } else switch(pPalace->getTornieMainRebelsSpecialWeapon()) {
+                    case Palace::TornieRebelsSpecialWeapon::Missile:
+                        picID = Picture_DeathHand;
+                        break;
+
+                    case Palace::TornieRebelsSpecialWeapon::Fremen:
+                        picID = Picture_Fremen;
+                        break;
+
+                    case Palace::TornieRebelsSpecialWeapon::Saboteur:
+                        picID = Picture_Saboteur;
+                        break;
+
+                    case Palace::TornieRebelsSpecialWeapon::LightVehicles:
+                        picID = Picture_PalaceLightVehicles;
+                        break;
+
+                    case Palace::TornieRebelsSpecialWeapon::Ornithopters:
+                        picID = Picture_Ornithopter;
+                        break;
+
+                    case Palace::TornieRebelsSpecialWeapon::None:
+                    default:
+                        picID = Picture_PalaceRebelsCharging;
+                        break;
+                }
+            } else if(pPalace->usesJerichoOrnithopterStrike()) {
                 picID = Picture_Ornithopter;
             } else if(pPalace->usesLightVehicleCall()) {
                 picID = Picture_PalaceLightVehicles;
@@ -156,8 +185,7 @@ private:
 
         Palace* pPalace = dynamic_cast<Palace*>(pObject);
         if(pPalace != nullptr) {
-            const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(pPalace->getOriginalHouseID()));
-            if((palaceHouse == HOUSE_HARKONNEN) || (palaceHouse == HOUSE_SARDAUKAR)) {
+            if(pPalace->usesTargetedSpecialWeapon()) {
                 currentGame->setCursorMode(Game::CursorMode_Attack);
             } else {
                 pPalace->handleSpecialClick();

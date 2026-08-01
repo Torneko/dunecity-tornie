@@ -99,6 +99,46 @@ void Palace::handleDeathhandClick(int xPos, int yPos) {
     }
 }
 
+bool Palace::usesTornieMainRebelsCooldown() const {
+    return originalHouseID == HOUSE_REBELS
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Tornie";
+}
+
+bool Palace::usesTornieMainRebelsRandomSpecial() const {
+    return usesTornieMainRebelsCooldown();
+}
+
+Palace::TornieRebelsSpecialWeapon Palace::getTornieMainRebelsSpecialWeapon() const {
+    if(!usesTornieMainRebelsRandomSpecial() || specialWeaponTimer >= 0) {
+        return TornieRebelsSpecialWeapon::None;
+    }
+
+    const Sint32 encodedWeapon = -specialWeaponTimer;
+    if(encodedWeapon < static_cast<Sint32>(TornieRebelsSpecialWeapon::Missile)
+       || encodedWeapon > static_cast<Sint32>(TornieRebelsSpecialWeapon::Ornithopters)) {
+        return TornieRebelsSpecialWeapon::None;
+    }
+
+    return static_cast<TornieRebelsSpecialWeapon>(encodedWeapon);
+}
+
+bool Palace::usesTargetedSpecialWeapon() const {
+    if(usesTornieMainRebelsRandomSpecial()) {
+        return getTornieMainRebelsSpecialWeapon() == TornieRebelsSpecialWeapon::Missile;
+    }
+
+    const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID));
+    return palaceHouse == HOUSE_HARKONNEN || palaceHouse == HOUSE_SARDAUKAR;
+}
+
+void Palace::selectTornieMainRebelsSpecialWeapon() {
+    const Sint32 selectedWeapon = currentGame->randomGen.rand(
+        static_cast<Sint32>(TornieRebelsSpecialWeapon::Missile),
+        static_cast<Sint32>(TornieRebelsSpecialWeapon::Ornithopters));
+    specialWeaponTimer = -selectedWeapon;
+}
+
 bool Palace::usesJerichoOrnithopterStrike() const {
     return originalHouseID == HOUSE_NEUTRAL
         && ModManager::instance().isInitialized()
@@ -127,6 +167,40 @@ void Palace::doSpecialWeapon() {
     }
 
     const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(originalHouseID);
+    if(usesTornieMainRebelsRandomSpecial()) {
+        bool activated = false;
+        switch(getTornieMainRebelsSpecialWeapon()) {
+            case TornieRebelsSpecialWeapon::Missile:
+                // The missile is launched through doLaunchDeathhand after selecting a target.
+                return;
+
+            case TornieRebelsSpecialWeapon::Fremen:
+                activated = callFremen();
+                break;
+
+            case TornieRebelsSpecialWeapon::Saboteur:
+                activated = spawnSaboteur();
+                break;
+
+            case TornieRebelsSpecialWeapon::LightVehicles:
+                activated = callLightVehicles();
+                break;
+
+            case TornieRebelsSpecialWeapon::Ornithopters:
+                activated = callOrnithopterStrike();
+                break;
+
+            case TornieRebelsSpecialWeapon::None:
+            default:
+                return;
+        }
+
+        if(activated) {
+            specialWeaponTimer = getMaxSpecialWeaponTimer();
+        }
+        return;
+    }
+
     if(usesJerichoOrnithopterStrike()) {
         if(callOrnithopterStrike()) {
             specialWeaponTimer = getMaxSpecialWeaponTimer();
@@ -181,9 +255,8 @@ void Palace::doLaunchDeathhand(int x, int y) {
         return;
     }
 
-    const HOUSETYPE palaceHouse = getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID));
-    if((palaceHouse != HOUSE_HARKONNEN) && (palaceHouse != HOUSE_SARDAUKAR)) {
-        // wrong house (see DoSpecialWeapon)
+    if(!usesTargetedSpecialWeapon()) {
+        // This command is valid for Harkonnen/Sardaukar or Tornie's revealed missile.
         return;
     }
 
@@ -217,31 +290,30 @@ void Palace::doLaunchDeathhand(int x, int y) {
 }
 
 void Palace::updateStructureSpecificStuff() {
+    bool becameReady = false;
+
     if(specialWeaponTimer > 0) {
         --specialWeaponTimer;
-        if(specialWeaponTimer <= 0) {
-            specialWeaponTimer = 0;
+        becameReady = specialWeaponTimer <= 0;
+    } else if(specialWeaponTimer == 0 && usesTornieMainRebelsRandomSpecial()) {
+        // Upgrade an already-ready Palace from an older save to the random Tornie ability.
+        becameReady = true;
+    }
 
-            if(getOwner() == pLocalHouse) {
-                currentGame->addToNewsTicker(_("Palace is ready"));
-            } else if(getOwner()->isAI()) {
+    if(!becameReady) {
+        return;
+    }
 
-                if((getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID)) == HOUSE_HARKONNEN) || (getHouseFallbackHouse(static_cast<HOUSETYPE>(originalHouseID)) == HOUSE_SARDAUKAR)) {
-                    // Harkonnen and Sardaukar
+    if(usesTornieMainRebelsRandomSpecial()) {
+        selectTornieMainRebelsSpecialWeapon();
+    } else {
+        specialWeaponTimer = 0;
+    }
 
-                    //old tergetting logic used by default AI
-                    /*
-                    const StructureBase* closestStructure = findClosestTargetStructure();
-                    if(closestStructure) {
-                        Coord temp = closestStructure->getClosestPoint(getLocation());
-                        doLaunchDeathhand(temp.x, temp.y);
-                    }*/
-                } else {
-                    // other houses
-                    doSpecialWeapon();
-                }
-            }
-        }
+    if(getOwner() == pLocalHouse) {
+        currentGame->addToNewsTicker(_("Palace is ready"));
+    } else if(getOwner()->isAI() && !usesTargetedSpecialWeapon()) {
+        doSpecialWeapon();
     }
 }
 

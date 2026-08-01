@@ -746,29 +746,18 @@ sdl2::surface_ptr PictureFactory::createMapChoiceScreen(int House) const {
     SDL_Rect clearRect = {8,24,304,119};
     SDL_FillRect(pMapChoiceScreen.get(),&clearRect,PALCOLOR_TRANSPARENT);
 
-    const bool usesPrivateRamp = isJerichoHouseColorSlot(House);
+    const bool usesPrivateRamp = House == HOUSE_REBELS || isJerichoHouseColorSlot(House);
     const int targetBase = usesPrivateRamp ? PALCOLOR_HARKONNEN : getHouseColorPaletteIndexFromSlot(House);
     auto houseColorScreen = mapSurfaceColorRange(pMapChoiceScreen.get(), PALCOLOR_HARKONNEN, targetBase);
-    if(usesPrivateRamp && customPaletteLoaded) {
-        const int sourceBase = getHouseColorPaletteIndexFromSlot(House);
-        if(sourceBase >= 0 && sourceBase + 7 < customPalette.getNumColors()
-           && targetBase >= 0 && targetBase + 7 < houseColorScreen->format->palette->ncolors) {
-            SDL_Color visualRamp[8];
-            for(int k = 0; k < 8; ++k) {
-                visualRamp[k] = customPalette[sourceBase + k];
-                visualRamp[k].a = 255;
-            }
-            SDL_SetPaletteColors(houseColorScreen->format->palette, visualRamp, targetBase, 8);
+    if(usesPrivateRamp && (House == HOUSE_REBELS || customPaletteLoaded)
+       && targetBase >= 0 && targetBase + 7 < houseColorScreen->format->palette->ncolors) {
+        SDL_Color visualRamp[8];
+        for(int k = 0; k < 8; ++k) {
+            visualRamp[k] = getHouseColorSDL(House, k);
+            visualRamp[k].a = 255;
         }
-    } else if(House == HOUSE_REBELS) {
-        const Palette& sourcePalette = customPaletteLoaded ? customPalette : palette;
-        for(int k = 0; k < 8; k++) {
-            SDL_Color& color = houseColorScreen->format->palette->colors[PALCOLOR_REBELS + k];
-            color = sourcePalette[PALCOLOR_REBELS + k];
-            color.a = 255;
-        }
-    }
-    pMapChoiceScreen = Scaler::defaultDoubleSurface(houseColorScreen.get());
+        SDL_SetPaletteColors(houseColorScreen->format->palette, visualRamp, targetBase, 8);
+    }    pMapChoiceScreen = Scaler::defaultDoubleSurface(houseColorScreen.get());
     auto pFullMapChoiceScreen = copySurface(background.get());
 
     SDL_Rect dest = calcAlignedDrawingRect(pMapChoiceScreen.get(), pFullMapChoiceScreen.get());

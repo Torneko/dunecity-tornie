@@ -16,7 +16,7 @@
 
 #include <vector>
 
-struct CustomHouseSpecialVehicleCandidateData {
+struct HouseSpecialVehicleCandidateData {
     bool enabled = false;
     int builder = ItemID_Invalid;
     bool requiresHouseIx = false;
@@ -29,24 +29,21 @@ inline bool isSpecialVehicleSelectionCandidate(int itemID) {
         && !isHarvesterLikeUnit(itemID);
 }
 
-inline bool isCustomHouseSpecialVehicleCandidate(
+inline bool isHouseSpecialVehicleCandidate(
         int itemID,
-        const CustomHouseSpecialVehicleCandidateData& candidateData) {
+        const HouseSpecialVehicleCandidateData& candidateData) {
     return candidateData.enabled
         && isSpecialVehicleSelectionCandidate(itemID)
-        && !isFlyingUnit(itemID)
-        && !isInfantryUnit(itemID)
-        && !isHarvesterLikeUnit(itemID)
         && candidateData.builder != ItemID_Invalid
         && candidateData.requiresHouseIx;
 }
 
 template<typename CandidateDataProvider>
-inline std::vector<int> discoverCustomHouseSpecialVehicleCandidates(
+inline std::vector<int> discoverHouseSpecialVehicleCandidates(
         CandidateDataProvider&& candidateDataProvider) {
     std::vector<int> candidates;
     for(int itemID = ItemID_FirstID; itemID <= ItemID_LastID; ++itemID) {
-        if(isCustomHouseSpecialVehicleCandidate(itemID, candidateDataProvider(itemID))) {
+        if(isHouseSpecialVehicleCandidate(itemID, candidateDataProvider(itemID))) {
             candidates.push_back(itemID);
         }
     }
@@ -54,7 +51,10 @@ inline std::vector<int> discoverCustomHouseSpecialVehicleCandidates(
     return candidates;
 }
 
-inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(int house, bool tornieActive) {
+inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(
+        int house,
+        bool tornieActive,
+        bool jerichoActive) {
     if(tornieActive) {
         switch(house) {
             case HOUSE_HARKONNEN:  return { Unit_Devastator, Unit_FlameTank };
@@ -63,8 +63,14 @@ inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(int house, bool to
             case HOUSE_FREMEN:     return { Unit_EliteSiegeTank, Unit_FlameTank };
             case HOUSE_SARDAUKAR:  return { Unit_Devastator, Unit_SonicTank };
             case HOUSE_MERCENARY:  return { Unit_EliteLauncher, Unit_Deviator };
-            case HOUSE_NEUTRAL:    return { Unit_EliteLauncher, Unit_FlameTank };
-            case HOUSE_REBELS:     return { Unit_SonicTank, Unit_EliteSiegeTank };
+            case HOUSE_NEUTRAL:
+                return jerichoActive
+                    ? std::vector<int>{ Unit_EliteLauncher, Unit_FlameTank }
+                    : std::vector<int>{ Unit_EliteLauncher, Unit_EliteSiegeTank };
+            case HOUSE_REBELS:
+                return jerichoActive
+                    ? std::vector<int>{ Unit_SonicTank, Unit_EliteSiegeTank }
+                    : std::vector<int>{ Unit_SonicTank, Unit_FlameTank };
             case HOUSE_CUSTOM:     break;
             default:               return {};
         }
@@ -87,12 +93,13 @@ inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(int house, bool to
 inline std::vector<int> resolveSpecialVehiclePoolForHouse(
         int house,
         bool tornieActive,
+        bool jerichoActive,
         const std::vector<int>& objectDataIxCandidates) {
-    if(house == HOUSE_CUSTOM && !objectDataIxCandidates.empty()) {
+    if(!objectDataIxCandidates.empty()) {
         return objectDataIxCandidates;
     }
 
-    return getSpecialVehicleFallbackPoolForHouse(house, tornieActive);
+    return getSpecialVehicleFallbackPoolForHouse(house, tornieActive, jerichoActive);
 }
 
 #endif // SPECIALVEHICLE_H
