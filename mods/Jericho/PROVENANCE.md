@@ -1,6 +1,6 @@
 # Tornie 1.0.523 provenance and licensing notes
 
-## Jericho 1.0.524-10 adaptation
+## Jericho 1.0.524-11 adaptation
 
 Wildspade and Kleshmersh names, herald images, and house-name voice files were supplied by the user for this local Jericho adaptation. The integration retains Tornie gameplay content and uses the legacy Neutral and Rebels engine slots for save and object-data compatibility.
 

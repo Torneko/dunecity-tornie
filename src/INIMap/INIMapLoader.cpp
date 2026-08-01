@@ -36,6 +36,28 @@
 
 namespace {
 
+bool isJerichoWildspade(Game* pGame, int houseID) {
+    return pGame != nullptr
+        && houseID == HOUSE_NEUTRAL
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+}
+
+int replaceJerichoWildspadeUnit(Game* pGame, int houseID, int itemID) {
+    if(!isJerichoWildspade(pGame, houseID)) {
+        return itemID;
+    }
+
+    if(itemID == Unit_Trike) {
+        return Unit_RaiderTrike;
+    }
+    if(itemID == Unit_Quad) {
+        return Unit_RocketTrike;
+    }
+
+    return itemID;
+}
+
 int chooseSpecialVehicle(Game* pGame, int houseID) {
     if(pGame == nullptr || houseID < 0 || houseID >= NUM_HOUSES) {
         return ItemID_Invalid;
@@ -632,6 +654,17 @@ void INIMapLoader::loadChoam()
             }
         }
     }
+
+    if(isJerichoWildspade(pGame, HOUSE_NEUTRAL) && pGame->house[HOUSE_NEUTRAL] != nullptr) {
+        auto& wildspadeChoam = pGame->house[HOUSE_NEUTRAL]->getChoam();
+
+        if(wildspadeChoam.getNumAvailable(Unit_RaiderTrike) == INVALID) {
+            wildspadeChoam.addItem(Unit_RaiderTrike, 5);
+        }
+        if(wildspadeChoam.getNumAvailable(Unit_RocketTrike) == INVALID) {
+            wildspadeChoam.addItem(Unit_RocketTrike, 5);
+        }
+    }
 }
 
 /**
@@ -693,6 +726,8 @@ void INIMapLoader::loadUnits()
                     continue;
                 }
             }
+
+            itemID = replaceJerichoWildspadeUnit(pGame, houseID, itemID);
 
             if(!pGame->objectData.data[itemID][houseID].enabled) {
                 continue;
@@ -880,6 +915,8 @@ void INIMapLoader::loadReinforcements()
             itemID = Unit_Trooper;
             Num2Drop = 3;
         }
+
+        itemID = replaceJerichoWildspadeUnit(pGame, houseID, itemID);
 
         if(!pGame->objectData.data[itemID][houseID].enabled) {
             continue;

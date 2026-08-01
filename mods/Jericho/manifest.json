@@ -3,7 +3,7 @@
     "mod":  {
                 "id":  "Jericho",
                 "displayName":  "Jericho",
-                "version":  "1.0.524-10",
+                "version":  "1.0.524-11",
                 "gameVersion":  "1.0.524",
                 "author":  "Tornie_Panther"
             },
@@ -77,5 +77,5 @@
     "checksums":  "checksums.sha256",
     "provenance":  "PROVENANCE.md",
     "changelog":  "CHANGELOG.md",
-    "integrationStatus":  "independent Jericho 1.0.524-10 integration"
+    "integrationStatus":  "independent Jericho 1.0.524-11 integration"
 }
