@@ -1,5 +1,15 @@
 # DuneCity Tornie Edition Release Notes
 
+## Version 1.0.524-15
+
+- Flamepost and Scoutpost now use their new message graphics.
+- Jericho reloads the Flamepost and Chemical Carryall graphics immediately when the active mod changes.
+- Tornie reloads the Rebels Palace ability icon immediately when the active mod changes.
+- The Flamepost uses its new dedicated icon.
+- House Kleshmersh receives 50% resistance to all flame damage, including persistent ground fire.
+- House Wildspade uses the new supplied banner.
+
+
 ## Version 1.0.520
 
 - `Unit_Special` scenario entries now choose randomly from every enabled vehicle in the selected House pool when more than one result is available.

@@ -646,6 +646,7 @@ private:
     bool                loadHDObjPicOverride(unsigned int id);
     void                loadMentatGraphics();
     void                loadCustomHouseHerald();
+    void                reloadModDependentAssetGraphics();
 
     struct HDObjPicOverride {
         std::array<sdl2::texture_ptr, NUM_HOUSES> texture;

@@ -3,7 +3,7 @@
   "mod": {
     "id": "TornieLite",
     "displayName": "Tornie Lite",
-    "version": "1.0.524-2",
+    "version": "1.0.524-15",
     "gameVersion": "1.0.524",
     "author": "Tornie_Panther"
   },
@@ -42,5 +42,5 @@
   "checksums": "checksums.sha256",
   "provenance": "PROVENANCE.md",
   "changelog": "CHANGELOG.md",
-  "integrationStatus": "independent Tornie Lite 1.0.524-2 integration"
+  "integrationStatus": "independent Tornie Lite 1.0.524-15 integration"
 }

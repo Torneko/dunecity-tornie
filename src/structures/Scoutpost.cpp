@@ -19,6 +19,7 @@
 #include <Game.h>
 #include <House.h>
 #include <Map.h>
+#include <mod/ModManager.h>
 
 Scoutpost::Scoutpost(House* newOwner) : TurretBase(newOwner) {
     Scoutpost::init();
@@ -37,8 +38,12 @@ void Scoutpost::init() {
     structureSize.x = 1;
     structureSize.y = 1;
 
-    attackSound = Sound_RocketSmall;
-    bulletType = Bullet_SmallRocket;
+    const bool kleshmershFlamepost = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho"
+        && owner->getHouseID() == HOUSE_REBELS;
+
+    attackSound = kleshmershFlamepost ? Sound_Rocket : Sound_RocketSmall;
+    bulletType = kleshmershFlamepost ? Bullet_Flame : Bullet_SmallRocket;
 
     graphicID = ObjPic_Scoutpost;
     graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());

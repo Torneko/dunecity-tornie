@@ -3625,11 +3625,191 @@ GFXManager::GFXManager() {
         SDL_SetColorKey(mapChoicePieces[i][HOUSE_HARKONNEN].get(), SDL_TRUE, 0);
     }
 
+    // Finalize graphics whose variants must remain correct regardless of
+    // which mod was active while GFXManager was constructed.
+    reloadModDependentAssetGraphics();
+
     // pBackgroundSurface is separate as we never draw it but use it to construct other sprites
     pBackgroundSurface = convertSurfaceToDisplayFormat(PicFactory->createBackground().get());
 }
 
 GFXManager::~GFXManager() = default;
+
+
+void GFXManager::reloadModDependentAssetGraphics() {
+    const bool jerichoActive = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+    const int kleshmershVisualHouse = getHouseVisualHouse(HOUSE_REBELS);
+
+    auto loadRgbaSurface = [](const char* filename) -> sdl2::surface_ptr {
+        if(!pFileManager->exists(filename)) {
+            SDL_Log("GFXManager: mod-independent asset '%s' is missing", filename);
+            return nullptr;
+        }
+
+        auto raw = LoadPNG_RW(pFileManager->openFile(filename).get());
+        if(raw == nullptr) {
+            SDL_Log("GFXManager: unable to decode '%s'", filename);
+            return nullptr;
+        }
+
+        sdl2::surface_ptr converted{
+            SDL_ConvertSurfaceFormat(raw.get(), SCREEN_FORMAT, 0)
+        };
+        if(converted != nullptr) {
+            SDL_SetSurfaceBlendMode(converted.get(), SDL_BLENDMODE_NONE);
+        }
+        return converted;
+    };
+
+    auto buildScoutpostAtlas = [](SDL_Surface* activeFrames,
+                                  SDL_Surface* previousAtlas) -> sdl2::surface_ptr {
+        constexpr int FrameSize = D2_TILESIZE;
+        sdl2::surface_ptr atlas{
+            SDL_CreateRGBSurface(0, 4 * FrameSize, FrameSize, SCREEN_BPP,
+                                 RMASK, GMASK, BMASK, AMASK)
+        };
+        if(atlas == nullptr || activeFrames == nullptr
+           || activeFrames->w != FrameSize || activeFrames->h != 2 * FrameSize) {
+            return nullptr;
+        }
+
+        SDL_SetSurfaceBlendMode(atlas.get(), SDL_BLENDMODE_NONE);
+        SDL_FillRect(atlas.get(), nullptr,
+                     SDL_MapRGBA(atlas->format, 0, 0, 0, 0));
+
+        bool copiedConstructionFrames = false;
+        if(previousAtlas != nullptr
+           && previousAtlas->w >= 4 * FrameSize
+           && previousAtlas->h >= FrameSize) {
+            SDL_Rect source{0, 0, 2 * FrameSize, FrameSize};
+            SDL_Rect destination{0, 0, source.w, source.h};
+            copiedConstructionFrames =
+                SDL_BlitSurface(previousAtlas, &source, atlas.get(), &destination) == 0;
+        }
+
+        for(int frame = 0; frame < 2; ++frame) {
+            SDL_Rect source{0, frame * FrameSize, FrameSize, FrameSize};
+            SDL_Rect activeDestination{(frame + 2) * FrameSize, 0,
+                                       FrameSize, FrameSize};
+            SDL_BlitSurface(activeFrames, &source, atlas.get(), &activeDestination);
+
+            if(!copiedConstructionFrames) {
+                SDL_Rect buildDestination{frame * FrameSize, 0,
+                                          FrameSize, FrameSize};
+                SDL_BlitSurface(activeFrames, &source, atlas.get(), &buildDestination);
+            }
+        }
+
+        return atlas;
+    };
+
+    auto installAtlas = [&](unsigned int objectPicture, int colorSlot,
+                            sdl2::surface_ptr atlas) {
+        if(atlas == nullptr || !isValidHouseColorSlot(colorSlot)) {
+            return;
+        }
+
+        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+            objPic[objectPicture][colorSlot][zoom].reset();
+            objPicTex[objectPicture][colorSlot][zoom].reset();
+        }
+
+        objPic[objectPicture][colorSlot][0] = std::move(atlas);
+        SDL_Surface* base = objPic[objectPicture][colorSlot][0].get();
+        objPic[objectPicture][colorSlot][1] =
+            resizeSurfaceNearest(base, base->w * 2, base->h * 2);
+        objPic[objectPicture][colorSlot][2] =
+            resizeSurfaceNearest(base, base->w * 3, base->h * 3);
+    };
+
+    // Always load the shared Scoutpost atlas from a unique base-data name.
+    // This prevents the FileManager's previous active-mod search order from
+    // leaving the old sprite in memory after a mod switch.
+    if(auto scoutpostFrames = loadRgbaSurface("SharedScoutpost.png")) {
+        auto scoutpostAtlas = buildScoutpostAtlas(
+            scoutpostFrames.get(),
+            objPic[ObjPic_Scoutpost][HOUSE_HARKONNEN][0].get());
+
+        if(scoutpostAtlas != nullptr) {
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                installAtlas(ObjPic_Scoutpost, colorSlot,
+                             copySurface(scoutpostAtlas.get()));
+            }
+
+            // Jericho's Kleshmersh slot uses the dedicated Flamepost active frames.
+            if(jerichoActive && isValidHouseColorSlot(kleshmershVisualHouse)) {
+                if(auto flamepostFrames = loadRgbaSurface("JerichoFlamepost.png")) {
+                    auto flamepostAtlas = buildScoutpostAtlas(
+                        flamepostFrames.get(),
+                        objPic[ObjPic_Scoutpost][kleshmershVisualHouse][0].get());
+                    installAtlas(ObjPic_Scoutpost, kleshmershVisualHouse,
+                                 std::move(flamepostAtlas));
+                }
+            }
+
+            uiGraphic[UI_MapEditor_Scoutpost][HOUSE_HARKONNEN] =
+                getSubPicture(objPic[ObjPic_Scoutpost][HOUSE_HARKONNEN][0].get(),
+                              2 * D2_TILESIZE, 0, D2_TILESIZE, D2_TILESIZE);
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                uiGraphicTex[UI_MapEditor_Scoutpost][colorSlot].reset();
+                if(colorSlot != HOUSE_HARKONNEN) {
+                    uiGraphic[UI_MapEditor_Scoutpost][colorSlot].reset();
+                }
+            }
+        }
+    }
+
+    // Load Jericho's Chemical Carryall through a unique global filename.
+    // The sprite is fixed cyan artwork and intentionally is not house-remapped.
+    if(auto carryall = loadRgbaSurface("JerichoChemicalCarryall.png")) {
+        if(carryall->w == 192 && carryall->h == 48) {
+            for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                installAtlas(ObjPic_ChemicalCarryall, colorSlot,
+                             copySurface(carryall.get()));
+            }
+        } else {
+            SDL_Log("GFXManager: JerichoChemicalCarryall.png has unexpected size %dx%d",
+                    carryall->w, carryall->h);
+        }
+    }
+
+    auto loadFixedIcon = [&](const char* filename) -> sdl2::texture_ptr {
+        constexpr int IconWidth = 91;
+        constexpr int IconHeight = 55;
+        auto surface = loadRgbaSurface(filename);
+        if(surface == nullptr) {
+            return nullptr;
+        }
+        if(surface->w != IconWidth || surface->h != IconHeight) {
+            surface = resizeSurfaceNearest(surface.get(), IconWidth, IconHeight);
+        }
+        auto texture = convertSurfaceToTexture(surface.get());
+        if(texture != nullptr) {
+            SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
+        }
+        return texture;
+    };
+
+    if(auto icon = loadFixedIcon("JerichoChemicalCarryallIcon.png")) {
+        smallDetailPicTex[Picture_ChemicalCarryall] = std::move(icon);
+    }
+
+    if(auto icon = loadFixedIcon("TorniePalaceRebelsChargingIcon.png")) {
+        smallDetailPicTex[Picture_PalaceRebelsCharging] = std::move(icon);
+    }
+
+    if(isValidHouseColorSlot(kleshmershVisualHouse)) {
+        houseSmallDetailPicTex[Picture_Scoutpost][kleshmershVisualHouse].reset();
+        if(jerichoActive) {
+            if(auto icon = loadFixedIcon("JerichoFlamepostIcon.png")) {
+                houseSmallDetailPicTex[Picture_Scoutpost][kleshmershVisualHouse] =
+                    std::move(icon);
+            }
+        }
+    }
+}
+
 
 static std::unique_ptr<Animation> loadPngStripAnimation(const std::string& filename, int frameCount, double frameRate, bool bDoublePic, int transparentColorKey) {
     if(frameCount <= 0 || !pFileManager->exists(filename)) {
@@ -5009,6 +5189,10 @@ void GFXManager::reloadModDependentUiGraphics() {
         }
     }
 
+    // Rebuild object atlases and global/special icons after the active
+    // mod's FileManager search order has changed.
+    reloadModDependentAssetGraphics();
+
     for(unsigned int piece = 0; piece < NUM_MAPCHOICEPIECES; ++piece) {
         for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
             mapChoicePiecesTex[piece][colorSlot].reset();
@@ -5367,6 +5551,19 @@ SDL_Texture* GFXManager::getSmallDetailPic(unsigned int id, int house) {
     }
 
     const int visualHouse = getHouseVisualHouse(house);
+
+    // Jericho gives Kleshmersh a dedicated Flamepost portrait while
+    // Wildspade and the other Houses keep the Scoutpost portrait.
+    const bool jerichoActive = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+    const int kleshmershVisualHouse = getHouseVisualHouse(HOUSE_REBELS);
+    if(id == Picture_Scoutpost && jerichoActive
+       && visualHouse == kleshmershVisualHouse
+       && isValidHouseColorSlot(visualHouse)
+       && houseSmallDetailPicTex[id][visualHouse] != nullptr) {
+        return houseSmallDetailPicTex[id][visualHouse].get();
+    }
+
     if(!isValidHouseColorSlot(visualHouse)
        || (visualHouse != HOUSE_CUSTOM && !isCustomHouseColorSlot(visualHouse))) {
         return smallDetailPicTex[id].get();

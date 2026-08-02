@@ -1,5 +1,10 @@
 # Tornie changelog
 
+## 1.0.524-15 - 2026-08-02
+
+- Updated the shared Scoutpost graphic.
+- Rebuilt `Tornie.PAK` and refreshed release checksums.
+
 ## 1.0.524-2 - 2026-07-26
 
 - Added the 2x3 Love Factory at tech level 9 for every house.

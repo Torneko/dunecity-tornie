@@ -1,5 +1,13 @@
 # Tornie changelog
 
+## Jericho 1.0.524-15 - 2026-08-02
+
+- Added the supplied Flamepost graphics and dedicated portrait for Kleshmersh.
+- Updated the shared Scoutpost graphic and the supplied Wildspade herald.
+- Kleshmersh now receives 50% resistance to all `Bullet_Flame` damage, including persistent ground fire.
+- Fixed live mod switching for Flamepost/Scoutpost, Chemical Carryall graphics, and mod-dependent portraits without restarting the game.
+- Rebuilt `Tornie.PAK` and refreshed release checksums.
+
 ## Jericho 1.0.524-11 - Campaign and roster consistency
 
 - Unified campaign and skirmish scenario loading so both modes use the same campaign tables.
