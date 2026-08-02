@@ -71,6 +71,7 @@ public:
     inline bool isSpecialWeaponReady() const { return (specialWeaponTimer <= 0); }
     inline int getSpecialWeaponTimer() const { return specialWeaponTimer; }
     bool usesJerichoOrnithopterStrike() const;
+    bool usesJerichoKleshmershFremenCall() const;
     bool usesLightVehicleCall() const;
     bool usesTornieMainRebelsCooldown() const;
     bool usesTornieMainRebelsRandomSpecial() const;

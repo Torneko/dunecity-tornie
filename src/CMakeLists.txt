@@ -261,6 +261,7 @@ target_sources(dunecity
         structures/TechCenter.cpp
         structures/Scoutpost.cpp
         structures/LoveFactory.cpp
+        structures/ChaosFactory.cpp
         structures/WOR.cpp
         structures/NuclearPlant.cpp
         structures/PoliceStation.cpp

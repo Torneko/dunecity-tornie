@@ -188,6 +188,7 @@ public:
     void decrementUnits(int itemID);
     void incrementStructures(int itemID);
     void decrementStructures(int itemID, const Coord& location);
+    void transformStructure(int oldItemID, int newItemID);
 
     /**
         An object was hit by something or damaged somehow else.

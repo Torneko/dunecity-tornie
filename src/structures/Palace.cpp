@@ -145,13 +145,22 @@ bool Palace::usesJerichoOrnithopterStrike() const {
         && ModManager::instance().getActiveModName() == "Jericho";
 }
 
+bool Palace::usesJerichoKleshmershFremenCall() const {
+    return originalHouseID == HOUSE_REBELS
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+}
+
 bool Palace::usesLightVehicleCall() const {
     const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(originalHouseID);
     const bool jerichoActive = ModManager::instance().isInitialized()
         && ModManager::instance().getActiveModName() == "Jericho";
 
-    if(jerichoActive && (originalHouse == HOUSE_REBELS || originalHouse == HOUSE_CUSTOM)) {
+    if(jerichoActive && originalHouse == HOUSE_CUSTOM) {
         return true;
+    }
+    if(usesJerichoKleshmershFremenCall()) {
+        return false;
     }
     if(usesJerichoOrnithopterStrike()) {
         return false;
@@ -203,6 +212,13 @@ void Palace::doSpecialWeapon() {
 
     if(usesJerichoOrnithopterStrike()) {
         if(callOrnithopterStrike()) {
+            specialWeaponTimer = getMaxSpecialWeaponTimer();
+        }
+        return;
+    }
+
+    if(usesJerichoKleshmershFremenCall()) {
+        if(callFremen()) {
             specialWeaponTimer = getMaxSpecialWeaponTimer();
         }
         return;

@@ -106,7 +106,9 @@ bool shouldDrawTerrainBelowStructure(int itemID) noexcept {
         case Structure_Worfinery:
         case Structure_TechCenter:
         case Structure_Scoutpost:
+        case Structure_Flamepost:
         case Structure_LoveFactory:
+        case Structure_ChaosFactory:
             return true;
 
         default:

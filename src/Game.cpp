@@ -182,8 +182,16 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             preview = { ObjPic_Scoutpost, 4, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
+        case Structure_Flamepost:
+            preview = { ObjPic_Flamepost, 4, 1, TornieStructureFrame_BuildSite, -1 };
+            return true;
+
         case Structure_LoveFactory:
             preview = { ObjPic_LoveFactory, 10, 1, TornieStructureFrame_BuildSite, -1 };
+            return true;
+
+        case Structure_ChaosFactory:
+            preview = { ObjPic_ChaosFactory, 4, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
         default:
@@ -4659,9 +4667,9 @@ bool Game::handleSelectedObjectsAttackClick(int xPos, int yPos) {
         if(pObject->isAUnit() && (pOwner == pLocalHouse) && pObject->isRespondable()) {
             pResponder = static_cast<UnitBase*>(pObject);
             pResponder->handleAttackClick(xPos,yPos);
-        } else if((pObject->getItemID() == Structure_Palace) && ((pOwner->getHouseID() == HOUSE_HARKONNEN) || (pOwner->getHouseID() == HOUSE_SARDAUKAR))) {
+        } else if(pObject->getItemID() == Structure_Palace && pOwner == pLocalHouse) {
             Palace* pPalace = static_cast<Palace*>(pObject);
-            if(pPalace->isSpecialWeaponReady()) {
+            if(pPalace->isSpecialWeaponReady() && pPalace->usesTargetedSpecialWeapon()) {
                 pPalace->handleDeathhandClick(xPos, yPos);
             }
         }

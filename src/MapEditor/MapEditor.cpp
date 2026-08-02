@@ -102,7 +102,9 @@ unsigned int getMapEditorStructureUIGraphic(int itemID) noexcept {
         case Structure_Worfinery:           return UI_MapEditor_Worfinery;
         case Structure_TechCenter:          return UI_MapEditor_TechCenter;
         case Structure_Scoutpost:           return UI_MapEditor_Scoutpost;
+        case Structure_Flamepost:           return UI_MapEditor_Flamepost;
         case Structure_LoveFactory:         return UI_MapEditor_LoveFactory;
+        case Structure_ChaosFactory:        return UI_MapEditor_ChaosFactory;
         default:                            return NUM_UIGRAPHICS;
     }
 }
@@ -1758,7 +1760,9 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
                 case Structure_Worfinery:           objectPic = ObjPic_Worfinery;           break;
                 case Structure_TechCenter:          objectPic = ObjPic_TechCenter;          break;
                 case Structure_Scoutpost:           objectPic = ObjPic_Scoutpost;           break;
+                case Structure_Flamepost:           objectPic = ObjPic_Flamepost;           break;
                 case Structure_LoveFactory:         objectPic = ObjPic_LoveFactory;         break;
+                case Structure_ChaosFactory:        objectPic = ObjPic_ChaosFactory;        break;
                 default:                            objectPic = 0;                          break;
             }
 

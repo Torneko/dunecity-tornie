@@ -36,6 +36,7 @@
 #include <structures/TurretBase.h>
 #include <structures/Palace.h>
 #include <structures/TechCenter.h>
+#include <structures/Scoutpost.h>
 #include <structures/StarPort.h>
 #include <structures/ConstructionYard.h>
 
@@ -392,6 +393,17 @@ case CMD_INFANTRY_CAPTURE: {
                 return;
             }
             pTechCenter->doSpawnVehicles();
+        } break;
+
+        case CMD_SCOUTPOST_UPGRADE: {
+            if(parameter.size() != 1) {
+                THROW(std::invalid_argument, "Command::executeCommand(): CMD_SCOUTPOST_UPGRADE needs 1 Parameter!");
+            }
+            Scoutpost* pScoutpost = dynamic_cast<Scoutpost*>(currentGame->getObjectManager().getObject(parameter[0]));
+            if(pScoutpost == nullptr) {
+                return;
+            }
+            pScoutpost->doUpgradeToFlamepost();
         } break;
         
         case CMD_PLAYER_PAUSE: {

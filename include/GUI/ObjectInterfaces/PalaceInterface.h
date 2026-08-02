@@ -129,6 +129,8 @@ protected:
                 }
             } else if(pPalace->usesJerichoOrnithopterStrike()) {
                 picID = Picture_Ornithopter;
+            } else if(pPalace->usesJerichoKleshmershFremenCall()) {
+                picID = Picture_Fremen;
             } else if(pPalace->usesLightVehicleCall()) {
                 picID = Picture_PalaceLightVehicles;
             } else switch(getHouseFallbackHouse(originalHouse)) {
