@@ -211,6 +211,7 @@ public:
 
     // DuneCity 1.0.492: seed the Tornie mod
     void seedTornieFromDefaults();
+    void seedBundledTornieModFromDefaults(const std::string& modName);
     void seedDune2RFromDefaults();
 
     /**
@@ -221,6 +222,7 @@ public:
 
     // DuneCity 1.0.492: Tornie mod reseed check
     bool tornieNeedsReseed() const;
+    bool bundledTornieModNeedsReseed(const std::string& modName) const;
     
     // === Paths ===
     

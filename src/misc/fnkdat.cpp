@@ -236,7 +236,22 @@ int fnkdat(const _TCHAR* target, _TCHAR* buffer, int len, int flags) {
    /* Get the user conf directory using the silly-ass function if it
       is available.
     */
-   if (dwFlags
+   // An explicit per-process user root enables portable and isolated profiles.
+   // When unset, Windows keeps using the normal Roaming folder.
+   const _TCHAR* userDirectoryOverride =
+      (rawflags == FNKDAT_USER) ? _tgetenv(_T("DUNECITY_USER_DIR")) : NULL;
+   if (userDirectoryOverride && userDirectoryOverride[0]) {
+      if (_tcslen(userDirectoryOverride) >= static_cast<size_t>(len - 1))
+         return -1;
+
+      FNKDAT_S(_tcsncpy(buffer, userDirectoryOverride, len));
+      const size_t overrideLength = _tcslen(buffer);
+      if (overrideLength > 0
+          && buffer[overrideLength - 1] != _T('\\')
+          && buffer[overrideLength - 1] != _T('/')) {
+         FNKDAT_S(_tcsncat(buffer, _T("\\"), len));
+      }
+   } else if (dwFlags
        && SHGetFolderPath
        && SUCCEEDED(hresult = SHGetFolderPath(
          NULL,
