@@ -154,6 +154,8 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_RebelSonicTankGun
     { 8, 1 },   // ObjPic_HarvestankGunTornie
     { 8, 2 },   // ObjPic_ChemicalCarryall
+    { 4, 1 },   // ObjPic_Flamepost
+    { 4, 1 },   // ObjPic_ChaosFactory
 };
 static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
               "objPicTiles must have one entry per ObjPic enum value");
@@ -2241,6 +2243,7 @@ GFXManager::GFXManager() {
     loadTornieStructureSprite(ObjPic_TechCenter, "TechCenter.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "TechCenter", true);
     loadTornieStructureSprite(ObjPic_Scoutpost,  "Scoutpost.png",  Coord(1,1), "BUILDING_1x1_prebuild.png", "Scoutpost", true);
     loadTornieStructureSprite(ObjPic_LoveFactory, "LoveFactory.png", Coord(2,3), nullptr, "LoveFactory", true, true);
+    loadTornieStructureSprite(ObjPic_ChaosFactory, "ChaosFactory.png", Coord(3,2), "BUILDING_3x2_prebuild.png", "ChaosFactory", true, true);
 
     // Advanced Windtraps are installed per colour slot before their indexed
     // source atlases are expanded into the 10x7 RGBA animation sheets.
@@ -2317,47 +2320,23 @@ GFXManager::GFXManager() {
     installTornieStructureTruecolorSlots(ObjPic_TechCenter,          "TechCenter");
     installTornieStructureTruecolorSlots(ObjPic_Scoutpost,           "Scoutpost");
     installTornieStructureTruecolorSlots(ObjPic_LoveFactory,          "LoveFactory");
-
-    // Jericho: install the authored Chemical Carryall atlas as fixed RGBA for
-    // every visual colour slot. Its cyan livery must not be remapped through
-    // the vanilla Carryall house-colour ramp.
-    try {
-        if(auto spriteAsset = openTornieAsset("ChemicalCarryall.png", "unit sprite")) {
-            auto raw = LoadPNG_RW(spriteAsset.get());
-            if(raw && raw->w == 192 && raw->h == 48) {
-                preserveOpaqueBlackIndex(raw.get());
-                normalizeTransparentPaletteIndexes(raw.get());
-                for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
-                    sdl2::surface_ptr rgba{
-                        SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0)
-                    };
-                    if(!rgba) {
-                        continue;
-                    }
-                    SDL_SetColorKey(rgba.get(), SDL_FALSE, 0);
-                    SDL_SetSurfaceBlendMode(rgba.get(), SDL_BLENDMODE_BLEND);
-                    objPic[ObjPic_ChemicalCarryall][colorSlot][0] = std::move(rgba);
-                    objPic[ObjPic_ChemicalCarryall][colorSlot][1] =
-                        scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 2);
-                    objPic[ObjPic_ChemicalCarryall][colorSlot][2] =
-                        scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 3);
-                    if(objPic[ObjPic_ChemicalCarryall][colorSlot][1]) {
-                        SDL_SetSurfaceBlendMode(objPic[ObjPic_ChemicalCarryall][colorSlot][1].get(), SDL_BLENDMODE_BLEND);
-                    }
-                    if(objPic[ObjPic_ChemicalCarryall][colorSlot][2]) {
-                        SDL_SetSurfaceBlendMode(objPic[ObjPic_ChemicalCarryall][colorSlot][2].get(), SDL_BLENDMODE_BLEND);
-                    }
-                }
-                SDL_Log("GFXManager: loaded ChemicalCarryall.png as dedicated 8x2 RGBA atlas");
-            } else if(raw) {
-                SDL_Log("GFXManager: ChemicalCarryall.png must be 192x48, got %dx%d; using vanilla fallback",
-                        raw->w, raw->h);
+    installTornieStructureTruecolorSlots(ObjPic_ChaosFactory,         "ChaosFactory");
+    for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+            if(objPic[ObjPic_Scoutpost][colorSlot][zoom]) {
+                scoutpostBaseGraphics[colorSlot][zoom] =
+                    copySurface(objPic[ObjPic_Scoutpost][colorSlot][zoom].get());
+                objPic[ObjPic_Flamepost][colorSlot][zoom] =
+                    copySurface(objPic[ObjPic_Scoutpost][colorSlot][zoom].get());
+            }
+            if(objPic[ObjPic_ChaosFactory][colorSlot][zoom]) {
+                chaosFactoryBaseGraphics[colorSlot][zoom] =
+                    copySurface(objPic[ObjPic_ChaosFactory][colorSlot][zoom].get());
             }
         }
-    } catch(const std::exception& e) {
-        SDL_Log("GFXManager: ChemicalCarryall.png load failed (%s); using vanilla fallback", e.what());
     }
 
+    reloadModDependentObjectGraphics();
     SDL_Color fogTransparent = { 0, 0, 0, 96};
     SDL_SetPaletteColors(objPic[ObjPic_Terrain_HiddenFog][HOUSE_HARKONNEN][0]->format->palette, &fogTransparent, PALCOLOR_BLACK, 1);
 
@@ -2701,10 +2680,13 @@ GFXManager::GFXManager() {
         loadIcon(Picture_Worfinery,      "WorfineryIcon.png",      "WOR.WSA");
         loadIcon(Picture_TechCenter,     "TechCenterIcon.png",     "PALACE.WSA");
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
+        loadIcon(Picture_Flamepost,      "FlamepostIcon.png",      "RTURRET.WSA");
+        loadIcon(Picture_ChaosFactory,   "ChaosFactoryIcon.png",   "STARPORT.WSA");
         loadIcon(Picture_LoveFactory,     "LoveFactoryIcon.png",     "STARPORT.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
         loadIcon(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA");
         loadIcon(Picture_Harvestank,     "HarvestankIcon.png",     "HARVEST.WSA");
+        reloadRuntimeModPortraits();
     }
 
     // unused: FARTR.WSA, FHARK.WSA, FORDOS.WSA
@@ -3274,7 +3256,8 @@ GFXManager::GFXManager() {
         { UI_MapEditor_Worfinery,           ObjPic_Worfinery,           2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_TechCenter,          ObjPic_TechCenter,          2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE   },
-        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE },
+        { UI_MapEditor_ChaosFactory,        ObjPic_ChaosFactory,        2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE }
     };
     for(const auto& preview : tornieEditorStructures) {
         for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
@@ -3506,6 +3489,7 @@ GFXManager::GFXManager() {
             : ObjPic_Carryall;
     uiGraphic[UI_MapEditor_ChemicalCarryall][HOUSE_HARKONNEN] = getSubFrame(objPic[chemicalCarryallEditorSprite][HOUSE_HARKONNEN][0].get(),0,0,8,2);
     addMapEditorStar(UI_MapEditor_ChemicalCarryall, true);
+    rebuildModDependentEditorGraphics();
     uiGraphic[UI_MapEditor_Ornithopter][HOUSE_HARKONNEN] = getSubFrame(objPic[ObjPic_Ornithopter][HOUSE_HARKONNEN][0].get(),0,0,8,3);
 
     uiGraphic[UI_MapEditor_Pen1x1][HOUSE_HARKONNEN] = LoadPNG_RW(pFileManager->openFile("MapEditorPen1x1.png").get());
@@ -4990,6 +4974,397 @@ void GFXManager::loadCustomHouseHerald() {
         pictureFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM].get());
 }
 
+void GFXManager::reloadModDependentObjectGraphics() {
+    for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+            objPicTex[ObjPic_Scoutpost][colorSlot][zoom].reset();
+            objPicTex[ObjPic_Flamepost][colorSlot][zoom].reset();
+            objPicTex[ObjPic_ChaosFactory][colorSlot][zoom].reset();
+            if(scoutpostBaseGraphics[colorSlot][zoom]) {
+                objPic[ObjPic_Scoutpost][colorSlot][zoom] =
+                    copySurface(scoutpostBaseGraphics[colorSlot][zoom].get());
+                objPic[ObjPic_Flamepost][colorSlot][zoom] =
+                    copySurface(scoutpostBaseGraphics[colorSlot][zoom].get());
+            } else {
+                objPic[ObjPic_Scoutpost][colorSlot][zoom].reset();
+                objPic[ObjPic_Flamepost][colorSlot][zoom].reset();
+            }
+            if(chaosFactoryBaseGraphics[colorSlot][zoom]) {
+                objPic[ObjPic_ChaosFactory][colorSlot][zoom] =
+                    copySurface(chaosFactoryBaseGraphics[colorSlot][zoom].get());
+            } else {
+                objPic[ObjPic_ChaosFactory][colorSlot][zoom].reset();
+            }
+        }
+    }
+
+    const bool torniePostsActive = ModManager::instance().isInitialized()
+        && ModManager::instance().isTornieContentActive();
+    auto prepareRuntimeTeamGraphic = [&](SDL_Surface* source,
+                                                 bool postPaint,
+                                                 bool chaosPaint) -> sdl2::surface_ptr {
+        if(source == nullptr) {
+            return nullptr;
+        }
+        SDL_Surface* reference = objPic[ObjPic_Windtrap][HOUSE_HARKONNEN][0].get();
+        const SDL_Palette* targetPalette =
+            reference && reference->format ? reference->format->palette : nullptr;
+        if(targetPalette == nullptr) {
+            return nullptr;
+        }
+
+        sdl2::surface_ptr indexed;
+        if(source->format && source->format->BytesPerPixel == 1
+           && source->format->palette) {
+            indexed = remapIndexedSurfaceToPalette(source, targetPalette);
+        } else {
+            indexed = convertTruecolorSurfaceToPalette(source, targetPalette);
+        }
+        if(!indexed || !indexed->format || !indexed->format->palette) {
+            return nullptr;
+        }
+        preserveOpaqueBlackIndex(indexed.get());
+        normalizeTransparentPaletteIndexes(indexed.get());
+
+        SDL_Palette* colors = indexed->format->palette;
+        {
+            sdl2::surface_lock lock{indexed.get()};
+            for(int y = 0; y < indexed->h; ++y) {
+                Uint8* pixels =
+                    static_cast<Uint8*>(indexed->pixels) + y * indexed->pitch;
+                for(int x = 0; x < indexed->w; ++x) {
+                    Uint8& pixel = pixels[x];
+                    if(pixel == PALCOLOR_TRANSPARENT || pixel >= colors->ncolors) {
+                        continue;
+                    }
+                    const SDL_Color c = colors->colors[pixel];
+                    const int r = c.r;
+                    const int g = c.g;
+                    const int b = c.b;
+                    const bool greenPost =
+                        postPaint && g >= 55 && g > r + 10 && g > b + 10;
+                    const bool flamePost =
+                        postPaint && r >= 70 && r > b + 18 && r > g + 8;
+                    const bool redFlag =
+                        chaosPaint && r >= 55 && r > g + 14 && r >= b;
+                    const bool purpleFlag =
+                        chaosPaint && r >= 45 && b >= 45
+                        && r > g + 10 && b > g + 10;
+                    if(greenPost || flamePost || redFlag || purpleFlag) {
+                        const int brightness = std::max(std::max(r, g), b);
+                        pixel = static_cast<Uint8>(
+                            PALCOLOR_HARKONNEN
+                            + getNearestHarkonnenShade(colors, brightness));
+                    }
+                }
+            }
+        }
+        normalizeTransparentPaletteIndexes(indexed.get());
+        return indexed;
+    };
+
+    auto createRuntimeHouseGraphic = [&](SDL_Surface* source, int colorSlot,
+                                         const char* label) -> sdl2::surface_ptr {
+        sdl2::surface_ptr indexed;
+        if(colorSlot == HOUSE_HARKONNEN) {
+            indexed = copySurface(source);
+        } else {
+            indexed = mapSurfaceColorRange(
+                source, PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
+            if(indexed) {
+                applyCustomVisualColorRamp(indexed.get(), colorSlot);
+                if(colorSlot == HOUSE_REBELS) {
+                    applyRebelsTint(indexed.get());
+                }
+            }
+        }
+        if(!indexed) {
+            return nullptr;
+        }
+        normalizeTransparentPaletteIndexes(indexed.get());
+        auto rgba = convertTornieIndexedSurfaceToRGBA(
+            indexed.get(), label, colorSlot, 0, false);
+        if(rgba) {
+            SDL_SetColorKey(rgba.get(), SDL_FALSE, 0);
+            SDL_SetSurfaceBlendMode(rgba.get(), SDL_BLENDMODE_BLEND);
+        }
+        return rgba;
+    };
+
+    auto installPostGraphic = [&](unsigned int objectGraphic,
+                                  const char* filename,
+                                  const char* label) {
+        if(!torniePostsActive) {
+            return;
+        }
+        try {
+            if(!pFileManager->exists(filename)) {
+                return;
+            }
+            auto raw = LoadPNG_RW(pFileManager->openFile(filename).get());
+            if(!raw || raw->w != D2_TILESIZE || raw->h != 2 * D2_TILESIZE) {
+                SDL_Log("GFXManager: %s must be %dx%d",
+                        label, D2_TILESIZE, 2 * D2_TILESIZE);
+                return;
+            }
+            auto source = prepareRuntimeTeamGraphic(raw.get(), false, false);
+            for(int slot = 0; source && slot < NUM_HOUSE_COLOR_SLOTS; ++slot) {
+                SDL_Surface* base = objPic[objectGraphic][slot][0].get();
+                auto houseGraphic =
+                    createRuntimeHouseGraphic(source.get(), slot, label);
+                sdl2::surface_ptr atlas{
+                    base ? SDL_ConvertSurfaceFormat(
+                               base, SDL_PIXELFORMAT_RGBA32, 0)
+                         : nullptr
+                };
+                if(!atlas || !houseGraphic) {
+                    continue;
+                }
+                SDL_SetSurfaceBlendMode(atlas.get(), SDL_BLENDMODE_BLEND);
+                const Uint32 transparent =
+                    SDL_MapRGBA(atlas->format, 0, 0, 0, 0);
+                for(int frame = 0; frame < 2; ++frame) {
+                    SDL_Rect src{0, frame * D2_TILESIZE,
+                                 D2_TILESIZE, D2_TILESIZE};
+                    SDL_Rect dst{(2 + frame) * D2_TILESIZE, 0,
+                                 D2_TILESIZE, D2_TILESIZE};
+                    SDL_FillRect(atlas.get(), &dst, transparent);
+                    SDL_BlitSurface(houseGraphic.get(), &src, atlas.get(), &dst);
+                }
+                objPic[objectGraphic][slot][0] = std::move(atlas);
+                objPic[objectGraphic][slot][1] =
+                    scaleSurfaceNearest(objPic[objectGraphic][slot][0].get(), 2);
+                objPic[objectGraphic][slot][2] =
+                    scaleSurfaceNearest(objPic[objectGraphic][slot][0].get(), 3);
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: %s load failed (%s)", label, e.what());
+        }
+    };
+
+    installPostGraphic(ObjPic_Scoutpost, "Green_Post.png", "Scoutpost");
+    installPostGraphic(ObjPic_Flamepost, "Flamepost.png", "Flamepost");
+
+    if(torniePostsActive) {
+        try {
+            if(pFileManager->exists("ChaosFactory.png")) {
+                auto raw =
+                    LoadPNG_RW(pFileManager->openFile("ChaosFactory.png").get());
+                if(raw && raw->w == 3 * D2_TILESIZE
+                   && raw->h == 4 * D2_TILESIZE) {
+                    auto source =
+                        prepareRuntimeTeamGraphic(raw.get(), false, true);
+                    for(int slot = 0;
+                        source && slot < NUM_HOUSE_COLOR_SLOTS; ++slot) {
+                        auto houseGraphic = createRuntimeHouseGraphic(
+                            source.get(), slot, "ChaosFactory");
+                        if(!houseGraphic) {
+                            continue;
+                        }
+                        sdl2::surface_ptr atlas;
+                        if(objPic[ObjPic_ChaosFactory][slot][0]) {
+                            atlas.reset(SDL_ConvertSurfaceFormat(
+                                objPic[ObjPic_ChaosFactory][slot][0].get(),
+                                SDL_PIXELFORMAT_RGBA32, 0));
+                        }
+                        if(!atlas) {
+                            atlas.reset(SDL_CreateRGBSurfaceWithFormat(
+                                0, 12 * D2_TILESIZE, 2 * D2_TILESIZE,
+                                32, SDL_PIXELFORMAT_RGBA32));
+                        }
+                        if(!atlas) {
+                            continue;
+                        }
+                        SDL_SetSurfaceBlendMode(atlas.get(), SDL_BLENDMODE_BLEND);
+                        const Uint32 transparent =
+                            SDL_MapRGBA(atlas->format, 0, 0, 0, 0);
+                        if(!chaosFactoryBaseGraphics[slot][0]) {
+                            SDL_FillRect(atlas.get(), nullptr, transparent);
+                            for(int frame = 0; frame < 2; ++frame) {
+                                SDL_Rect src{0, 0, 3 * D2_TILESIZE,
+                                             2 * D2_TILESIZE};
+                                SDL_Rect dst{frame * 3 * D2_TILESIZE, 0,
+                                             3 * D2_TILESIZE, 2 * D2_TILESIZE};
+                                SDL_BlitSurface(
+                                    houseGraphic.get(), &src, atlas.get(), &dst);
+                            }
+                        }
+                        for(int frame = 0; frame < 2; ++frame) {
+                            SDL_Rect src{0, frame * 2 * D2_TILESIZE,
+                                         3 * D2_TILESIZE, 2 * D2_TILESIZE};
+                            SDL_Rect dst{(2 + frame) * 3 * D2_TILESIZE, 0,
+                                         3 * D2_TILESIZE, 2 * D2_TILESIZE};
+                            SDL_FillRect(atlas.get(), &dst, transparent);
+                            SDL_BlitSurface(
+                                houseGraphic.get(), &src, atlas.get(), &dst);
+                        }
+                        objPic[ObjPic_ChaosFactory][slot][0] = std::move(atlas);
+                        objPic[ObjPic_ChaosFactory][slot][1] =
+                            scaleSurfaceNearest(
+                                objPic[ObjPic_ChaosFactory][slot][0].get(), 2);
+                        objPic[ObjPic_ChaosFactory][slot][2] =
+                            scaleSurfaceNearest(
+                                objPic[ObjPic_ChaosFactory][slot][0].get(), 3);
+                    }
+                }
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: Chaos Factory reload failed (%s)", e.what());
+        }
+    }
+
+    for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+            objPic[ObjPic_ChemicalCarryall][colorSlot][zoom].reset();
+            objPicTex[ObjPic_ChemicalCarryall][colorSlot][zoom].reset();
+        }
+    }
+
+    bool chemicalCarryallLoaded = false;
+    try {
+        if(pFileManager->exists("ChemicalCarryall.png")) {
+            auto raw = LoadPNG_RW(pFileManager->openFile("ChemicalCarryall.png").get());
+            if(raw && raw->w == 192 && raw->h == 48) {
+                preserveOpaqueBlackIndex(raw.get());
+                normalizeTransparentPaletteIndexes(raw.get());
+                sdl2::surface_ptr sourceRGBA{
+                    SDL_ConvertSurfaceFormat(raw.get(), SDL_PIXELFORMAT_RGBA32, 0)
+                };
+                if(!sourceRGBA) {
+                    throw std::runtime_error("Could not convert ChemicalCarryall.png to RGBA");
+                }
+                SDL_SetColorKey(sourceRGBA.get(), SDL_FALSE, 0);
+                SDL_SetSurfaceBlendMode(sourceRGBA.get(), SDL_BLENDMODE_BLEND);
+
+                for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+                    auto rgba = remapTruecolorHouseColorRange(sourceRGBA.get(), colorSlot);
+                    if(!rgba) {
+                        rgba = copySurface(sourceRGBA.get());
+                    }
+                    if(!rgba) {
+                        continue;
+                    }
+                    SDL_SetColorKey(rgba.get(), SDL_FALSE, 0);
+                    SDL_SetSurfaceBlendMode(rgba.get(), SDL_BLENDMODE_BLEND);
+                    objPic[ObjPic_ChemicalCarryall][colorSlot][0] = std::move(rgba);
+                    objPic[ObjPic_ChemicalCarryall][colorSlot][1] =
+                        scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 2);
+                    objPic[ObjPic_ChemicalCarryall][colorSlot][2] =
+                        scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 3);
+                }
+                chemicalCarryallLoaded = true;
+                SDL_Log("GFXManager: reloaded Chemical Carryall graphics for the active mod");
+            }
+        }
+    } catch(const std::exception& e) {
+        SDL_Log("GFXManager: Chemical Carryall reload failed (%s)", e.what());
+    }
+
+    if(!chemicalCarryallLoaded) {
+        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
+            if(objPic[ObjPic_Carryall][HOUSE_HARKONNEN][zoom]) {
+                objPic[ObjPic_ChemicalCarryall][HOUSE_HARKONNEN][zoom] =
+                    copySurface(objPic[ObjPic_Carryall][HOUSE_HARKONNEN][zoom].get());
+            }
+        }
+    }
+}
+
+void GFXManager::reloadRuntimeModPortraits() {
+    constexpr int portraitWidth = 91;
+    constexpr int portraitHeight = 55;
+    auto loadPortrait = [&](unsigned int pictureID, const char* filename,
+                            const char* fallbackWsa, bool enabled) {
+        smallDetailPicTex[pictureID].reset();
+        try {
+            if(enabled && pFileManager->exists(filename)) {
+                auto raw = LoadPNG_RW(pFileManager->openFile(filename).get());
+                if(raw) {
+                    preserveOpaqueBlackIndex(raw.get());
+                    normalizeTransparentPaletteIndexes(raw.get());
+                    if(raw->w != portraitWidth || raw->h != portraitHeight) {
+                        auto resized = resizeSurfaceNearest(raw.get(), portraitWidth, portraitHeight);
+                        if(resized) {
+                            raw = std::move(resized);
+                        }
+                    }
+                    auto texture = convertSurfaceToTexture(raw.get());
+                    if(texture) {
+                        SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
+                        smallDetailPicTex[pictureID] = std::move(texture);
+                        return;
+                    }
+                }
+            }
+        } catch(const std::exception& e) {
+            SDL_Log("GFXManager: runtime portrait '%s' reload failed (%s)", filename, e.what());
+        }
+        smallDetailPicTex[pictureID] = extractSmallDetailPic(fallbackWsa);
+    };
+
+    const std::string activeMod = ModManager::instance().isInitialized()
+        ? ModManager::instance().getActiveModName()
+        : std::string();
+    loadPortrait(Picture_ChemicalCarryall, "ChemicalCarryallIcon.png", "CARRYALL.WSA", true);
+    loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA",
+                 ModManager::instance().isTornieContentActive());
+    loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA",
+                 ModManager::instance().isTornieContentActive());
+    loadPortrait(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA",
+                 activeMod == "Tornie");
+
+
+}
+
+void GFXManager::rebuildModDependentEditorGraphics() {
+    auto customStar = createCustomMapEditorStar(objPic[ObjPic_Star][HOUSE_HARKONNEN][1].get());
+    struct EditorStructurePreview {
+        unsigned int uiID;
+        unsigned int objectGraphic;
+        int x;
+        int y;
+        int width;
+        int height;
+    };
+    constexpr EditorStructurePreview previews[] = {
+        { UI_MapEditor_AdvancedWindTrap,    ObjPic_AdvancedWindTrap,    2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 3*D2_TILESIZE },
+        { UI_MapEditor_AdvancedWindTrapMK2, ObjPic_AdvancedWindTrap2x3, 2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE },
+        { UI_MapEditor_AdvancedWindTrapMK3, ObjPic_AdvancedWindTrap3x2, 2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
+        { UI_MapEditor_Worfinery,           ObjPic_Worfinery,           2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
+        { UI_MapEditor_TechCenter,          ObjPic_TechCenter,          2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
+        { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
+        { UI_MapEditor_Flamepost,           ObjPic_Flamepost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
+    };
+
+    for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+        for(const auto& preview : previews) {
+            uiGraphicTex[preview.uiID][colorSlot].reset();
+            SDL_Surface* atlas = objPic[preview.objectGraphic][colorSlot][0].get();
+            if(atlas) {
+                uiGraphic[preview.uiID][colorSlot] = getSubPicture(
+                    atlas, preview.x, preview.y, preview.width, preview.height);
+            } else {
+                uiGraphic[preview.uiID][colorSlot].reset();
+            }
+        }
+
+        uiGraphicTex[UI_MapEditor_ChemicalCarryall][colorSlot].reset();
+        SDL_Surface* carryall = objPic[ObjPic_ChemicalCarryall][colorSlot][0].get();
+        if(carryall) {
+            auto preview = getSubFrame(carryall, 0, 0, 8, 2);
+            if(preview && customStar) {
+                preview = combinePictures(preview.get(), customStar.get(),
+                                          preview->w - customStar->w,
+                                          preview->h - customStar->h);
+            }
+            uiGraphic[UI_MapEditor_ChemicalCarryall][colorSlot] = std::move(preview);
+        } else {
+            uiGraphic[UI_MapEditor_ChemicalCarryall][colorSlot].reset();
+        }
+    }
+}
+
 void GFXManager::reloadModDependentUiGraphics() {
     // House-coloured interface borders are generated from the active palette.
     // Keep the Harkonnen master surfaces: every other house is rebuilt from them.
@@ -5003,6 +5378,7 @@ void GFXManager::reloadModDependentUiGraphics() {
     }
 
     SDL_Log("GFXManager::reloadModDependentUiGraphics(): reloading active-mod presentation");
+    reloadModDependentObjectGraphics();
     for(auto& detailByHouse : houseSmallDetailPicTex) {
         for(auto& texture : detailByHouse) {
             texture.reset();
@@ -5031,7 +5407,7 @@ void GFXManager::reloadModDependentUiGraphics() {
     animation[Anim_RebelsPlanet].reset();
     // Editor previews cache house-remapped surfaces. Drop every derived slot
     // when the active mod changes so Rebels cannot retain Jericho colours.
-    for(unsigned int id = UI_MapEditor_SideBar; id <= UI_MapEditor_SonicTrike; ++id) {
+    for(unsigned int id = UI_MapEditor_SideBar; id < NUM_UIGRAPHICS; ++id) {
         for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
             uiGraphicTex[id][colorSlot].reset();
             if(colorSlot != HOUSE_HARKONNEN) {
@@ -5039,6 +5415,8 @@ void GFXManager::reloadModDependentUiGraphics() {
             }
         }
     }
+
+    rebuildModDependentEditorGraphics();
 
     auto pictureFactory = std::make_unique<PictureFactory>();
     auto reloadBonusHerald = [&](int house, const char* filename) {
@@ -5091,6 +5469,7 @@ void GFXManager::reloadModDependentUiGraphics() {
                       jerichoIdentity ? "HeraldWildspade.png" : "HeraldNeu.png");
     reloadBonusHerald(HOUSE_REBELS,
                       jerichoIdentity ? "HeraldKleshmersh.png" : "HeraldRebels.png");
+    reloadRuntimeModPortraits();
     loadCustomHouseHerald();
     loadMentatGraphics();
 }
@@ -5338,18 +5717,22 @@ zoomable_texture GFXManager::getObjPic(unsigned int id, int house) {
     if(id >= NUM_OBJPICS) {
         THROW(std::invalid_argument, "GFXManager::getObjPic(): Unit Picture with ID %u is not available!", id);
     }
-    house = getHouseVisualHouse(house);
-    if(!isValidHouseColorSlot(house)) {
-        house = HOUSE_HARKONNEN;
+
+    const int requestedHouse = house;
+    int visualHouse = getHouseVisualHouse(requestedHouse);
+    if(!isValidHouseColorSlot(visualHouse)) {
+        visualHouse = HOUSE_HARKONNEN;
     }
 
     for(int z = 0; z < NUM_ZOOMLEVEL; z++) {
-        if(objPicTex[id][house][z] == nullptr) {
-            getZoomedObjPic(id, house, z);  // no assignment as the return value is already stored in objPicTex
+        if(objPicTex[id][visualHouse][z] == nullptr) {
+            // Pass the house identity, not the already-resolved color slot.
+            // getZoomedObjPic() performs the visual mapping exactly once.
+            getZoomedObjPic(id, requestedHouse, z);
         }
     }
 
-    return zoomable_texture{ objPicTex[id][house][0].get(), objPicTex[id][house][1].get(), objPicTex[id][house][2].get() };
+    return zoomable_texture{ objPicTex[id][visualHouse][0].get(), objPicTex[id][visualHouse][1].get(), objPicTex[id][visualHouse][2].get() };
 }
 
 
@@ -5374,6 +5757,7 @@ SDL_Texture* GFXManager::getSmallDetailPic(unsigned int id, int house) {
 
     unsigned int editorGraphic = NUM_UIGRAPHICS;
     switch(id) {
+        case Picture_Flamepost:       editorGraphic = UI_MapEditor_Flamepost;        break;
         case Picture_Carryall:         editorGraphic = UI_MapEditor_Carryall;          break;
         case Picture_Devastator:       editorGraphic = UI_MapEditor_Devastator;        break;
         case Picture_Deviator:         editorGraphic = UI_MapEditor_Deviator;          break;
@@ -5489,28 +5873,29 @@ SDL_Texture* GFXManager::getUIGraphic(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphic(): UI Graphic with ID %u is not available!", id);
     }
+
+    const int requestedHouse = house;
     const bool useHouseIdentity =
         id == UI_Herald_Colored
         || id == UI_Herald_ColoredLarge
         || id == UI_Herald_Grey;
-    if(!useHouseIdentity) {
-        house = getHouseVisualHouse(house);
-    }
-    if(!isValidHouseColorSlot(house)) {
-        house = HOUSE_HARKONNEN;
+    int visualHouse = useHouseIdentity ? requestedHouse : getHouseVisualHouse(requestedHouse);
+    if(!isValidHouseColorSlot(visualHouse)) {
+        visualHouse = HOUSE_HARKONNEN;
     }
 
-    if(uiGraphicTex[id][house] == nullptr) {
-        SDL_Surface* pSurface = getUIGraphicSurface(id, house);
+    if(uiGraphicTex[id][visualHouse] == nullptr) {
+        // Preserve the original house identity so the surface resolver maps it once.
+        SDL_Surface* pSurface = getUIGraphicSurface(id, requestedHouse);
 
         if(id >= UI_MapChoiceArrow_None && id <= UI_MapChoiceArrow_Left) {
-            uiGraphicTex[id][house] = convertSurfaceToTexture(generateMapChoiceArrowFrames(pSurface, house));
+            uiGraphicTex[id][visualHouse] = convertSurfaceToTexture(generateMapChoiceArrowFrames(pSurface, visualHouse));
         } else {
-            uiGraphicTex[id][house] = convertSurfaceToTexture(pSurface);
+            uiGraphicTex[id][visualHouse] = convertSurfaceToTexture(pSurface);
         }
     }
 
-    return uiGraphicTex[id][house].get();
+    return uiGraphicTex[id][visualHouse].get();
 }
 
 SDL_Surface* GFXManager::getMapChoicePieceSurface(unsigned int num, int house) {
@@ -5542,16 +5927,19 @@ SDL_Texture* GFXManager::getMapChoicePiece(unsigned int num, int house) {
     if(num >= NUM_MAPCHOICEPIECES) {
         THROW(std::invalid_argument, "GFXManager::getMapChoicePiece(): Map Piece with number %u is not available!", num);
     }
-    house = getHouseVisualHouse(house);
-    if(!isValidHouseColorSlot(house)) {
-        house = HOUSE_HARKONNEN;
+
+    const int requestedHouse = house;
+    int visualHouse = getHouseVisualHouse(requestedHouse);
+    if(!isValidHouseColorSlot(visualHouse)) {
+        visualHouse = HOUSE_HARKONNEN;
     }
 
-    if(mapChoicePiecesTex[num][house] == nullptr) {
-        mapChoicePiecesTex[num][house] = convertSurfaceToTexture(getMapChoicePieceSurface(num, house));
+    if(mapChoicePiecesTex[num][visualHouse] == nullptr) {
+        mapChoicePiecesTex[num][visualHouse] = convertSurfaceToTexture(
+            getMapChoicePieceSurface(num, requestedHouse));
     }
 
-    return mapChoicePiecesTex[num][house].get();
+    return mapChoicePiecesTex[num][visualHouse].get();
 }
 
 Animation* GFXManager::getAnimation(unsigned int id) {

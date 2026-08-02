@@ -12,6 +12,9 @@
 #include <GUI/ObjectInterfaces/DefaultObjectInterface.h>
 #include <GUI/ObjectInterfaces/WindTrapInterface.h>
 #include <globals.h>
+#include <mod/ModManager.h>
+#include <players/Player.h>
+#include <Command.h>
 
 #include <Bullet.h>
 #include <FileClasses/GFXManager.h>
@@ -20,27 +23,27 @@
 #include <House.h>
 #include <Map.h>
 
-Scoutpost::Scoutpost(House* newOwner) : TurretBase(newOwner) {
-    Scoutpost::init();
+Scoutpost::Scoutpost(House* newOwner, int newItemID) : TurretBase(newOwner) {
+    Scoutpost::init(newItemID);
 
     setHealth(getMaxHealth());
 }
 
-Scoutpost::Scoutpost(InputStream& stream) : TurretBase(stream) {
-    Scoutpost::init();
+Scoutpost::Scoutpost(InputStream& stream, int newItemID) : TurretBase(stream) {
+    Scoutpost::init(newItemID);
 }
 
-void Scoutpost::init() {
-    itemID = Structure_Scoutpost;
+void Scoutpost::init(int newItemID) {
+    itemID = newItemID;
     owner->incrementStructures(itemID);
 
     structureSize.x = 1;
     structureSize.y = 1;
 
     attackSound = Sound_RocketSmall;
-    bulletType = Bullet_SmallRocket;
+    bulletType = itemID == Structure_Flamepost ? Bullet_Flame : Bullet_SmallRocket;
 
-    graphicID = ObjPic_Scoutpost;
+    graphicID = itemID == Structure_Flamepost ? ObjPic_Flamepost : ObjPic_Scoutpost;
     graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
     numImagesX = 4;
     numImagesY = 1;
@@ -107,4 +110,49 @@ int Scoutpost::getProducedPower() const {
     int nominal = abs(currentGame->objectData.data[itemID][originalHouseID].power);
     FixPoint ratio = getHealth() / getMaxHealth();
     return lround(ratio * nominal);
+}
+bool Scoutpost::isFlamepostUpgradeEligible() const {
+    return itemID == Structure_Scoutpost
+        && owner != nullptr
+        && originalHouseID == HOUSE_REBELS
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Jericho";
+}
+
+int Scoutpost::getFlamepostUpgradeCost() const {
+    if(currentGame == nullptr) {
+        return 0;
+    }
+
+    const int configuredPrice = currentGame->objectData.data[Structure_Flamepost][originalHouseID].price;
+    return configuredPrice > 0 ? configuredPrice : 0;
+}
+
+bool Scoutpost::canUpgradeToFlamepost() const {
+    return isFlamepostUpgradeEligible()
+        && owner->getNumItems(Structure_IX) > 0
+        && owner->getCredits() >= getFlamepostUpgradeCost();
+}
+
+void Scoutpost::handleFlamepostUpgradeClick() {
+    if(currentGame == nullptr || pLocalPlayer == nullptr) {
+        return;
+    }
+
+    currentGame->getCommandManager().addCommand(
+        Command(pLocalPlayer->getPlayerID(), CMD_SCOUTPOST_UPGRADE, objectID));
+}
+
+void Scoutpost::doUpgradeToFlamepost() {
+    if(!canUpgradeToFlamepost()) {
+        return;
+    }
+
+    owner->takeCredits(getFlamepostUpgradeCost());
+    owner->transformStructure(Structure_Scoutpost, Structure_Flamepost);
+
+    itemID = Structure_Flamepost;
+    bulletType = Bullet_Flame;
+    graphicID = ObjPic_Flamepost;
+    graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
 }

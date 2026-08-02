@@ -245,8 +245,10 @@ private:
     SymbolButton        editorModeStructs_Palace;
     HBox                editorModeStructs_HBoxTechCenter;
     SymbolButton        editorModeStructs_TechCenter;   ///< Tornie: Palace-equivalent that spawns vehicles
+    SymbolButton        editorModeStructs_ChaosFactory; ///< Tornie: random factory
     HBox                editorModeStructs_HBoxScoutpost;
     SymbolButton        editorModeStructs_Scoutpost;     ///< Tornie: power/defense/recon post
+    SymbolButton        editorModeStructs_Flamepost;     ///< Tornie: flame defense post
     HBox                editorModeStructs_HBoxLoveFactory;
     SymbolButton        editorModeStructs_LoveFactory;
     // DuneCity: SimCity-style buildings, only added to the picker when the

@@ -39,7 +39,7 @@
 const int BuilderBase::itemOrder[] = {    Unit_ChemicalCarryall,
                                            Structure_Slab4, Structure_Slab1, Structure_Road, Structure_IX, Structure_StarPort,
                                            Structure_HighTechFactory, Structure_HeavyFactory, Structure_RocketTurret,
-                                           Structure_Scoutpost, Structure_LoveFactory,
+                                           Structure_Scoutpost, Structure_Flamepost, Structure_LoveFactory, Structure_ChaosFactory,
                                            Structure_RepairYard, Structure_GunTurret, Structure_TechCenter, Structure_WOR,
                                            Structure_Worfinery,
                                            Structure_Barracks, Structure_Wall, Structure_LightFactory,
@@ -420,7 +420,10 @@ void BuilderBase::updateBuildList()
 
         const bool itemEnabled = objData.enabled || specialChemicalCarryall;
         const int requiredUpgrade = specialChemicalCarryall ? 2 : objData.upgradeLevel;
-        const int requiredTechLevel = specialChemicalCarryall ? 1 : objData.techLevel;
+        const int configuredTechLevel = specialChemicalCarryall ? 1 : objData.techLevel;
+        const int requiredTechLevel = itemID2Add == Structure_ChaosFactory
+            ? std::max(9, configuredTechLevel)
+            : configuredTechLevel;
         const bool producedHere = objData.builder == static_cast<int>(itemID)
                                || isAlternateTornieBuilder(itemID, itemID2Add)
                                || specialChemicalCarryall;
@@ -475,6 +478,24 @@ void BuilderBase::updateBuildList()
                 bPrerequisitesMet = false;
                 missingPrerequisite = Structure_IX;
             }
+
+            if(itemID2Add == Structure_ChaosFactory) {
+                const int chaosPrerequisites[] = {
+                    Structure_WindTrap,
+                    Structure_LightFactory,
+                    Structure_Radar,
+                    Structure_HeavyFactory,
+                    Structure_HighTechFactory
+                };
+                for(const int prerequisite : chaosPrerequisites) {
+                    if(owner->getNumItems(prerequisite) <= 0) {
+                        bPrerequisitesMet = false;
+                        missingPrerequisite = prerequisite;
+                        break;
+                    }
+                }
+            }
+
             if(bPrerequisitesMet) {
                 if(traceTechCenter) {
                     logTechCenterBuildGate(this, owner, objData, producedHere, true, ItemID_Invalid, "available", true);

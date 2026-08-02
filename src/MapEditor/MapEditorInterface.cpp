@@ -558,9 +558,15 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_Scoutpost.setToggleButton(true);
     editorModeStructs_Scoutpost.setTooltipText(resolveItemName(Structure_Scoutpost));
     editorModeStructs_Scoutpost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Scoutpost));
+    editorModeStructs_Flamepost.setToggleButton(true);
+    editorModeStructs_Flamepost.setTooltipText(resolveItemName(Structure_Flamepost));
+    editorModeStructs_Flamepost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Flamepost));
     editorModeStructs_LoveFactory.setToggleButton(true);
     editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
     editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
+    editorModeStructs_ChaosFactory.setToggleButton(true);
+    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory) + _(" (Tech Level 9)"));
+    editorModeStructs_ChaosFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ChaosFactory));
 
     // DuneCity: expose SimCity-style buildings (R/C/I zones, Road, nuclear
     // plant) in the editor when the dune city mod is the active mod. Always
@@ -622,10 +628,17 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 2*D2_TILESIZE + 4);
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_TechCenter);
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_ChaosFactory);
+
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxLoveFactory, 3*D2_TILESIZE + 4);
         editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
         editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
+
+        // Keep the two compact post buttons at the end of the structure list.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, D2_TILESIZE + 4);
+        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Flamepost);
+        editorModeStructs_HBoxScoutpost.addWidget(Spacer::create());
     }
 
     // setup units mode
@@ -1269,7 +1282,9 @@ void MapEditorInterface::onStructButton(int structType) {
     editorModeStructs_Palace.setToggleState( (structType == Structure_Palace) );
     editorModeStructs_TechCenter.setToggleState( (structType == Structure_TechCenter) );
     editorModeStructs_Scoutpost.setToggleState( (structType == Structure_Scoutpost) );
+    editorModeStructs_Flamepost.setToggleState( (structType == Structure_Flamepost) );
     editorModeStructs_LoveFactory.setToggleState( (structType == Structure_LoveFactory) );
+    editorModeStructs_ChaosFactory.setToggleState( (structType == Structure_ChaosFactory) );
 
     editorModeStructs_ZoneResidential.setToggleState( (structType == Structure_ZoneResidential) );
     editorModeStructs_ZoneCommercial.setToggleState( (structType == Structure_ZoneCommercial) );
@@ -1536,7 +1551,12 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeStructs_Palace.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Palace, newHouse));
     editorModeStructs_TechCenter.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_TechCenter, newHouse));
     editorModeStructs_Scoutpost.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Scoutpost, newHouse));
+    editorModeStructs_Scoutpost.setTooltipText(resolveItemName(Structure_Scoutpost));
+    editorModeStructs_Flamepost.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Flamepost, newHouse));
+    editorModeStructs_Flamepost.setTooltipText(resolveItemName(Structure_Flamepost));
     editorModeStructs_LoveFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_LoveFactory, newHouse));
+    editorModeStructs_ChaosFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ChaosFactory, newHouse));
+    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory) + _(" (Tech Level 9)"));
 
     editorModeStructs_ZoneResidential.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneResidential, newHouse));
     editorModeStructs_ZoneCommercial.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneCommercial, newHouse));

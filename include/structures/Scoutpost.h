@@ -15,9 +15,9 @@
 class Scoutpost final : public TurretBase
 {
 public:
-    explicit Scoutpost(House* newOwner);
-    explicit Scoutpost(InputStream& stream);
-    void init();
+    explicit Scoutpost(House* newOwner, int newItemID = Structure_Scoutpost);
+    explicit Scoutpost(InputStream& stream, int newItemID = Structure_Scoutpost);
+    void init(int newItemID);
     ~Scoutpost() override;
 
     bool canAttack(const ObjectBase* object) const override;
@@ -25,6 +25,12 @@ public:
     void setHealth(FixPoint newHealth) override;
 
     int getProducedPower() const;
+
+    bool isFlamepostUpgradeEligible() const;
+    bool canUpgradeToFlamepost() const;
+    int getFlamepostUpgradeCost() const;
+    void handleFlamepostUpgradeClick();
+    void doUpgradeToFlamepost();
 
 protected:
     void updateStructureSpecificStuff() override;

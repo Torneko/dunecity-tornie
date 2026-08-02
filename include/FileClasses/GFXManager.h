@@ -143,6 +143,8 @@ typedef enum {
     ObjPic_RebelSonicTankGun,      ///< Tornie: Rebels-only violet Sonic Tank turret
     ObjPic_HarvestankGunTornie,     ///< Tornie: Harvestank turret overlay
     ObjPic_ChemicalCarryall,        ///< Jericho: dedicated 8x2 healing Carryall atlas
+    ObjPic_Flamepost,               ///< Tornie: dedicated Flamepost atlas
+    ObjPic_ChaosFactory,            ///< Tornie: animated 3x2 Chaos Factory atlas
     NUM_OBJPICS
 } ObjPic_enum;
 
@@ -159,7 +161,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost", "LoveFactory",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
-    "HarvestankGunTornie", "ChemicalCarryall" } };
+    "HarvestankGunTornie", "ChemicalCarryall", "Flamepost" , "ChaosFactory" } };
 
 #define GROUNDUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+3)|TILE_FLIPV, (i+4)|TILE_NORMAL,(i+3)|TILE_NORMAL
 #define AIRUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+1)|TILE_ROTATE, i|TILE_FLIPH,(i+1)|TILE_FLIPH
@@ -238,6 +240,8 @@ typedef enum {
     Picture_SonicTrike,            ///< Tornie: portrait from SonicTrikeIcon.png
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
     Picture_ChemicalCarryall,      ///< Jericho: Chemical Carryall portrait
+    Picture_Flamepost,             ///< Tornie: Flamepost portrait
+    Picture_ChaosFactory,          ///< Tornie: Chaos Factory portrait
     NUM_SMALLDETAILPICS
 } SmallDetailPics_Enum;
 
@@ -504,6 +508,8 @@ typedef enum {
     UI_MapEditor_Road,              ///< DuneCity: map-editor icon for road tile
     UI_MapEditor_SonicTrike,        ///< Tornie: Rebels-only light sonic vehicle
     UI_MapEditor_ChemicalCarryall,  ///< Jericho: healing Carryall with special-unit star
+    UI_MapEditor_Flamepost,         ///< Tornie: dedicated Flamepost
+    UI_MapEditor_ChaosFactory,      ///< Tornie: 3x2 Chaos Factory
     NUM_UIGRAPHICS
 } UIGraphics_Enum;
 
@@ -646,6 +652,9 @@ private:
     bool                loadHDObjPicOverride(unsigned int id);
     void                loadMentatGraphics();
     void                loadCustomHouseHerald();
+    void                reloadModDependentObjectGraphics();
+    void                reloadRuntimeModPortraits();
+    void                rebuildModDependentEditorGraphics();
 
     struct HDObjPicOverride {
         std::array<sdl2::texture_ptr, NUM_HOUSES> texture;
@@ -662,6 +671,8 @@ private:
 
     // 8-bit surfaces kept in main memory for processing as needed, e.g. color remapping
     std::array<std::array<std::array<sdl2::surface_ptr, NUM_ZOOMLEVEL>, NUM_HOUSE_COLOR_SLOTS>, NUM_OBJPICS> objPic;
+    std::array<std::array<sdl2::surface_ptr, NUM_ZOOMLEVEL>, NUM_HOUSE_COLOR_SLOTS> scoutpostBaseGraphics{};
+    std::array<std::array<sdl2::surface_ptr, NUM_ZOOMLEVEL>, NUM_HOUSE_COLOR_SLOTS> chaosFactoryBaseGraphics{};
     std::array<std::array<sdl2::surface_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_UIGRAPHICS> uiGraphic;
     std::array<std::array<sdl2::surface_ptr, NUM_HOUSE_COLOR_SLOTS>, NUM_MAPCHOICEPIECES> mapChoicePieces;
     std::array<std::unique_ptr<Animation>, NUM_ANIMATION> animation{};

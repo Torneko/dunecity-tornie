@@ -79,7 +79,9 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Structure_Worfinery:          newPicID = Picture_Worfinery;           break;
         case Structure_TechCenter:         newPicID = Picture_TechCenter;          break;
         case Structure_Scoutpost:          newPicID = Picture_Scoutpost;           break;
+        case Structure_Flamepost:          newPicID = Picture_Flamepost;           break;
         case Structure_LoveFactory:        newPicID = Picture_LoveFactory;       break;
+        case Structure_ChaosFactory:       newPicID = Picture_ChaosFactory;      break;
         case Structure_ZoneResidential:    newPicID = Picture_ZoneResidential;    break;
         case Structure_ZoneCommercial:     newPicID = Picture_ZoneCommercial;     break;
         case Structure_ZoneIndustrial:     newPicID = Picture_ZoneIndustrial;     break;
@@ -243,7 +245,9 @@ Coord getStructureSize(int itemID) {
         case Structure_Worfinery:           return Coord(3,2); break;
         case Structure_TechCenter:          return Coord(3,2); break;
         case Structure_Scoutpost:           return Coord(1,1); break;
+        case Structure_Flamepost:           return Coord(1,1); break;
         case Structure_LoveFactory:         return Coord(2,3); break;
+        case Structure_ChaosFactory:        return Coord(3,2); break;
         default:                            return Coord(0,0); break;
     }
 }
@@ -291,7 +295,9 @@ Uint32  getItemIDByName(const std::string& name) {
     else if(lowerName == "worfinery")                                             return Structure_Worfinery;
     else if((lowerName == "tech center") || (lowerName == "techcenter"))          return Structure_TechCenter;
     else if((lowerName == "scoutpost") || (lowerName == "scout post") || (lowerName == "green post") || (lowerName == "sentinel post") || (lowerName == "avant-poste") || (lowerName == "avant poste")) return Structure_Scoutpost;
+    else if((lowerName == "flamepost") || (lowerName == "flame post"))              return Structure_Flamepost;
     else if((lowerName == "love factory") || (lowerName == "lovefactory"))       return Structure_LoveFactory;
+    else if((lowerName == "chaos factory") || (lowerName == "chaosfactory"))     return Structure_ChaosFactory;
     else if((lowerName == "carryall") || (lowerName == "carry-all"))            return Unit_Carryall;
     else if((lowerName == "chemical carryall") || (lowerName == "chemicalcarryall")) return Unit_ChemicalCarryall;
     else if((lowerName == "small delivery") || (lowerName == "delivery small")) return Delivery_Small;
@@ -374,7 +380,9 @@ std::string getItemNameByID(Uint32 itemID) {
         case Structure_Worfinery:           return "Worfinery";         break;
         case Structure_TechCenter:          return "Tech Center";       break;
         case Structure_Scoutpost:           return "Scoutpost";         break;
+        case Structure_Flamepost:           return "Flamepost";         break;
         case Structure_LoveFactory:         return "Love Factory";      break;
+        case Structure_ChaosFactory:        return "Chaos Factory";     break;
 
         case Unit_Carryall:                 return "Carryall";          break;
         case Unit_ChemicalCarryall:         return "Chemical Carryall"; break;
@@ -460,7 +468,9 @@ std::string resolveItemName(int itemID) {
         case Structure_Worfinery:           return _("Worfinery");                         break;
         case Structure_TechCenter:          return _("Tech Center");                       break;
         case Structure_Scoutpost:           return _("Scoutpost");                         break;
-        case Structure_LoveFactory:         return _("Love Factory");             break;
+        case Structure_Flamepost:           return _("Flamepost");                         break;
+        case Structure_LoveFactory:         return _("Love Factory");
+        case Structure_ChaosFactory:        return _("Chaos Factory");             break;
 
         case Unit_Carryall:                 return _("@DUNE.ENG|195#Carryall");            break;
         case Unit_ChemicalCarryall:         return _("Chemical Carryall");                   break;

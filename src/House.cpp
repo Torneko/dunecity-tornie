@@ -521,6 +521,33 @@ void House::decrementStructures(int itemID, const Coord& location) {
 
 
 
+void House::transformStructure(int oldItemID, int newItemID) {
+    if(oldItemID == newItemID || !isStructure(oldItemID) || !isStructure(newItemID)
+       || numItem[oldItemID] <= 0) {
+        return;
+    }
+
+    const auto& oldData = currentGame->objectData.data[oldItemID][houseID];
+    const auto& newData = currentGame->objectData.data[newItemID][houseID];
+
+    numItem[oldItemID]--;
+    numItem[newItemID]++;
+
+    if(oldData.power >= 0) {
+        powerRequirement -= oldData.power;
+    }
+    if(newData.power >= 0) {
+        powerRequirement += newData.power;
+    }
+    capacity += newData.capacity - oldData.capacity;
+
+    if(currentGame->gameState != GameState::Loading) {
+        updateBuildLists();
+    }
+}
+
+
+
 void House::noteDamageLocation(ObjectBase* pObject, int damage, Uint32 damagerID) {
     for(auto& pPlayer : players) {
         pPlayer->onDamage(pObject, damage, damagerID);

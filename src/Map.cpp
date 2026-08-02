@@ -41,6 +41,20 @@ bool isTornieModActive() {
     return ModManager::instance().isInitialized() && ModManager::instance().getActiveModName() == "Tornie";
 }
 
+int applyJerichoKleshmershFireResistance(const ObjectBase* target, Uint32 bulletID, int damage) {
+    if(target == nullptr || damage <= 0 || bulletID != Bullet_Flame) {
+        return damage;
+    }
+
+    const ModManager& modManager = ModManager::instance();
+    if(!modManager.isInitialized() || modManager.getActiveModName() != "Jericho"
+       || target->getOriginalHouseID() != HOUSE_REBELS) {
+        return damage;
+    }
+
+    return std::max(1, (damage + 1) / 2);
+}
+
 } // namespace
 
 Map::Map(int xSize, int ySize)
@@ -222,8 +236,8 @@ void Map::damage(Uint32 damagerID, House* damagerOwner, const Coord& realPos, Ui
                     const auto bottomRightCorner = topLeftCorner + pStructure->getStructureSize()*TILESIZE;
 
                     if(realPos.x >= topLeftCorner.x && realPos.y >= topLeftCorner.y && realPos.x < bottomRightCorner.x && realPos.y < bottomRightCorner.y) {
-                        pStructure->handleDamage(lround(damage), damagerID, damagerOwner);
-
+                        pStructure->handleDamage(applyJerichoKleshmershFireResistance(
+                            pStructure, bulletID, lround(damage)), damagerID, damagerOwner);
                         if( (bulletID == Bullet_LargeRocket || bulletID == Bullet_Rocket || bulletID == Bullet_TurretRocket || bulletID == Bullet_SmallRocket || bulletID == Bullet_Flame)
                             && (pStructure->getHealth() < pStructure->getMaxHealth()/2)) {
                             if(pStructure->getNumSmoke() < 5) {
@@ -256,7 +270,8 @@ void Map::damage(Uint32 damagerID, House* damagerOwner, const Coord& realPos, Ui
                             if(pUnit->isInfantry()) {
                                 scaledDamage = std::max<int>(lround(damage), scaledDamage * 2);
                             }
-                            pUnit->handleDamage(scaledDamage, damagerID, damagerOwner);
+                            pUnit->handleDamage(applyJerichoKleshmershFireResistance(
+                                pUnit, bulletID, scaledDamage), damagerID, damagerOwner);
                         } else {
                             const auto scaledDamage = lround(damage) >> (distance/16 + 1);
                             pUnit->handleDamage(scaledDamage, damagerID, damagerOwner);
