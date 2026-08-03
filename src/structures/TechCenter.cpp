@@ -153,6 +153,9 @@ int TechCenter::spawnRandomVehicles(int count) {
     const bool tornieActive = modInitialized && ModManager::instance().isTornieContentActive();
     const bool jerichoActive = modInitialized
         && ModManager::instance().getActiveModName() == "Jericho";
+    const bool corruptiqueActive = modInitialized
+        && originalHouseID == HOUSE_CUSTOM
+        && ModManager::instance().getActiveModName() == "Tornie";
     const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
         const auto& data = currentGame->objectData.data[candidate][originalHouseID];
         return HouseSpecialVehicleCandidateData{
@@ -163,7 +166,7 @@ int TechCenter::spawnRandomVehicles(int count) {
     });
 
     const auto specialVehiclePool = resolveSpecialVehiclePoolForHouse(
-        originalHouseID, tornieActive, jerichoActive, objectDataIxCandidates);
+        originalHouseID, tornieActive, jerichoActive, objectDataIxCandidates, corruptiqueActive);
     const bool useGenericCustomFallback =
         originalHouseID == HOUSE_CUSTOM && objectDataIxCandidates.empty();
     std::vector<int> vehiclePool;

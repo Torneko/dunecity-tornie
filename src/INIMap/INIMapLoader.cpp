@@ -67,6 +67,9 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     const bool tornieActive = modInitialized && ModManager::instance().isTornieContentActive();
     const bool jerichoActive = modInitialized
         && ModManager::instance().getActiveModName() == "Jericho";
+    const bool corruptiqueActive = modInitialized
+        && houseID == HOUSE_CUSTOM
+        && ModManager::instance().getActiveModName() == "Tornie";
     const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
         const auto& data = pGame->objectData.data[candidate][houseID];
         return HouseSpecialVehicleCandidateData{
@@ -77,7 +80,7 @@ int chooseSpecialVehicle(Game* pGame, int houseID) {
     });
 
     const auto pool = resolveSpecialVehiclePoolForHouse(
-        houseID, tornieActive, jerichoActive, objectDataIxCandidates);
+        houseID, tornieActive, jerichoActive, objectDataIxCandidates, corruptiqueActive);
 
     std::vector<int> enabledPool;
     enabledPool.reserve(pool.size());

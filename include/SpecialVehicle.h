@@ -11,7 +11,6 @@
 #define SPECIALVEHICLE_H
 
 #include <data.h>
-#include <mod/ModManager.h>
 
 #include <units/HarvesterHelpers.h>
 
@@ -95,12 +94,9 @@ inline std::vector<int> resolveSpecialVehiclePoolForHouse(
         int house,
         bool tornieActive,
         bool jerichoActive,
-        const std::vector<int>& objectDataIxCandidates) {
-    const bool corruptiqueActive = tornieActive
-        && house == HOUSE_CUSTOM
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
-    if(corruptiqueActive) {
+        const std::vector<int>& objectDataIxCandidates,
+        bool corruptiqueActive = false) {
+    if(corruptiqueActive && house == HOUSE_CUSTOM) {
         return { Unit_Devastator, Unit_EliteSiegeTank };
     }
 

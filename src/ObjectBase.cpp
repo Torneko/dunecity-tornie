@@ -903,6 +903,9 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
             const bool jerichoActive = modInitialized
                 && ModManager::instance().getActiveModName() == "Jericho";
             const int houseID = Owner->getHouseID();
+            const bool corruptiqueActive = modInitialized
+                && houseID == HOUSE_CUSTOM
+                && ModManager::instance().getActiveModName() == "Tornie";
             const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
                 const auto& data = currentGame->objectData.data[candidate][houseID];
                 return HouseSpecialVehicleCandidateData{
@@ -913,7 +916,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
             });
 
             const auto pool = resolveSpecialVehiclePoolForHouse(
-                houseID, tornieActive, jerichoActive, objectDataIxCandidates);
+                houseID, tornieActive, jerichoActive, objectDataIxCandidates, corruptiqueActive);
             std::vector<int> enabledPool;
             for(const int candidate : pool) {
                 if(isSpecialVehicleSelectionCandidate(candidate) && currentGame->objectData.data[candidate][houseID].enabled) {
