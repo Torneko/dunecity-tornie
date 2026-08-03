@@ -114,8 +114,15 @@ BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHo
         } break;
     }
 
+    const bool preserveCorruptiqueVictoryColors =
+        type == DEBRIEFING_WIN
+        && house == HOUSE_CUSTOM
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Tornie";
+
     if(ModManager::instance().isInitialized()
-            && ModManager::instance().isTornieContentActive()) {
+            && ModManager::instance().isTornieContentActive()
+            && !preserveCorruptiqueVictoryColors) {
         tornieHouseAnimation = createTornieHouseAnimation(anim, house);
         if(tornieHouseAnimation != nullptr) {
             anim = tornieHouseAnimation.get();

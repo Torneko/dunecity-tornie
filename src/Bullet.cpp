@@ -49,6 +49,17 @@ Bullet::Bullet(Uint32 shooterID, Coord* newRealLocation, Coord* newRealDestinati
 
     Bullet::init();
 
+    const ObjectBase* pShooter = currentGame->getObjectManager().getObject(shooterID);
+    const bool usesPreciseFlameTrajectory = bulletID == Bullet_Flame
+        && pShooter != nullptr
+        && (pShooter->getItemID() == Unit_Trooper
+            || pShooter->getItemID() == Structure_Flamepost);
+    if(usesPreciseFlameTrajectory) {
+        // Trooper rockets travel directly to their target. Keep the flame
+        // projectile and impact, but remove the delayed point-blank miss.
+        detonationTimer = 0;
+    }
+
     if(bulletID == Bullet_TurretRocket) {
         const ObjectBase* pInitialTarget = target.getObjPointer();
         if(pInitialTarget && pInitialTarget->isAFlyingUnit()) {
@@ -84,7 +95,8 @@ Bullet::Bullet(Uint32 shooterID, Coord* newRealLocation, Coord* newRealDestinati
         FixPoint ratio = (weaponrange*TILESIZE)/square_root;
         destination.x = newRealLocation->x + floor(diffX*ratio);
         destination.y = newRealLocation->y + floor(diffY*ratio);
-    } else if(bulletID == Bullet_Rocket || bulletID == Bullet_DRocket || bulletID == Bullet_Flame) {
+    } else if((bulletID == Bullet_Rocket || bulletID == Bullet_DRocket || bulletID == Bullet_Flame)
+              && !usesPreciseFlameTrajectory) {
         // Dynasty scatter algorithm - applies to both ground AND air targets
         FixPoint distance = distanceFrom(*newRealLocation, *newRealDestination);
         const int distanceInTiles = std::max(0, lround(distance / TILESIZE));

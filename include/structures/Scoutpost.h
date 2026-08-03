@@ -12,6 +12,8 @@
 
 #include <structures/TurretBase.h>
 
+class UnitBase;
+
 class Scoutpost final : public TurretBase
 {
 public:
@@ -32,8 +34,17 @@ public:
     void handleFlamepostUpgradeClick();
     void doUpgradeToFlamepost();
 
+    bool isChemipostUpgradeEligible() const;
+    bool canUpgradeToChemipost() const;
+    int getChemipostUpgradeCost() const;
+    void handleChemipostUpgradeClick();
+    void doUpgradeToChemipost();
+
 protected:
     void updateStructureSpecificStuff() override;
+
+private:
+    UnitBase* findDamagedAlly() const;
 };
 
 #endif // SCOUTPOST_H

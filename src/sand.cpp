@@ -80,6 +80,7 @@ SDL_Texture* resolveItemPicture(int itemID, HOUSETYPE house) {
         case Structure_TechCenter:         newPicID = Picture_TechCenter;          break;
         case Structure_Scoutpost:          newPicID = Picture_Scoutpost;           break;
         case Structure_Flamepost:          newPicID = Picture_Flamepost;           break;
+        case Structure_Chemipost:          newPicID = Picture_Chemipost;           break;
         case Structure_LoveFactory:        newPicID = Picture_LoveFactory;       break;
         case Structure_ChaosFactory:       newPicID = Picture_ChaosFactory;      break;
         case Structure_ZoneResidential:    newPicID = Picture_ZoneResidential;    break;
@@ -246,6 +247,7 @@ Coord getStructureSize(int itemID) {
         case Structure_TechCenter:          return Coord(3,2); break;
         case Structure_Scoutpost:           return Coord(1,1); break;
         case Structure_Flamepost:           return Coord(1,1); break;
+        case Structure_Chemipost:           return Coord(1,1); break;
         case Structure_LoveFactory:         return Coord(2,3); break;
         case Structure_ChaosFactory:        return Coord(3,2); break;
         default:                            return Coord(0,0); break;
@@ -296,6 +298,7 @@ Uint32  getItemIDByName(const std::string& name) {
     else if((lowerName == "tech center") || (lowerName == "techcenter"))          return Structure_TechCenter;
     else if((lowerName == "scoutpost") || (lowerName == "scout post") || (lowerName == "green post") || (lowerName == "sentinel post") || (lowerName == "avant-poste") || (lowerName == "avant poste")) return Structure_Scoutpost;
     else if((lowerName == "flamepost") || (lowerName == "flame post"))              return Structure_Flamepost;
+    else if((lowerName == "chemipost") || (lowerName == "chemi post"))              return Structure_Chemipost;
     else if((lowerName == "love factory") || (lowerName == "lovefactory"))       return Structure_LoveFactory;
     else if((lowerName == "chaos factory") || (lowerName == "chaosfactory"))     return Structure_ChaosFactory;
     else if((lowerName == "carryall") || (lowerName == "carry-all"))            return Unit_Carryall;
@@ -381,6 +384,7 @@ std::string getItemNameByID(Uint32 itemID) {
         case Structure_TechCenter:          return "Tech Center";       break;
         case Structure_Scoutpost:           return "Scoutpost";         break;
         case Structure_Flamepost:           return "Flamepost";         break;
+        case Structure_Chemipost:           return "Chemipost";         break;
         case Structure_LoveFactory:         return "Love Factory";      break;
         case Structure_ChaosFactory:        return "Chaos Factory";     break;
 
@@ -469,6 +473,7 @@ std::string resolveItemName(int itemID) {
         case Structure_TechCenter:          return _("Tech Center");                       break;
         case Structure_Scoutpost:           return _("Scoutpost");                         break;
         case Structure_Flamepost:           return _("Flamepost");                         break;
+        case Structure_Chemipost:           return _("Chemipost");                         break;
         case Structure_LoveFactory:         return _("Love Factory");
         case Structure_ChaosFactory:        return _("Chaos Factory");             break;
 

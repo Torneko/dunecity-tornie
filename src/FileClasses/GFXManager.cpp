@@ -155,6 +155,7 @@ static const Coord objPicTiles[] {
     { 8, 1 },   // ObjPic_HarvestankGunTornie
     { 8, 2 },   // ObjPic_ChemicalCarryall
     { 4, 1 },   // ObjPic_Flamepost
+    { 4, 1 },   // ObjPic_Chemipost
     { 4, 1 },   // ObjPic_ChaosFactory
 };
 static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
@@ -2328,6 +2329,8 @@ GFXManager::GFXManager() {
                     copySurface(objPic[ObjPic_Scoutpost][colorSlot][zoom].get());
                 objPic[ObjPic_Flamepost][colorSlot][zoom] =
                     copySurface(objPic[ObjPic_Scoutpost][colorSlot][zoom].get());
+                objPic[ObjPic_Chemipost][colorSlot][zoom] =
+                    copySurface(objPic[ObjPic_Scoutpost][colorSlot][zoom].get());
             }
             if(objPic[ObjPic_ChaosFactory][colorSlot][zoom]) {
                 chaosFactoryBaseGraphics[colorSlot][zoom] =
@@ -2681,6 +2684,7 @@ GFXManager::GFXManager() {
         loadIcon(Picture_TechCenter,     "TechCenterIcon.png",     "PALACE.WSA");
         loadIcon(Picture_Scoutpost,      "ScoutpostIcon.png",      "RTURRET.WSA");
         loadIcon(Picture_Flamepost,      "FlamepostIcon.png",      "RTURRET.WSA");
+        loadIcon(Picture_Chemipost,      "ChemipostIcon.png",      "RTURRET.WSA");
         loadIcon(Picture_ChaosFactory,   "ChaosFactoryIcon.png",   "STARPORT.WSA");
         loadIcon(Picture_LoveFactory,     "LoveFactoryIcon.png",     "STARPORT.WSA");
         loadIcon(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA");
@@ -4979,15 +4983,19 @@ void GFXManager::reloadModDependentObjectGraphics() {
         for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
             objPicTex[ObjPic_Scoutpost][colorSlot][zoom].reset();
             objPicTex[ObjPic_Flamepost][colorSlot][zoom].reset();
+            objPicTex[ObjPic_Chemipost][colorSlot][zoom].reset();
             objPicTex[ObjPic_ChaosFactory][colorSlot][zoom].reset();
             if(scoutpostBaseGraphics[colorSlot][zoom]) {
                 objPic[ObjPic_Scoutpost][colorSlot][zoom] =
                     copySurface(scoutpostBaseGraphics[colorSlot][zoom].get());
                 objPic[ObjPic_Flamepost][colorSlot][zoom] =
                     copySurface(scoutpostBaseGraphics[colorSlot][zoom].get());
+                objPic[ObjPic_Chemipost][colorSlot][zoom] =
+                    copySurface(scoutpostBaseGraphics[colorSlot][zoom].get());
             } else {
                 objPic[ObjPic_Scoutpost][colorSlot][zoom].reset();
                 objPic[ObjPic_Flamepost][colorSlot][zoom].reset();
+                objPic[ObjPic_Chemipost][colorSlot][zoom].reset();
             }
             if(chaosFactoryBaseGraphics[colorSlot][zoom]) {
                 objPic[ObjPic_ChaosFactory][colorSlot][zoom] =
@@ -5144,6 +5152,7 @@ void GFXManager::reloadModDependentObjectGraphics() {
 
     installPostGraphic(ObjPic_Scoutpost, "Green_Post.png", "Scoutpost");
     installPostGraphic(ObjPic_Flamepost, "Flamepost.png", "Flamepost");
+    installPostGraphic(ObjPic_Chemipost, "Chemipost.png", "Chemipost");
 
     if(torniePostsActive) {
         try {
@@ -5308,6 +5317,8 @@ void GFXManager::reloadRuntimeModPortraits() {
     loadPortrait(Picture_ChemicalCarryall, "ChemicalCarryallIcon.png", "CARRYALL.WSA", true);
     loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA",
                  ModManager::instance().isTornieContentActive());
+    loadPortrait(Picture_Chemipost, "ChemipostIcon.png", "RTURRET.WSA",
+                 ModManager::instance().isTornieContentActive());
     loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA",
                  ModManager::instance().isTornieContentActive());
     loadPortrait(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA",
@@ -5334,6 +5345,7 @@ void GFXManager::rebuildModDependentEditorGraphics() {
         { UI_MapEditor_TechCenter,          ObjPic_TechCenter,          2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE },
         { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_Flamepost,           ObjPic_Flamepost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
+        { UI_MapEditor_Chemipost,           ObjPic_Chemipost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
 

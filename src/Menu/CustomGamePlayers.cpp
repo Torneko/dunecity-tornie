@@ -92,7 +92,7 @@ const char* getCustomColorName(int colorSlot) {
         case HOUSECOLOR_CUSTOM_DARK_VIOLET:   return "Dark Violet";
         case HOUSECOLOR_CUSTOM_FUCHSIA:       return "Fuchsia";
         case HOUSECOLOR_CUSTOM_TEAL:          return "Teal";
-        case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW: return "Bright Yellow";
+        case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW: return isTornieMainActive() ? "Cyan" : "Bright Yellow";
         case HOUSECOLOR_CUSTOM_APPLE_GREEN:   return isTornieMainActive() ? "Dark Grey" : "Dark Green";
         case HOUSECOLOR_CUSTOM_LIGHT_PINK:    return "Light Pink";
         default:                              return "Custom";

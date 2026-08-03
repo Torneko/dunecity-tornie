@@ -94,7 +94,12 @@ inline std::vector<int> resolveSpecialVehiclePoolForHouse(
         int house,
         bool tornieActive,
         bool jerichoActive,
-        const std::vector<int>& objectDataIxCandidates) {
+        const std::vector<int>& objectDataIxCandidates,
+        bool corruptiqueActive = false) {
+    if(corruptiqueActive && house == HOUSE_CUSTOM) {
+        return { Unit_Devastator, Unit_EliteSiegeTank };
+    }
+
     if(!objectDataIxCandidates.empty()) {
         return objectDataIxCandidates;
     }

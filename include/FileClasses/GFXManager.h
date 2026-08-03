@@ -144,6 +144,7 @@ typedef enum {
     ObjPic_HarvestankGunTornie,     ///< Tornie: Harvestank turret overlay
     ObjPic_ChemicalCarryall,        ///< Jericho: dedicated 8x2 healing Carryall atlas
     ObjPic_Flamepost,               ///< Tornie: dedicated Flamepost atlas
+    ObjPic_Chemipost,               ///< Tornie: dedicated healing post atlas
     ObjPic_ChaosFactory,            ///< Tornie: animated 3x2 Chaos Factory atlas
     NUM_OBJPICS
 } ObjPic_enum;
@@ -161,7 +162,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost", "LoveFactory",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
-    "HarvestankGunTornie", "ChemicalCarryall", "Flamepost" , "ChaosFactory" } };
+    "HarvestankGunTornie", "ChemicalCarryall", "Flamepost", "Chemipost", "ChaosFactory" } };
 
 #define GROUNDUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+3)|TILE_FLIPV, (i+4)|TILE_NORMAL,(i+3)|TILE_NORMAL
 #define AIRUNIT_ROW(i) (i+2)|TILE_NORMAL,(i+1)|TILE_NORMAL,i|TILE_NORMAL,(i+1)|TILE_FLIPV,(i+2)|TILE_FLIPV,(i+1)|TILE_ROTATE, i|TILE_FLIPH,(i+1)|TILE_FLIPH
@@ -241,6 +242,7 @@ typedef enum {
     Picture_Harvestank,            ///< Tornie: portrait from HarvestankIcon.png
     Picture_ChemicalCarryall,      ///< Jericho: Chemical Carryall portrait
     Picture_Flamepost,             ///< Tornie: Flamepost portrait
+    Picture_Chemipost,             ///< Tornie: Chemipost portrait
     Picture_ChaosFactory,          ///< Tornie: Chaos Factory portrait
     NUM_SMALLDETAILPICS
 } SmallDetailPics_Enum;
@@ -509,6 +511,7 @@ typedef enum {
     UI_MapEditor_SonicTrike,        ///< Tornie: Rebels-only light sonic vehicle
     UI_MapEditor_ChemicalCarryall,  ///< Jericho: healing Carryall with special-unit star
     UI_MapEditor_Flamepost,         ///< Tornie: dedicated Flamepost
+    UI_MapEditor_Chemipost,         ///< Tornie: dedicated healing post
     UI_MapEditor_ChaosFactory,      ///< Tornie: 3x2 Chaos Factory
     NUM_UIGRAPHICS
 } UIGraphics_Enum;

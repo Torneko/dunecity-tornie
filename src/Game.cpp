@@ -186,6 +186,10 @@ bool getTornieStructurePlacementPreview(int itemID, StructurePlacementPreview& p
             preview = { ObjPic_Flamepost, 4, 1, TornieStructureFrame_BuildSite, -1 };
             return true;
 
+        case Structure_Chemipost:
+            preview = { ObjPic_Chemipost, 4, 1, TornieStructureFrame_BuildSite, -1 };
+            return true;
+
         case Structure_LoveFactory:
             preview = { ObjPic_LoveFactory, 10, 1, TornieStructureFrame_BuildSite, -1 };
             return true;

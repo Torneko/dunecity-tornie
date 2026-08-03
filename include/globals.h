@@ -144,13 +144,7 @@ inline int getHouseColorPaletteIndex(int house) {
     return PALCOLOR_HARKONNEN;
 }
 
-inline int getHouseColorPaletteIndexFromSlot(int colorSlot) {
-    if(isValidHouseColorSlot(colorSlot)) {
-        return colorSlot == HOUSE_CUSTOM ? getHousePaletteIndex(HOUSE_CUSTOM) : houseColorToPaletteIndex[colorSlot];
-    }
-
-    return PALCOLOR_HARKONNEN;
-}
+int getHouseColorPaletteIndexFromSlot(int colorSlot);
 
 bool isJerichoHouseColorSlot(int colorSlot);
 

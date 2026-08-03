@@ -153,8 +153,9 @@ typedef enum {
     Delivery_Support = 70,             ///< Love Factory support reinforcement delivery
     Structure_Flamepost = 71,          ///< Tornie: flame variant of the Scoutpost
     Structure_ChaosFactory = 72,       ///< Tornie: two random global unit offers
+    Structure_Chemipost = 73,          ///< Tornie: healing variant of the Scoutpost
 
-    ItemID_LastID = 72,
+    ItemID_LastID = 73,
 
     Num_ItemID
 } ItemID_enum;
@@ -208,7 +209,7 @@ inline bool isUnit(int itemID) { return (itemID >= Unit_FirstID && itemID <= Uni
     \param itemID   the ID of the item (e.g. Structure_ConstructionYard)
     \return true if it is a structure, false otherwise
 */
-inline bool isStructure(int itemID) { return (itemID >= Structure_FirstID && itemID <= Structure_LastID) || (itemID >= Structure_Stadium && itemID <= Structure_ExtLastID) || (itemID >= Structure_AdvancedWindTrap && itemID <= Structure_AdvancedWindTrapMK2) || itemID == Structure_TechCenter || itemID == Structure_AdvancedWindTrapMK3 || itemID == Structure_Scoutpost || itemID == Structure_LoveFactory || itemID == Structure_Flamepost || itemID == Structure_ChaosFactory; }
+inline bool isStructure(int itemID) { return (itemID >= Structure_FirstID && itemID <= Structure_LastID) || (itemID >= Structure_Stadium && itemID <= Structure_ExtLastID) || (itemID >= Structure_AdvancedWindTrap && itemID <= Structure_AdvancedWindTrapMK2) || itemID == Structure_TechCenter || itemID == Structure_AdvancedWindTrapMK3 || itemID == Structure_Scoutpost || itemID == Structure_LoveFactory || itemID == Structure_Flamepost || itemID == Structure_ChaosFactory || itemID == Structure_Chemipost; }
 
 /**
     This function determines if the specified itemID is a DuneCity zone structure.

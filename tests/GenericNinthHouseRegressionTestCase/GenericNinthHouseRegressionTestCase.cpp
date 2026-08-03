@@ -175,10 +175,17 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
         Unit_Deviator,
         Unit_EliteLauncher
     };
+    const std::vector<int> expectedCorruptiqueCandidates = {
+        Unit_Devastator,
+        Unit_EliteSiegeTank
+    };
 
     REQUIRE(resolveSpecialVehiclePoolForHouse(
                 HOUSE_CUSTOM, true, false, tornieIxCandidates)
             == expectedCandidates);
+    REQUIRE(resolveSpecialVehiclePoolForHouse(
+                HOUSE_CUSTOM, true, false, tornieIxCandidates, true)
+            == expectedCorruptiqueCandidates);
     REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
         Unit_Ornithopter, objectData[Unit_Ornithopter]));
     REQUIRE_FALSE(isHouseSpecialVehicleCandidate(
