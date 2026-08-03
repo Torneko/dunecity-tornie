@@ -14,7 +14,7 @@
 - Preserved the published Tornie and Tornie Lite campaigns unchanged.
 - Added Jericho as an independent third mod with Wildspade, Kleshmersh, and Tharpique campaigns.
 - Integrated the requested faction colors, heralds, voices, units, buildings, spice terrain, Palace, Tech Center, editor, mod-switching, and Linux Mint fixes.
-- Final special vehicles: Wildspade Elite Launcher + Flame Tank; Kleshmersh Sonic Tank + Elite Siege Tank.
+- Final special vehicles: Wildspade Elite Launcher + Flame Tank; Kleshmersh Flame Tank + Elite Siege Tank.
 
 ## Jericho 1.0.524-9 - Wildspade and Kleshmersh integration
 

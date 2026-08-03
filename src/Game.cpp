@@ -4547,6 +4547,12 @@ bool Game::handlePlacementClick(int xPos, int yPos) {
     }
 
     int placeItem = pBuilder->getCurrentProducedItem();
+    if(!pBuilder->isWaitingToPlace() || placeItem == ItemID_Invalid || !isStructure(placeItem)) {
+        setCursorMode(CursorMode_Normal);
+        soundPlayer->playSound(Sound_InvalidAction);
+        return false;
+    }
+
     Coord structuresize = getStructureSize(placeItem);
 
     const bool footprintInsideMap =
