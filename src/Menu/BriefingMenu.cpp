@@ -47,9 +47,10 @@ std::unique_ptr<Animation> createTornieHouseAnimation(Animation* source, int hou
     auto result = std::make_unique<Animation>();
 
     for(const auto& frame : source->getFrames()) {
+        // Briefing WSA artwork reuses the Atreides and Ordos ramps for sky
+        // and scenery. Only the Harkonnen master ramp marks house-coloured
+        // details; remapping all three turns parts of the background olive.
         auto recolored = mapSurfaceColorRange(frame.get(), PALCOLOR_HARKONNEN, destination);
-        recolored = mapSurfaceColorRange(recolored.get(), PALCOLOR_ATREIDES, destination);
-        recolored = mapSurfaceColorRange(recolored.get(), PALCOLOR_ORDOS, destination);
         if(usesPrivateVisualRamp && recolored && recolored->format
            && recolored->format->palette
            && destination >= 0 && destination + 7 < recolored->format->palette->ncolors) {
@@ -122,6 +123,7 @@ BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHo
 
     if(ModManager::instance().isInitialized()
             && ModManager::instance().isTornieContentActive()
+            && type != BRIEFING
             && !preserveCorruptiqueVictoryColors) {
         tornieHouseAnimation = createTornieHouseAnimation(anim, house);
         if(tornieHouseAnimation != nullptr) {

@@ -448,6 +448,11 @@ Uint32 CampaignAIPlayer::pickNextToBuild(const BuilderBase* pBuilder) {
     // Get buildable items from builder's build list
     const std::list<BuildItem>& buildList = pBuilder->getBuildList();
     if(buildList.empty()) return ItemID_Invalid;
+
+    const int customItem = chooseLowPriorityCustomUnit(pBuilder);
+    if(customItem != ItemID_Invalid) {
+        return static_cast<Uint32>(customItem);
+    }
     
     // Build filtered candidate list (Original AI filters)
     std::vector<Uint32> candidates;
