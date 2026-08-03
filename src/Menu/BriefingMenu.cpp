@@ -148,7 +148,7 @@ int BriefingMenu::showMenu()
     switch(type) {
         case DEBRIEFING_WIN:
         {
-            switch(house) {
+            switch(getHouseFallbackHouse(static_cast<HOUSETYPE>(house))) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -170,7 +170,7 @@ int BriefingMenu::showMenu()
 
         case DEBRIEFING_LOST:
         {
-            switch(house) {
+            switch(getHouseFallbackHouse(static_cast<HOUSETYPE>(house))) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
@@ -192,7 +192,7 @@ int BriefingMenu::showMenu()
 
         case BRIEFING:
         {
-            switch(house) {
+            switch(getHouseFallbackHouse(static_cast<HOUSETYPE>(house))) {
                 case HOUSE_HARKONNEN:
                 case HOUSE_SARDAUKAR:
                 case HOUSE_NEUTRAL: {
