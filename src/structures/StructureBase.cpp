@@ -47,6 +47,7 @@ bool isTornieStructureForDiagnostics(int itemID) {
         || itemID == Structure_TechCenter
         || itemID == Structure_Scoutpost
         || itemID == Structure_Flamepost
+        || itemID == Structure_Chemipost
         || itemID == Structure_LoveFactory
         || itemID == Structure_ChaosFactory;
 }
@@ -60,6 +61,7 @@ const char* getTornieStructureDiagnosticName(int itemID) {
         case Structure_TechCenter:          return "TechCenter";
         case Structure_Scoutpost:           return "Scoutpost";
         case Structure_Flamepost:           return "Flamepost";
+        case Structure_Chemipost:           return "Chemipost";
         case Structure_LoveFactory:         return "LoveFactory";
         case Structure_ChaosFactory:        return "ChaosFactory";
         default:                            return "Unknown";

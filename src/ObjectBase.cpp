@@ -857,6 +857,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
         case Structure_TechCenter:          newObject = new TechCenter(Owner); break;
         case Structure_Scoutpost:           newObject = new Scoutpost(Owner); break;
         case Structure_Flamepost:           newObject = new Scoutpost(Owner, Structure_Flamepost); break;
+        case Structure_Chemipost:           newObject = new Scoutpost(Owner, Structure_Chemipost); break;
         case Structure_LoveFactory:         newObject = new LoveFactory(Owner); break;
         case Structure_ChaosFactory:        newObject = new ChaosFactory(Owner); break;
         case Structure_WOR:                 newObject = new WOR(Owner); break;
@@ -981,6 +982,7 @@ ObjectBase* ObjectBase::loadObject(InputStream& stream, int itemID, Uint32 objec
         case Structure_TechCenter:          newObject = new TechCenter(stream); break;
         case Structure_Scoutpost:           newObject = new Scoutpost(stream); break;
         case Structure_Flamepost:           newObject = new Scoutpost(stream, Structure_Flamepost); break;
+        case Structure_Chemipost:           newObject = new Scoutpost(stream, Structure_Chemipost); break;
         case Structure_LoveFactory:         newObject = new LoveFactory(stream); break;
         case Structure_ChaosFactory:        newObject = new ChaosFactory(stream); break;
         case Structure_WOR:                 newObject = new WOR(stream); break;

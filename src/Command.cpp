@@ -405,6 +405,17 @@ case CMD_INFANTRY_CAPTURE: {
             }
             pScoutpost->doUpgradeToFlamepost();
         } break;
+
+        case CMD_SCOUTPOST_CHEMIPOST_UPGRADE: {
+            if(parameter.size() != 1) {
+                THROW(std::invalid_argument, "Command::executeCommand(): CMD_SCOUTPOST_CHEMIPOST_UPGRADE needs 1 Parameter!");
+            }
+            Scoutpost* pScoutpost = dynamic_cast<Scoutpost*>(currentGame->getObjectManager().getObject(parameter[0]));
+            if(pScoutpost == nullptr) {
+                return;
+            }
+            pScoutpost->doUpgradeToChemipost();
+        } break;
         
         case CMD_PLAYER_PAUSE: {
             if(parameter.size() != 0) {

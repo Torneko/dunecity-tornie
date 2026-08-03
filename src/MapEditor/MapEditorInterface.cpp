@@ -561,6 +561,9 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_Flamepost.setToggleButton(true);
     editorModeStructs_Flamepost.setTooltipText(resolveItemName(Structure_Flamepost));
     editorModeStructs_Flamepost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Flamepost));
+    editorModeStructs_Chemipost.setToggleButton(true);
+    editorModeStructs_Chemipost.setTooltipText(resolveItemName(Structure_Chemipost));
+    editorModeStructs_Chemipost.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_Chemipost));
     editorModeStructs_LoveFactory.setToggleButton(true);
     editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
     editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
@@ -638,6 +641,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, D2_TILESIZE + 4);
         editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
         editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Flamepost);
+        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Chemipost);
         editorModeStructs_HBoxScoutpost.addWidget(Spacer::create());
     }
 
@@ -1283,6 +1287,7 @@ void MapEditorInterface::onStructButton(int structType) {
     editorModeStructs_TechCenter.setToggleState( (structType == Structure_TechCenter) );
     editorModeStructs_Scoutpost.setToggleState( (structType == Structure_Scoutpost) );
     editorModeStructs_Flamepost.setToggleState( (structType == Structure_Flamepost) );
+    editorModeStructs_Chemipost.setToggleState( (structType == Structure_Chemipost) );
     editorModeStructs_LoveFactory.setToggleState( (structType == Structure_LoveFactory) );
     editorModeStructs_ChaosFactory.setToggleState( (structType == Structure_ChaosFactory) );
 
@@ -1554,6 +1559,8 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeStructs_Scoutpost.setTooltipText(resolveItemName(Structure_Scoutpost));
     editorModeStructs_Flamepost.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Flamepost, newHouse));
     editorModeStructs_Flamepost.setTooltipText(resolveItemName(Structure_Flamepost));
+    editorModeStructs_Chemipost.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Chemipost, newHouse));
+    editorModeStructs_Chemipost.setTooltipText(resolveItemName(Structure_Chemipost));
     editorModeStructs_LoveFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_LoveFactory, newHouse));
     editorModeStructs_ChaosFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ChaosFactory, newHouse));
     editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory) + _(" (Tech Level 9)"));

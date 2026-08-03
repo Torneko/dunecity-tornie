@@ -22,6 +22,10 @@
 #include <Game.h>
 #include <House.h>
 #include <Map.h>
+#include <units/UnitBase.h>
+
+#include <algorithm>
+#include <cstdlib>
 
 Scoutpost::Scoutpost(House* newOwner, int newItemID) : TurretBase(newOwner) {
     Scoutpost::init(newItemID);
@@ -41,9 +45,13 @@ void Scoutpost::init(int newItemID) {
     structureSize.y = 1;
 
     attackSound = Sound_RocketSmall;
-    bulletType = itemID == Structure_Flamepost ? Bullet_Flame : Bullet_SmallRocket;
+    bulletType = itemID == Structure_Chemipost
+        ? Bullet_Heal
+        : (itemID == Structure_Flamepost ? Bullet_Flame : Bullet_SmallRocket);
 
-    graphicID = itemID == Structure_Flamepost ? ObjPic_Flamepost : ObjPic_Scoutpost;
+    graphicID = itemID == Structure_Chemipost
+        ? ObjPic_Chemipost
+        : (itemID == Structure_Flamepost ? ObjPic_Flamepost : ObjPic_Scoutpost);
     graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
     numImagesX = 4;
     numImagesY = 1;
@@ -56,6 +64,15 @@ void Scoutpost::init(int newItemID) {
 Scoutpost::~Scoutpost() = default;
 
 bool Scoutpost::canAttack(const ObjectBase* object) const {
+    if(itemID == Structure_Chemipost) {
+        const auto* unit = dynamic_cast<const UnitBase*>(object);
+        return unit != nullptr
+            && unit->getHealth() > 0
+            && unit->getHealth() < unit->getMaxHealth()
+            && unit->getOwner()->getTeamID() == owner->getTeamID()
+            && unit->isVisible(owner->getTeamID());
+    }
+
     return object != nullptr
         && ((object->getOwner()->getTeamID() != owner->getTeamID()) || object->getItemID() == Unit_Sandworm)
         && object->isVisible(getOwner()->getTeamID());
@@ -85,7 +102,7 @@ void Scoutpost::updateStructureSpecificStuff() {
             attack();
         }
     } else if((attackMode != STOP) && (findTargetTimer == 0)) {
-        setTarget(findTarget());
+        setTarget(itemID == Structure_Chemipost ? findDamagedAlly() : findTarget());
         findTargetTimer = 50 + (objectID % 20);
     }
 
@@ -96,6 +113,25 @@ void Scoutpost::updateStructureSpecificStuff() {
     if(weaponTimer > 0) {
         weaponTimer--;
     }
+}
+
+UnitBase* Scoutpost::findDamagedAlly() const {
+    UnitBase* bestTarget = nullptr;
+    int bestDistance = getWeaponRange() + 1;
+    for(UnitBase* unit : unitList) {
+        if(!canAttack(unit)) {
+            continue;
+        }
+
+        const Coord targetLocation = unit->getLocation();
+        const int distance = std::max(std::abs(targetLocation.x - location.x),
+                                      std::abs(targetLocation.y - location.y));
+        if(distance <= getWeaponRange() && distance < bestDistance) {
+            bestDistance = distance;
+            bestTarget = unit;
+        }
+    }
+    return bestTarget;
 }
 
 void Scoutpost::setHealth(FixPoint newHealth) {
@@ -155,4 +191,54 @@ void Scoutpost::doUpgradeToFlamepost() {
     bulletType = Bullet_Flame;
     graphicID = ObjPic_Flamepost;
     graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
+}
+
+bool Scoutpost::isChemipostUpgradeEligible() const {
+    if(itemID != Structure_Scoutpost || owner == nullptr || currentGame == nullptr
+       || originalHouseID != HOUSE_CUSTOM || currentGame->techLevel < 7
+       || !ModManager::instance().isInitialized()) {
+        return false;
+    }
+
+    const std::string& activeMod = ModManager::instance().getActiveModName();
+    return activeMod == "Tornie" || activeMod == "Jericho";
+}
+
+int Scoutpost::getChemipostUpgradeCost() const {
+    if(currentGame == nullptr) {
+        return 0;
+    }
+
+    const int configuredPrice = currentGame->objectData.data[Structure_Chemipost][originalHouseID].price;
+    return configuredPrice > 0 ? configuredPrice : 0;
+}
+
+bool Scoutpost::canUpgradeToChemipost() const {
+    return isChemipostUpgradeEligible()
+        && owner->getNumItems(Structure_IX) > 0
+        && owner->getCredits() >= getChemipostUpgradeCost();
+}
+
+void Scoutpost::handleChemipostUpgradeClick() {
+    if(currentGame == nullptr || pLocalPlayer == nullptr) {
+        return;
+    }
+
+    currentGame->getCommandManager().addCommand(
+        Command(pLocalPlayer->getPlayerID(), CMD_SCOUTPOST_CHEMIPOST_UPGRADE, objectID));
+}
+
+void Scoutpost::doUpgradeToChemipost() {
+    if(!canUpgradeToChemipost()) {
+        return;
+    }
+
+    owner->takeCredits(getChemipostUpgradeCost());
+    owner->transformStructure(Structure_Scoutpost, Structure_Chemipost);
+
+    itemID = Structure_Chemipost;
+    bulletType = Bullet_Heal;
+    graphicID = ObjPic_Chemipost;
+    graphic = pGFXManager->getObjPic(graphicID, getOwner()->getHouseID());
+    setTarget(nullptr);
 }

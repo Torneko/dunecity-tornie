@@ -110,6 +110,22 @@ bool isJerichoHouseColorSlot(int colorSlot) {
         && ModManager::instance().getActiveModName() == "Jericho";
 }
 
+int getHouseColorPaletteIndexFromSlot(int colorSlot) {
+    if(!isValidHouseColorSlot(colorSlot)) {
+        return PALCOLOR_HARKONNEN;
+    }
+
+    const bool tornieMainActive = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "Tornie";
+    if(tornieMainActive && colorSlot == HOUSECOLOR_CUSTOM_BRIGHT_YELLOW) {
+        return PALCOLOR_NEUTRAL;
+    }
+
+    return colorSlot == HOUSE_CUSTOM
+        ? getHousePaletteIndex(HOUSE_CUSTOM)
+        : houseColorToPaletteIndex[colorSlot];
+}
+
 void applyCustomPaletteRuntimeHouseRamps() {
     static const Uint8 rebelsGreyRamp[8] = { 82, 72, 62, 52, 42, 34, 27, 20 };
     const bool swapTornieRebelsWithDarkGreen =

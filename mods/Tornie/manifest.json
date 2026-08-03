@@ -13,11 +13,11 @@
   },
   "customHouse": {
     "slot": 8,
-    "displayName": "Tharpique",
-    "scenarioLetter": "T",
-    "regionPrefix": "THA",
-    "paletteIndex": 128,
-    "fallbackHouse": 5
+    "displayName": "Corruptique",
+    "scenarioLetter": "C",
+    "regionPrefix": "COR",
+    "paletteIndex": 192,
+    "fallbackHouse": 2
   },
   "contentRoots": [
     "campaign",
