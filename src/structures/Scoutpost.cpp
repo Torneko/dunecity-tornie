@@ -150,9 +150,9 @@ int Scoutpost::getProducedPower() const {
 bool Scoutpost::isFlamepostUpgradeEligible() const {
     return itemID == Structure_Scoutpost
         && owner != nullptr
-        && originalHouseID == HOUSE_REBELS
+        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_KLESHMERSH)
         && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
+        && ModManager::instance().isTornieContentActive();
 }
 
 int Scoutpost::getFlamepostUpgradeCost() const {
@@ -195,7 +195,8 @@ void Scoutpost::doUpgradeToFlamepost() {
 
 bool Scoutpost::isChemipostUpgradeEligible() const {
     if(itemID != Structure_Scoutpost || owner == nullptr || currentGame == nullptr
-       || originalHouseID != HOUSE_CUSTOM || currentGame->techLevel < 7
+       || !isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_THARPIQUE)
+       || currentGame->techLevel < 7
        || !ModManager::instance().isInitialized()) {
         return false;
     }

@@ -154,8 +154,7 @@ int TechCenter::spawnRandomVehicles(int count) {
     const bool jerichoActive = modInitialized
         && ModManager::instance().getActiveModName() == "Jericho";
     const bool corruptiqueActive = modInitialized
-        && originalHouseID == HOUSE_CUSTOM
-        && ModManager::instance().getActiveModName() == "Tornie";
+        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_CUSTOM);
     const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
         const auto& data = currentGame->objectData.data[candidate][originalHouseID];
         return HouseSpecialVehicleCandidateData{
@@ -168,7 +167,9 @@ int TechCenter::spawnRandomVehicles(int count) {
     const auto specialVehiclePool = resolveSpecialVehiclePoolForHouse(
         originalHouseID, tornieActive, jerichoActive, objectDataIxCandidates, corruptiqueActive);
     const bool useGenericCustomFallback =
-        originalHouseID == HOUSE_CUSTOM && objectDataIxCandidates.empty();
+        (isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_CUSTOM)
+         || isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_THARPIQUE))
+        && objectDataIxCandidates.empty();
     std::vector<int> vehiclePool;
     for(const auto candidate : specialVehiclePool) {
         const bool candidateEnabled = useGenericCustomFallback
@@ -179,9 +180,9 @@ int TechCenter::spawnRandomVehicles(int count) {
         }
     }
 
-    const bool jerichoNamedHouse = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho"
-        && (originalHouseID == HOUSE_NEUTRAL || originalHouseID == HOUSE_REBELS);
+    const HOUSETYPE factionIdentity = getHouseFactionIdentity(static_cast<HOUSETYPE>(originalHouseID));
+    const bool jerichoNamedHouse = factionIdentity == HOUSE_WILDSPADE
+        || factionIdentity == HOUSE_KLESHMERSH;
 
     if(vehiclePool.empty() && !jerichoNamedHouse) {
         for(const auto fallback : { Unit_Trike, Unit_Quad }) {

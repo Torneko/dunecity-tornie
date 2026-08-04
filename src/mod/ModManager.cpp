@@ -56,6 +56,34 @@ static const char* OBJECT_DATA_DEFAULT = "ObjectData.ini.default";
 static const char* QUANTBOT_CONFIG_DEFAULT = "QuantBot Config.ini.default";
 static const char* CUSTOM_HOUSE_CONFIG = "CustomHouse.ini";
 
+static CustomHouseInfo makeGuestCustomHouse(const std::string& activeModName) {
+    CustomHouseInfo info;
+    if(activeModName == TORNIE_MOD_NAME) {
+        info.enabled = true;
+        info.displayName = "Tharpique";
+        info.scenarioLetter = 'T';
+        info.regionPrefix = "THA";
+        info.paletteIndex = 136;
+        info.fallbackHouse = HOUSE_MERCENARY;
+        info.heraldAsset = "HeraldTharpique.png";
+        info.houseNameVoiceAsset = "OTHARP.VOC";
+        info.voicePlaybackRate = 1.06;
+        info.voiceGain = 1.15;
+    } else if(activeModName == JERICHO_MOD_NAME) {
+        info.enabled = true;
+        info.displayName = "Corruptique";
+        info.scenarioLetter = 'C';
+        info.regionPrefix = "COR";
+        info.paletteIndex = 192;
+        info.fallbackHouse = HOUSE_ORDOS;
+        info.heraldAsset = "HeraldCorruptique.png";
+        info.houseNameVoiceAsset = "CORRUPT.VOC";
+        info.voicePlaybackRate = 1.06;
+        info.voiceGain = 1.15;
+    }
+    return info;
+}
+
 ModManager& ModManager::instance() {
     static ModManager instance;
     return instance;
@@ -127,6 +155,7 @@ void ModManager::initialize() {
     
     const ModInfo activeInfo = readModIni(getModPath(activeMod));
     activeCustomHouse = activeInfo.customHouse;
+    activeGuestCustomHouse = makeGuestCustomHouse(activeMod);
     activeMentats = activeInfo.mentats;
     initialized = true;
     SDL_Log("ModManager: Initialized with active mod '%s'", activeMod.c_str());
@@ -140,12 +169,27 @@ const CustomHouseInfo& ModManager::getActiveCustomHouseInfo() const {
     return activeCustomHouse;
 }
 
+const CustomHouseInfo& ModManager::getCustomHouseInfo(int house) const {
+    static const CustomHouseInfo noHouse;
+    if(house == HOUSE_CUSTOM) return activeCustomHouse;
+    if(house == HOUSE_THARPIQUE) return activeGuestCustomHouse;
+    return noHouse;
+}
+
 bool ModManager::isCustomHouseRegistered() const {
     return initialized && activeCustomHouse.enabled;
 }
 
+bool ModManager::isCustomHouseRegistered(int house) const {
+    return initialized && getCustomHouseInfo(house).enabled;
+}
+
 const ModMentatInfo& ModManager::getActiveMentatInfo(int house) const {
     static const ModMentatInfo noOverride;
+    if(house >= HOUSE_WILDSPADE && house <= HOUSE_THARPIQUE
+       && (activeMod == TORNIE_MOD_NAME || activeMod == JERICHO_MOD_NAME)) {
+        house = HOUSE_NEUTRAL + (house - HOUSE_WILDSPADE);
+    }
     if(!initialized || house < 0 || static_cast<std::size_t>(house) >= activeMentats.size()) {
         return noOverride;
     }
@@ -159,7 +203,17 @@ int ModManager::getEffectiveMentatIdentity(int house) const {
         : house;
 
     if(identity == HOUSE_CUSTOM) {
-        identity = activeCustomHouse.enabled ? activeCustomHouse.fallbackHouse : HOUSE_HARKONNEN;
+        const CustomHouseInfo& info = getCustomHouseInfo(house);
+        identity = info.enabled ? info.fallbackHouse : HOUSE_HARKONNEN;
+    } else if(identity >= HOUSE_WILDSPADE && identity <= HOUSE_THARPIQUE) {
+        const int localIdentity = HOUSE_NEUTRAL + (identity - HOUSE_WILDSPADE);
+        if(localIdentity == HOUSE_CUSTOM) {
+            identity = activeGuestCustomHouse.enabled
+                ? activeGuestCustomHouse.fallbackHouse
+                : HOUSE_HARKONNEN;
+        } else {
+            identity = localIdentity;
+        }
     }
 
     switch(identity) {
@@ -171,9 +225,9 @@ int ModManager::getEffectiveMentatIdentity(int house) const {
         case HOUSE_MERCENARY:
             return identity;
         case HOUSE_NEUTRAL:
-            return HOUSE_HARKONNEN;
-        case HOUSE_REBELS:
             return HOUSE_ATREIDES;
+        case HOUSE_REBELS:
+            return HOUSE_HARKONNEN;
         default:
             return HOUSE_HARKONNEN;
     }
@@ -198,6 +252,7 @@ bool ModManager::setActiveMod(const std::string& name) {
     activeMod = name;
     const ModInfo activeInfo = readModIni(getModPath(activeMod));
     activeCustomHouse = activeInfo.customHouse;
+    activeGuestCustomHouse = makeGuestCustomHouse(activeMod);
     activeMentats = activeInfo.mentats;
     checksumsDirty = true;
     saveActiveMod();

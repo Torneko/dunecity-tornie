@@ -27,49 +27,7 @@
 #include <misc/draw_util.h>
 #include <mod/ModManager.h>
 
-namespace {
 
-std::unique_ptr<Animation> createTornieHouseAnimation(Animation* source, int house) {
-    if(source == nullptr) {
-        return nullptr;
-    }
-
-    const int colorSlot = getHouseVisualHouse(house);
-    const bool usesPrivateVisualRamp =
-        colorSlot == HOUSE_REBELS
-        || (customPaletteLoaded
-            && (colorSlot == HOUSE_CUSTOM
-                || isCustomHouseColorSlot(colorSlot)
-                || isJerichoHouseColorSlot(colorSlot)));
-    const int destination = usesPrivateVisualRamp
-        ? PALCOLOR_HARKONNEN
-        : getHouseColorPaletteIndexFromSlot(colorSlot);
-    auto result = std::make_unique<Animation>();
-
-    for(const auto& frame : source->getFrames()) {
-        // Briefing WSA artwork reuses the Atreides and Ordos ramps for sky
-        // and scenery. Only the Harkonnen master ramp marks house-coloured
-        // details; remapping all three turns parts of the background olive.
-        auto recolored = mapSurfaceColorRange(frame.get(), PALCOLOR_HARKONNEN, destination);
-        if(usesPrivateVisualRamp && recolored && recolored->format
-           && recolored->format->palette
-           && destination >= 0 && destination + 7 < recolored->format->palette->ncolors) {
-            SDL_Color visualRamp[8];
-            for(int shade = 0; shade < 8; ++shade) {
-                visualRamp[shade] = getHouseColorSDL(colorSlot, shade);
-                visualRamp[shade].a = 255;
-            }
-            SDL_SetPaletteColors(recolored->format->palette, visualRamp, destination, 8);
-        }
-        result->addFrame(std::move(recolored));
-    }
-
-    result->setFrameDurationTime(source->getFrameDurationTime());
-    result->setNumLoops(source->getLoopsLeft());
-    return result;
-}
-
-}
 BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHouse) {
     this->mission = mission;
     this->type = type;
@@ -115,21 +73,6 @@ BriefingMenu::BriefingMenu(int newHouse,int mission,int type) : MentatMenu(newHo
         } break;
     }
 
-    const bool preserveCorruptiqueVictoryColors =
-        type == DEBRIEFING_WIN
-        && house == HOUSE_CUSTOM
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
-
-    if(ModManager::instance().isInitialized()
-            && ModManager::instance().isTornieContentActive()
-            && type != BRIEFING
-            && !preserveCorruptiqueVictoryColors) {
-        tornieHouseAnimation = createTornieHouseAnimation(anim, house);
-        if(tornieHouseAnimation != nullptr) {
-            anim = tornieHouseAnimation.get();
-        }
-    }
 
     setText(text);
     animation.setAnimation(anim);

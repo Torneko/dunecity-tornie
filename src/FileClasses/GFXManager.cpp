@@ -161,9 +161,10 @@ static const Coord objPicTiles[] {
 static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
               "objPicTiles must have one entry per ObjPic enum value");
 
-static void applyRebelsTint(SDL_Surface* surface);
+static void applyRebelsTint(SDL_Surface* surface, int colorSlot);
 static bool usesPrivateVisualColorRamp(int colorSlot) {
-    return colorSlot == HOUSE_REBELS || colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
+    return isTornieRebelsColorSlot(colorSlot) || colorSlot == HOUSE_CUSTOM
+        || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
 }
 static int getVisualRemapPaletteIndex(int colorSlot) {
     return usesPrivateVisualColorRamp(colorSlot)
@@ -1551,9 +1552,7 @@ GFXManager::GFXManager() {
                         atlas.get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
                     if(indexed) {
                         applyCustomVisualColorRamp(indexed.get(), colorSlot);
-                        if(colorSlot == HOUSE_REBELS) {
-                            applyRebelsTint(indexed.get());
-                        }
+                        applyRebelsTint(indexed.get(), colorSlot);
                     }
                 }
 
@@ -2276,8 +2275,8 @@ GFXManager::GFXManager() {
                                                getVisualRemapPaletteIndex(colorSlot));
                 if(indexed) {
                     applyCustomVisualColorRamp(indexed.get(), colorSlot);
-                    if(colorSlot == HOUSE_REBELS && objPicEnum != ObjPic_TechCenter) {
-                        applyRebelsTint(indexed.get());
+                    if(objPicEnum != ObjPic_TechCenter) {
+                        applyRebelsTint(indexed.get(), colorSlot);
                     }
                 }
             }
@@ -3374,9 +3373,7 @@ GFXManager::GFXManager() {
                 remappedAtlas = mapSurfaceColorRange(
                     harkonnenAtlas, PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
                 applyCustomVisualColorRamp(remappedAtlas.get(), colorSlot);
-                if(colorSlot == HOUSE_REBELS) {
-                    applyRebelsTint(remappedAtlas.get());
-                }
+                applyRebelsTint(remappedAtlas.get(), colorSlot);
                 normalizeTransparentPaletteIndexes(remappedAtlas.get());
                 SDL_SetColorKey(remappedAtlas.get(), SDL_TRUE, PALCOLOR_TRANSPARENT);
                 atlas = remappedAtlas.get();
@@ -3656,43 +3653,38 @@ static std::unique_ptr<Animation> loadPngStripAnimation(const std::string& filen
     return animation;
 }
 
-static void applyRebelsTint(SDL_Surface* surface) {
-    if(!surface || !surface->format || !surface->format->palette) {
-        return;
-    }
-    if(isJerichoHouseColorSlot(HOUSE_REBELS)) {
+static void applyRebelsTint(SDL_Surface* surface, int colorSlot) {
+    if(!surface || !surface->format || !surface->format->palette
+       || !isTornieRebelsColorSlot(colorSlot)) {
         return;
     }
 
-    const int rebelsBase = getVisualRemapPaletteIndex(HOUSE_REBELS);
+    const int rebelsBase = getVisualRemapPaletteIndex(colorSlot);
     if(rebelsBase < 0 || rebelsBase + 7 >= surface->format->palette->ncolors) {
         return;
     }
 
     SDL_Color visualRamp[8];
     for(int k = 0; k < 8; ++k) {
-        visualRamp[k] = getHouseColorSDL(HOUSE_REBELS, k);
+        visualRamp[k] = getHouseColorSDL(colorSlot, k);
         visualRamp[k].a = 255;
     }
     SDL_SetPaletteColors(surface->format->palette, visualRamp, rebelsBase, 8);
 }
 static void applyCustomVisualColorRamp(SDL_Surface* surface, int colorSlot) {
-    if((colorSlot == HOUSE_REBELS && !isJerichoHouseColorSlot(colorSlot))
-       || !usesPrivateVisualColorRamp(colorSlot) || !customPaletteLoaded
+    if(!usesPrivateVisualColorRamp(colorSlot)
        || !surface || !surface->format || !surface->format->palette) {
         return;
     }
 
-    const int sourceBase = getHouseColorPaletteIndexFromSlot(colorSlot);
     const int targetBase = getVisualRemapPaletteIndex(colorSlot);
-    if(sourceBase < 0 || sourceBase + 7 >= customPalette.getNumColors()
-       || targetBase < 0 || targetBase + 7 >= surface->format->palette->ncolors) {
+    if(targetBase < 0 || targetBase + 7 >= surface->format->palette->ncolors) {
         return;
     }
 
     SDL_Color visualRamp[8];
     for(int shade = 0; shade < 8; ++shade) {
-        visualRamp[shade] = customPalette[sourceBase + shade];
+        visualRamp[shade] = getHouseColorSDL(colorSlot, shade);
     }
     SDL_SetPaletteColors(surface->format->palette, visualRamp, targetBase, 8);
     normalizeTransparentPaletteIndexes(surface);
@@ -4864,7 +4856,7 @@ void GFXManager::loadMentatGraphics() {
                              PALCOLOR_ATREIDES,
                              getVisualRemapPaletteIndex(HOUSE_REBELS));
     applyCustomVisualColorRamp(uiGraphic[UI_MentatBackground][HOUSE_REBELS].get(), HOUSE_REBELS);
-    applyRebelsTint(uiGraphic[UI_MentatBackground][HOUSE_REBELS].get());
+    applyRebelsTint(uiGraphic[UI_MentatBackground][HOUSE_REBELS].get(), HOUSE_REBELS);
 
     ModManager& modManager = ModManager::instance();
     const int customFallback = modManager.isCustomHouseRegistered()
@@ -4931,51 +4923,43 @@ void GFXManager::loadCustomHouseHerald() {
         UI_Herald_ColoredLarge,
         UI_Herald_Grey
     };
-    for(const unsigned int id : presentationIds) {
-        uiGraphic[id][HOUSE_CUSTOM].reset();
-        uiGraphicTex[id][HOUSE_CUSTOM].reset();
-    }
-
     ModManager& modManager = ModManager::instance();
-    if(!modManager.isCustomHouseRegistered()) {
-        return;
-    }
-
-    const CustomHouseInfo& info = modManager.getActiveCustomHouseInfo();
-    SDL_Surface* fallback = uiGraphic[UI_Herald_Colored][info.fallbackHouse].get();
-    sdl2::surface_ptr herald;
-
-    if(!info.heraldAsset.empty()) {
-        try {
-            if(pFileManager->exists(info.heraldAsset)) {
-                herald = LoadPNG_RW(pFileManager->openFile(info.heraldAsset).get());
-                if(herald != nullptr) {
-                    SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
-                }
-            } else {
-                SDL_Log("GFXManager: Custom-house herald '%s' unavailable; using fallback",
-                        info.heraldAsset.c_str());
-            }
-        } catch(const std::exception& e) {
-            SDL_Log("GFXManager: Custom-house herald '%s' failed (%s); using fallback",
-                    info.heraldAsset.c_str(), e.what());
-        }
-    }
-
-    if(herald == nullptr && fallback != nullptr) {
-        herald = copySurface(fallback);
-    }
-    if(herald == nullptr) {
-        SDL_Log("GFXManager: No custom-house herald or fallback is available");
-        return;
-    }
-
-    uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM] = std::move(herald);
-    uiGraphic[UI_Herald_ColoredLarge][HOUSE_CUSTOM] =
-        Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM].get());
     auto pictureFactory = std::make_unique<PictureFactory>();
-    uiGraphic[UI_Herald_Grey][HOUSE_CUSTOM] =
-        pictureFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][HOUSE_CUSTOM].get());
+
+    auto loadRegisteredHerald = [&](int house) {
+        for(const unsigned int id : presentationIds) {
+            uiGraphic[id][house].reset();
+            uiGraphicTex[id][house].reset();
+        }
+        if(!modManager.isCustomHouseRegistered(house)) return;
+
+        const CustomHouseInfo& info = modManager.getCustomHouseInfo(house);
+        SDL_Surface* fallback = uiGraphic[UI_Herald_Colored][info.fallbackHouse].get();
+        sdl2::surface_ptr herald;
+
+        if(!info.heraldAsset.empty()) {
+            try {
+                if(pFileManager->exists(info.heraldAsset)) {
+                    herald = LoadPNG_RW(pFileManager->openFile(info.heraldAsset).get());
+                    if(herald != nullptr) SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
+                }
+            } catch(const std::exception& e) {
+                SDL_Log("GFXManager: Custom-house herald '%s' failed (%s); using fallback",
+                        info.heraldAsset.c_str(), e.what());
+            }
+        }
+        if(herald == nullptr && fallback != nullptr) herald = copySurface(fallback);
+        if(herald == nullptr) return;
+
+        uiGraphic[UI_Herald_Colored][house] = std::move(herald);
+        uiGraphic[UI_Herald_ColoredLarge][house] =
+            Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][house].get());
+        uiGraphic[UI_Herald_Grey][house] =
+            pictureFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][house].get());
+    };
+
+    loadRegisteredHerald(HOUSE_CUSTOM);
+    loadRegisteredHerald(HOUSE_THARPIQUE);
 }
 
 void GFXManager::reloadModDependentObjectGraphics() {
@@ -5081,8 +5065,8 @@ void GFXManager::reloadModDependentObjectGraphics() {
                 source, PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
             if(indexed) {
                 applyCustomVisualColorRamp(indexed.get(), colorSlot);
-                if(colorSlot == HOUSE_REBELS) {
-                    applyRebelsTint(indexed.get());
+                if(isTornieRebelsColorSlot(colorSlot)) {
+                    applyRebelsTint(indexed.get(), colorSlot);
                 }
             }
         }
@@ -5322,7 +5306,7 @@ void GFXManager::reloadRuntimeModPortraits() {
     loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA",
                  ModManager::instance().isTornieContentActive());
     loadPortrait(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA",
-                 activeMod == "Tornie");
+                 activeMod == "Tornie" || activeMod == "Jericho");
 
 
 }
@@ -5445,7 +5429,7 @@ void GFXManager::reloadModDependentUiGraphics() {
         if(pFileManager->exists(filename)) {
             auto herald = LoadPNG_RW(pFileManager->openFile(filename).get());
             if(herald != nullptr) {
-                if(house != HOUSE_REBELS) {
+                if(!isHouseFaction(static_cast<HOUSETYPE>(house), HOUSE_REBELS)) {
                     SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
                 }
                 uiGraphic[UI_Herald_Colored][house] = std::move(herald);
@@ -5457,7 +5441,7 @@ void GFXManager::reloadModDependentUiGraphics() {
             if(fallback == nullptr) {
                 return;
             }
-            if(house == HOUSE_REBELS) {
+            if(isHouseFaction(static_cast<HOUSETYPE>(house), HOUSE_REBELS)) {
                 uiGraphic[UI_Herald_Colored][house] = copySurface(fallback);
             } else {
                 uiGraphic[UI_Herald_Colored][house] =
@@ -5475,12 +5459,22 @@ void GFXManager::reloadModDependentUiGraphics() {
             pictureFactory->createGreyHouseChoice(heraldSurface);
     };
 
-    const bool jerichoIdentity = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
-    reloadBonusHerald(HOUSE_NEUTRAL,
-                      jerichoIdentity ? "HeraldWildspade.png" : "HeraldNeu.png");
-    reloadBonusHerald(HOUSE_REBELS,
-                      jerichoIdentity ? "HeraldKleshmersh.png" : "HeraldRebels.png");
+    auto getHeraldFilename = [](HOUSETYPE house) -> const char* {
+        switch(getHouseFactionIdentity(house)) {
+            case HOUSE_NEUTRAL: return "HeraldNeu.png";
+            case HOUSE_REBELS: return "HeraldRebels.png";
+            case HOUSE_WILDSPADE: return "HeraldWildspade.png";
+            case HOUSE_KLESHMERSH: return "HeraldKleshmersh.png";
+            default: return nullptr;
+        }
+    };
+    for(const HOUSETYPE house : {
+            HOUSE_NEUTRAL, HOUSE_REBELS, HOUSE_WILDSPADE, HOUSE_KLESHMERSH }) {
+        const char* filename = getHeraldFilename(house);
+        if(filename != nullptr && isCustomGameHouseAvailable(house)) {
+            reloadBonusHerald(house, filename);
+        }
+    }
     reloadRuntimeModPortraits();
     loadCustomHouseHerald();
     loadMentatGraphics();
@@ -5629,8 +5623,8 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
         if(objPic[id][HOUSE_HARKONNEN][z]->format->BytesPerPixel == 1) {
             objPic[id][house][z] = mapSurfaceColorRange(objPic[id][HOUSE_HARKONNEN][z].get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(house));
             applyCustomVisualColorRamp(objPic[id][house][z].get(), house);
-            if(house == HOUSE_REBELS) {
-                applyRebelsTint(objPic[id][house][z].get());
+            if(isTornieRebelsColorSlot(house)) {
+                applyRebelsTint(objPic[id][house][z].get(), house);
             }
             normalizeTransparentPaletteIndexes(objPic[id][house][z].get());
             if(z == 0 && isTornieStructureObjPic(id)) {
@@ -5865,8 +5859,8 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
             uiGraphic[id][house] = mapSurfaceColorRange(base, PALCOLOR_HARKONNEN,
                                                        getVisualRemapPaletteIndex(house));
             applyCustomVisualColorRamp(uiGraphic[id][house].get(), house);
-            if(house == HOUSE_REBELS) {
-                applyRebelsTint(uiGraphic[id][house].get());
+            if(isTornieRebelsColorSlot(house)) {
+                applyRebelsTint(uiGraphic[id][house].get(), house);
             }
         } else {
             // Truecolor icons need a pixel-safe team-ramp remap. Recolour only
@@ -5927,8 +5921,8 @@ SDL_Surface* GFXManager::getMapChoicePieceSurface(unsigned int num, int house) {
 
         mapChoicePieces[num][house] = mapSurfaceColorRange(mapChoicePieces[num][HOUSE_HARKONNEN].get(), PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(house));
         applyCustomVisualColorRamp(mapChoicePieces[num][house].get(), house);
-        if(house == HOUSE_REBELS) {
-            applyRebelsTint(mapChoicePieces[num][house].get());
+        if(isTornieRebelsColorSlot(house)) {
+            applyRebelsTint(mapChoicePieces[num][house].get(), house);
         }
     }
 

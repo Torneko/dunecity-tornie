@@ -40,8 +40,7 @@ void Trooper::init() {
 
     numWeapons = 1;
     const bool kleshmershTrooper = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho"
-        && owner->getHouseID() == HOUSE_REBELS;
+        && isHouseFaction(static_cast<HOUSETYPE>(owner->getHouseID()), HOUSE_KLESHMERSH);
     bulletType = kleshmershTrooper ? Bullet_Flame : Bullet_SmallRocket;
 
     graphicID = ObjPic_Trooper;
