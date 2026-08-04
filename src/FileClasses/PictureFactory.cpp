@@ -787,7 +787,11 @@ sdl2::surface_ptr PictureFactory::createMentatHouseChoiceQuestion(int House, Pal
         case HOUSE_SARDAUKAR:   pQuestionPart2 = Scaler::defaultDoubleSurface(LoadPNG_RW(pFileManager->openFile("Sardaukar.png").get()).get());   break;
         case HOUSE_MERCENARY:   pQuestionPart2 = Scaler::defaultDoubleSurface(LoadPNG_RW(pFileManager->openFile("Mercenary.png").get()).get());   break;
         case HOUSE_NEUTRAL:
-        case HOUSE_REBELS: {
+        case HOUSE_REBELS:
+        case HOUSE_CUSTOM:
+        case HOUSE_WILDSPADE:
+        case HOUSE_KLESHMERSH:
+        case HOUSE_THARPIQUE: {
             const std::string houseName = std::string(getHouseNameByNumber(static_cast<HOUSETYPE>(House))) + " ?";
             unsigned int fontSize = 30;
             while(fontSize > 18 && (pFontManager->getTextWidth(houseName, fontSize) > 198 || pFontManager->getTextHeight(fontSize) > 44)) {

@@ -3247,7 +3247,12 @@ void Game::onOptions()
         // don't show menu
         quitGame();
     } else {
-        Uint32 color = getHouseColorRGB(getHouseVisualHouse(pLocalHouse->getHouseID()), 3);
+        int optionsHouse = pLocalHouse->getHouseID();
+        const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
+        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
+            optionsHouse = selectedHouse;
+        }
+        Uint32 color = getHouseColorRGB(getHouseVisualHouse(optionsHouse), 3);
         pInGameMenu = std::make_unique<InGameMenu>((gameType == GameType::CustomMultiplayer), color);
         bMenu = true;
         pauseGame();
