@@ -635,7 +635,25 @@ if(WIN32)
         DESTINATION data
     )
     
-    # Install config files from config directory to root installation directory
+    # Vanilla-specific loose overrides are loaded from the runtime data
+    # directory. Development builds already copy them there, but CPack used
+    # to omit them and silently fall back to the original PAK resources.
+    install(
+        FILES
+            "${DATA_DIR}/ANEU.VOC"
+            "${DATA_DIR}/RREBELS.voc"
+            "${DATA_DIR}/HeraldNeuMask.png"
+            "${DATA_DIR}/HeraldRebels.png"
+            "${DATA_DIR}/HeraldRebelsMask.png"
+            "${DATA_DIR}/ChaniMentat.png"
+            "${DATA_DIR}/ChaniMentatEyes.png"
+            "${DATA_DIR}/ChaniMentatMouth.png"
+            "${DATA_DIR}/PalaceRebelsChargingIcon.png"
+            "${DATA_DIR}/PalaceRebelsIcon.png"
+            "${DATA_DIR}/Custom_IBM.pal"
+        DESTINATION data
+    )
+        # Install config files from config directory to root installation directory
     install(
         DIRECTORY ${CMAKE_SOURCE_DIR}/config
         DESTINATION .
