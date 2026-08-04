@@ -55,13 +55,21 @@ GameInterface::GameInterface() : Window(0,0,0,0) {
 
     setWindowWidget(&windowWidget);
 
+    int interfaceHouse = pLocalHouse->getHouseID();
+    if(currentGame != nullptr) {
+        const HOUSETYPE selectedHouse = currentGame->getGameInitSettings().getHouseID();
+        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
+            interfaceHouse = selectedHouse;
+        }
+    }
+
     // top bar
-    SDL_Texture* pTopBarTex = pGFXManager->getUIGraphic(UI_TopBar, pLocalHouse->getHouseID());
+    SDL_Texture* pTopBarTex = pGFXManager->getUIGraphic(UI_TopBar, interfaceHouse);
     topBar.setTexture(pTopBarTex);
     windowWidget.addWidget(&topBar,Point(0,0),Point(getWidth(pTopBarTex),getHeight(pTopBarTex) - 12));
 
     // side bar
-    SDL_Texture* pSideBarTex = pGFXManager->getUIGraphic(UI_SideBar, pLocalHouse->getHouseID());
+    SDL_Texture* pSideBarTex = pGFXManager->getUIGraphic(UI_SideBar, interfaceHouse);
     sideBar.setTexture(pSideBarTex);
     SDL_Rect dest = calcAlignedDrawingRect(pSideBarTex, HAlign::Right, VAlign::Top);
     windowWidget.addWidget(&sideBar, dest);
@@ -74,15 +82,15 @@ GameInterface::GameInterface() : Window(0,0,0,0) {
 
     topBarHBox.addWidget(Spacer::create());
 
-    optionsButton.setTextures(  pGFXManager->getUIGraphic(UI_Options, pLocalHouse->getHouseID()),
-                                pGFXManager->getUIGraphic(UI_Options_Pressed, pLocalHouse->getHouseID()));
+    optionsButton.setTextures(  pGFXManager->getUIGraphic(UI_Options, interfaceHouse),
+                                pGFXManager->getUIGraphic(UI_Options_Pressed, interfaceHouse));
     optionsButton.setOnClick(std::bind(&Game::onOptions, currentGame));
     topBarHBox.addWidget(&optionsButton);
 
     topBarHBox.addWidget(Spacer::create());
 
-    mentatButton.setTextures(   pGFXManager->getUIGraphic(UI_Mentat, pLocalHouse->getHouseID()),
-                                pGFXManager->getUIGraphic(UI_Mentat_Pressed, pLocalHouse->getHouseID()));
+    mentatButton.setTextures(   pGFXManager->getUIGraphic(UI_Mentat, interfaceHouse),
+                                pGFXManager->getUIGraphic(UI_Mentat_Pressed, interfaceHouse));
     mentatButton.setOnClick(std::bind(&Game::onMentat, currentGame));
     topBarHBox.addWidget(&mentatButton);
 

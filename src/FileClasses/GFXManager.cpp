@@ -2901,14 +2901,10 @@ GFXManager::GFXManager() {
         benePalette.applyToSurface(uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN].get());
     }
 
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_HARKONNEN] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_HARKONNEN, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_ATREIDES] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_ATREIDES, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_ORDOS] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_ORDOS, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_SARDAUKAR] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_SARDAUKAR, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_FREMEN] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_FREMEN, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_MERCENARY] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_MERCENARY, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_NEUTRAL] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_NEUTRAL, benePalette);
-    uiGraphic[UI_MentatHouseChoiceInfoQuestion][HOUSE_REBELS] = PicFactory->createMentatHouseChoiceQuestion(HOUSE_REBELS, benePalette);
+    for(int house = HOUSE_HARKONNEN; house < NUM_HOUSES; ++house) {
+        uiGraphic[UI_MentatHouseChoiceInfoQuestion][house] =
+            PicFactory->createMentatHouseChoiceQuestion(house, benePalette);
+    }
 
     uiGraphic[UI_MentatYes][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(mentat->getPicture(0).get());
     uiGraphic[UI_MentatYes_Pressed][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(mentat->getPicture(1).get());
@@ -5415,6 +5411,17 @@ void GFXManager::reloadModDependentUiGraphics() {
     rebuildModDependentEditorGraphics();
 
     auto pictureFactory = std::make_unique<PictureFactory>();
+    try {
+        Palette benePalette = LoadPalette_RW(pFileManager->openFile("BENE.PAL").get());
+        for(int house = HOUSE_HARKONNEN; house < NUM_HOUSES; ++house) {
+            uiGraphicTex[UI_MentatHouseChoiceInfoQuestion][house].reset();
+            uiGraphic[UI_MentatHouseChoiceInfoQuestion][house] =
+                pictureFactory->createMentatHouseChoiceQuestion(house, benePalette);
+        }
+    } catch(const std::exception& e) {
+        SDL_Log("GFXManager: house confirmation title reload failed (%s)", e.what());
+    }
+
     auto reloadBonusHerald = [&](int house, const char* filename) {
         constexpr unsigned int presentationIds[] = {
             UI_Herald_Colored,
@@ -5840,7 +5847,8 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     const bool useHouseIdentity =
         id == UI_Herald_Colored
         || id == UI_Herald_ColoredLarge
-        || id == UI_Herald_Grey;
+        || id == UI_Herald_Grey
+        || id == UI_MentatHouseChoiceInfoQuestion;
     if(!useHouseIdentity) {
         house = getHouseVisualHouse(house);
     }
@@ -5884,7 +5892,8 @@ SDL_Texture* GFXManager::getUIGraphic(unsigned int id, int house) {
     const bool useHouseIdentity =
         id == UI_Herald_Colored
         || id == UI_Herald_ColoredLarge
-        || id == UI_Herald_Grey;
+        || id == UI_Herald_Grey
+        || id == UI_MentatHouseChoiceInfoQuestion;
     int visualHouse = useHouseIdentity ? requestedHouse : getHouseVisualHouse(requestedHouse);
     if(!isValidHouseColorSlot(visualHouse)) {
         visualHouse = HOUSE_HARKONNEN;

@@ -66,6 +66,7 @@ bool isBonusColorSlot(int colorSlot) {
         case HOUSECOLOR_CUSTOM_LIGHT_PINK:
         case HOUSECOLOR_CUSTOM_APPLE_GREEN:
         case HOUSECOLOR_CUSTOM_DARK_VIOLET:
+        case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW:
             return true;
         default:
             return false;
@@ -87,6 +88,7 @@ const char* getCustomColorName(int colorSlot) {
         case HOUSECOLOR_CUSTOM_TEAL:        return "Teal";
         case HOUSECOLOR_CUSTOM_APPLE_GREEN: return "Dark Grey";
         case HOUSECOLOR_CUSTOM_LIGHT_PINK:  return "Pink";
+        case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW: return "Brown";
         default:                            return "Custom";
     }
 }
@@ -101,7 +103,8 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
             HOUSECOLOR_CUSTOM_FUCHSIA,
             HOUSECOLOR_CUSTOM_LIGHT_PINK,
             HOUSECOLOR_CUSTOM_APPLE_GREEN,
-            HOUSECOLOR_CUSTOM_DARK_VIOLET
+            HOUSECOLOR_CUSTOM_DARK_VIOLET,
+            HOUSECOLOR_CUSTOM_BRIGHT_YELLOW
         };
         for(const int colorSlot : bonusColorSlots) {
             colorDropDown.addEntry(getCustomColorName(colorSlot), colorSlot);
