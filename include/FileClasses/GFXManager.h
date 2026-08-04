@@ -620,6 +620,7 @@ public:
     // (objPicTex + objPic, NOT uiGraphic). Re-applied per
     // Tornie's OOB 'ajouter ces fonctions aussi'.
     void invalidateAllSpriteTextures();
+    void reloadAllObjectGraphicsForActiveMod();
     void reloadModDependentUiGraphics();
     Animation* getMentatEyesAnimation(int house);
     Animation* getMentatMouthAnimation(int house);

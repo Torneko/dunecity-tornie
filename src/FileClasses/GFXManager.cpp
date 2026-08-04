@@ -163,8 +163,9 @@ static_assert(sizeof(objPicTiles) / sizeof(objPicTiles[0]) == NUM_OBJPICS,
 
 static void applyRebelsTint(SDL_Surface* surface, int colorSlot);
 static bool usesPrivateVisualColorRamp(int colorSlot) {
-    return isTornieRebelsColorSlot(colorSlot) || colorSlot == HOUSE_CUSTOM
-        || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot);
+    return isTornieRebelsColorSlot(colorSlot) || isVanillaRebelsColorSlot(colorSlot)
+        || colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot)
+        || isJerichoHouseColorSlot(colorSlot);
 }
 static int getVisualRemapPaletteIndex(int colorSlot) {
     return usesPrivateVisualColorRamp(colorSlot)
@@ -5250,11 +5251,36 @@ void GFXManager::reloadModDependentObjectGraphics() {
     }
 
     if(!chemicalCarryallLoaded) {
-        for(unsigned int zoom = 0; zoom < NUM_ZOOMLEVEL; ++zoom) {
-            if(objPic[ObjPic_Carryall][HOUSE_HARKONNEN][zoom]) {
-                objPic[ObjPic_ChemicalCarryall][HOUSE_HARKONNEN][zoom] =
-                    copySurface(objPic[ObjPic_Carryall][HOUSE_HARKONNEN][zoom].get());
+        for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
+            SDL_Surface* source = objPic[ObjPic_Carryall][colorSlot][0].get();
+            const bool remapHarkonnen = source == nullptr && colorSlot != HOUSE_HARKONNEN;
+            if(source == nullptr) {
+                source = objPic[ObjPic_Carryall][HOUSE_HARKONNEN][0].get();
             }
+            if(source == nullptr) {
+                continue;
+            }
+
+            sdl2::surface_ptr fallback;
+            if(remapHarkonnen && source->format->BytesPerPixel == 1) {
+                fallback = mapSurfaceColorRange(
+                    source, PALCOLOR_HARKONNEN, getVisualRemapPaletteIndex(colorSlot));
+                applyCustomVisualColorRamp(fallback.get(), colorSlot);
+                applyRebelsTint(fallback.get(), colorSlot);
+                normalizeTransparentPaletteIndexes(fallback.get());
+                SDL_SetColorKey(fallback.get(), SDL_TRUE, PALCOLOR_TRANSPARENT);
+            } else {
+                fallback = copySurface(source);
+            }
+            if(!fallback) {
+                continue;
+            }
+
+            objPic[ObjPic_ChemicalCarryall][colorSlot][0] = std::move(fallback);
+            objPic[ObjPic_ChemicalCarryall][colorSlot][1] =
+                scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 2);
+            objPic[ObjPic_ChemicalCarryall][colorSlot][2] =
+                scaleSurfaceNearest(objPic[ObjPic_ChemicalCarryall][colorSlot][0].get(), 3);
         }
     }
 }
@@ -5294,15 +5320,27 @@ void GFXManager::reloadRuntimeModPortraits() {
     const std::string activeMod = ModManager::instance().isInitialized()
         ? ModManager::instance().getActiveModName()
         : std::string();
+    const bool tornieContentActive = ModManager::instance().isTornieContentActive();
+
+    loadPortrait(Picture_RocketTrike, "RocketTrikeIcon.png", "TRIKE.WSA", tornieContentActive);
+    loadPortrait(Picture_SonicTrike, "SonicTrikeIcon.png", "TRIKE.WSA", tornieContentActive);
+    loadPortrait(Picture_FlameTank, "FlameTankIcon.png", "HTANK.WSA", tornieContentActive);
+    loadPortrait(Picture_EliteLauncher, "EliteLauncherIcon.png", "HTANK.WSA", tornieContentActive);
+    loadPortrait(Picture_EliteSiegeTank, "EliteSiegeTankIcon.png", "HTANK.WSA", tornieContentActive);
+    loadPortrait(Picture_ChemicalSiegeTank, "ChemicalSiegeTankIcon.png", "HTANK.WSA", tornieContentActive);
     loadPortrait(Picture_ChemicalCarryall, "ChemicalCarryallIcon.png", "CARRYALL.WSA", true);
-    loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA",
-                 ModManager::instance().isTornieContentActive());
-    loadPortrait(Picture_Chemipost, "ChemipostIcon.png", "RTURRET.WSA",
-                 ModManager::instance().isTornieContentActive());
-    loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA",
-                 ModManager::instance().isTornieContentActive());
+    loadPortrait(Picture_AdvancedWindTrap, "Tornie_AdvancedWindtrap_icon.png", "WINDTRAP.WSA", tornieContentActive);
+    loadPortrait(Picture_Worfinery, "WorfineryIcon.png", "WOR.WSA", tornieContentActive);
+    loadPortrait(Picture_TechCenter, "TechCenterIcon.png", "PALACE.WSA", tornieContentActive);
+    loadPortrait(Picture_Scoutpost, "ScoutpostIcon.png", "RTURRET.WSA", tornieContentActive);
+    loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA", tornieContentActive);
+    loadPortrait(Picture_Chemipost, "ChemipostIcon.png", "RTURRET.WSA", tornieContentActive);
+    loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA", tornieContentActive);
+    loadPortrait(Picture_LoveFactory, "LoveFactoryIcon.png", "STARPORT.WSA", tornieContentActive);
+    loadPortrait(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA", tornieContentActive);
     loadPortrait(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA",
-                 activeMod == "Tornie" || activeMod == "Jericho");
+                 activeMod == "Tornie" || activeMod == "Jericho" || activeMod == "vanilla");
+    loadPortrait(Picture_Harvestank, "HarvestankIcon.png", "HARVEST.WSA", tornieContentActive);
 
 
 }
@@ -5329,6 +5367,99 @@ void GFXManager::rebuildModDependentEditorGraphics() {
         { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
 
+    const bool tornieActive = ModManager::instance().isInitialized()
+        && ModManager::instance().isTornieContentActive();
+    auto selectEditorSprite = [&](unsigned int customSprite, unsigned int fallbackSprite) {
+        return tornieActive && objPic[customSprite][HOUSE_HARKONNEN][0]
+            ? customSprite
+            : fallbackSprite;
+    };
+    const unsigned int deviatorEditorGun =
+        selectEditorSprite(ObjPic_DeviatorGunTornie, ObjPic_Launcher_Gun);
+    const unsigned int flameTankEditorGun =
+        selectEditorSprite(ObjPic_FlameTankGunTornie, ObjPic_Launcher_Gun);
+    const unsigned int eliteLauncherEditorGun =
+        selectEditorSprite(ObjPic_EliteLauncherGunTornie, ObjPic_Launcher_Gun);
+    const unsigned int eliteSiegeTankEditorGun =
+        selectEditorSprite(ObjPic_EliteSiegeTankGunTornie, ObjPic_Siegetank_Gun);
+    const unsigned int chemicalSiegeTankEditorGun =
+        selectEditorSprite(ObjPic_ChemicalSiegeTankGunTornie, ObjPic_Siegetank_Gun);
+
+    auto getRuntimeEditorFrame = [&](unsigned int objPicID, int colorSlot,
+                                     int frameX, int frameY, int framesX,
+                                     int framesY) -> sdl2::surface_ptr {
+        const bool forceCustomRemap = tornieActive
+            && (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot));
+        SDL_Surface* atlas = forceCustomRemap
+            ? nullptr
+            : objPic[objPicID][colorSlot][0].get();
+        sdl2::surface_ptr remappedAtlas;
+
+        if(!atlas) {
+            SDL_Surface* harkonnenAtlas = objPic[objPicID][HOUSE_HARKONNEN][0].get();
+            if(!harkonnenAtlas) {
+                return nullptr;
+            }
+
+            if(colorSlot != HOUSE_HARKONNEN && harkonnenAtlas->format->BytesPerPixel == 1) {
+                remappedAtlas = mapSurfaceColorRange(
+                    harkonnenAtlas, PALCOLOR_HARKONNEN,
+                    getVisualRemapPaletteIndex(colorSlot));
+                applyCustomVisualColorRamp(remappedAtlas.get(), colorSlot);
+                applyRebelsTint(remappedAtlas.get(), colorSlot);
+                normalizeTransparentPaletteIndexes(remappedAtlas.get());
+                SDL_SetColorKey(remappedAtlas.get(), SDL_TRUE, PALCOLOR_TRANSPARENT);
+                atlas = remappedAtlas.get();
+            } else {
+                atlas = harkonnenAtlas;
+            }
+        }
+
+        return getSubFrame(atlas, frameX, frameY, framesX, framesY);
+    };
+
+    auto composeRuntimeEditorVehicle = [&](unsigned int baseObjPicID, int baseColorSlot,
+                                           int gunObjPicID, int gunColorSlot,
+                                           int gunOffsetX, int gunOffsetY) -> sdl2::surface_ptr {
+        auto base = getRuntimeEditorFrame(
+            baseObjPicID, baseColorSlot, 0, 0, NUM_ANGLES, 1);
+        if(!base || gunObjPicID < 0) {
+            return base;
+        }
+
+        auto gun = getRuntimeEditorFrame(
+            static_cast<unsigned int>(gunObjPicID), gunColorSlot,
+            0, 0, NUM_ANGLES, 1);
+        if(!gun) {
+            return base;
+        }
+        return combinePictures(base.get(), gun.get(), gunOffsetX, gunOffsetY);
+    };
+
+    auto decorateRuntimeEditorVehicle = [&](sdl2::surface_ptr vehicle,
+                                             bool useCustomStar) -> sdl2::surface_ptr {
+        SDL_Surface* star = useCustomStar && customStar
+            ? customStar.get()
+            : objPic[ObjPic_Star][HOUSE_HARKONNEN][1].get();
+        if(!vehicle || !star) {
+            return vehicle;
+        }
+        return combinePictures(vehicle.get(), star,
+                               vehicle->w - star->w,
+                               vehicle->h - star->h);
+    };
+
+    constexpr unsigned int customVehiclePreviews[] = {
+        UI_MapEditor_RebelHarvester,
+        UI_MapEditor_Deviator,
+        UI_MapEditor_RocketTrike,
+        UI_MapEditor_SonicTrike,
+        UI_MapEditor_FlameTank,
+        UI_MapEditor_EliteLauncher,
+        UI_MapEditor_EliteSiegeTank,
+        UI_MapEditor_ChemicalSiegeTank
+    };
+
     for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
         for(const auto& preview : previews) {
             uiGraphicTex[preview.uiID][colorSlot].reset();
@@ -5339,6 +5470,75 @@ void GFXManager::rebuildModDependentEditorGraphics() {
             } else {
                 uiGraphic[preview.uiID][colorSlot].reset();
             }
+        }
+
+        for(const unsigned int uiID : customVehiclePreviews) {
+            uiGraphicTex[uiID][colorSlot].reset();
+            uiGraphic[uiID][colorSlot].reset();
+        }
+
+        const int fixedTornieGunSlot = tornieActive ? HOUSE_HARKONNEN : colorSlot;
+        auto harvestank = composeRuntimeEditorVehicle(
+            ObjPic_Harvester, colorSlot,
+            tornieActive ? static_cast<int>(ObjPic_HarvestankGunTornie) : -1,
+            colorSlot, 0, 0);
+        if(harvestank) {
+            uiGraphic[UI_MapEditor_RebelHarvester][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(harvestank), true);
+        }
+
+        auto deviator = composeRuntimeEditorVehicle(
+            ObjPic_Tank_Base, colorSlot, static_cast<int>(deviatorEditorGun),
+            fixedTornieGunSlot, 3, 0);
+        if(deviator) {
+            uiGraphic[UI_MapEditor_Deviator][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(deviator), false);
+        }
+
+        auto rocketTrike = getRuntimeEditorFrame(
+            ObjPic_RocketTrike, colorSlot, 0, 0, NUM_ANGLES, 1);
+        if(rocketTrike) {
+            uiGraphic[UI_MapEditor_RocketTrike][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(rocketTrike), true);
+        }
+
+        auto sonicTrike = getRuntimeEditorFrame(
+            ObjPic_SonicTrike, colorSlot, 0, 0, NUM_ANGLES, 1);
+        if(sonicTrike) {
+            uiGraphic[UI_MapEditor_SonicTrike][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(sonicTrike), true);
+        }
+
+        auto flameTank = composeRuntimeEditorVehicle(
+            ObjPic_Tank_Base, colorSlot, static_cast<int>(flameTankEditorGun),
+            fixedTornieGunSlot, 3, 0);
+        if(flameTank) {
+            uiGraphic[UI_MapEditor_FlameTank][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(flameTank), true);
+        }
+
+        auto eliteLauncher = composeRuntimeEditorVehicle(
+            ObjPic_Tank_Base, colorSlot, static_cast<int>(eliteLauncherEditorGun),
+            fixedTornieGunSlot, 3, 0);
+        if(eliteLauncher) {
+            uiGraphic[UI_MapEditor_EliteLauncher][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(eliteLauncher), true);
+        }
+
+        auto eliteSiegeTank = composeRuntimeEditorVehicle(
+            ObjPic_Siegetank_Base, colorSlot,
+            static_cast<int>(eliteSiegeTankEditorGun), colorSlot, 2, -4);
+        if(eliteSiegeTank) {
+            uiGraphic[UI_MapEditor_EliteSiegeTank][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(eliteSiegeTank), true);
+        }
+
+        auto chemicalSiegeTank = composeRuntimeEditorVehicle(
+            ObjPic_Siegetank_Base, colorSlot,
+            static_cast<int>(chemicalSiegeTankEditorGun), colorSlot, 2, -4);
+        if(chemicalSiegeTank) {
+            uiGraphic[UI_MapEditor_ChemicalSiegeTank][colorSlot] =
+                decorateRuntimeEditorVehicle(std::move(chemicalSiegeTank), true);
         }
 
         uiGraphicTex[UI_MapEditor_ChemicalCarryall][colorSlot].reset();
@@ -5355,6 +5555,23 @@ void GFXManager::rebuildModDependentEditorGraphics() {
             uiGraphic[UI_MapEditor_ChemicalCarryall][colorSlot].reset();
         }
     }
+}
+
+void GFXManager::reloadAllObjectGraphicsForActiveMod() {
+    // Build the complete object set through the newly active mod, but keep
+    // this manager alive: menus retain pointers to its UI and background
+    // textures while a saved game is running.
+    GFXManager refreshedGraphics;
+
+    objPic = std::move(refreshedGraphics.objPic);
+    objPicTex = std::move(refreshedGraphics.objPicTex);
+    scoutpostBaseGraphics = std::move(refreshedGraphics.scoutpostBaseGraphics);
+    chaosFactoryBaseGraphics = std::move(refreshedGraphics.chaosFactoryBaseGraphics);
+    hdObjPicOverrides = std::move(refreshedGraphics.hdObjPicOverrides);
+
+    // Editor previews and runtime portraits depend on the freshly installed
+    // object surfaces, so rebuild only those mod-sensitive UI caches.
+    reloadModDependentUiGraphics();
 }
 
 void GFXManager::reloadModDependentUiGraphics() {
@@ -5859,6 +6076,54 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     if(uiGraphic[id][house] == nullptr) {
         // remap to this color
         if(uiGraphic[id][HOUSE_HARKONNEN] == nullptr) {
+            unsigned int fallbackID = NUM_UIGRAPHICS;
+            switch(id) {
+                case UI_MapEditor_AdvancedWindTrap:
+                case UI_MapEditor_AdvancedWindTrapMK2:
+                case UI_MapEditor_AdvancedWindTrapMK3:
+                    fallbackID = UI_MapEditor_Windtrap;
+                    break;
+                case UI_MapEditor_Worfinery:
+                    fallbackID = UI_MapEditor_WOR;
+                    break;
+                case UI_MapEditor_TechCenter:
+                    fallbackID = UI_MapEditor_Palace;
+                    break;
+                case UI_MapEditor_Scoutpost:
+                case UI_MapEditor_Flamepost:
+                case UI_MapEditor_Chemipost:
+                    fallbackID = UI_MapEditor_RocketTurret;
+                    break;
+                case UI_MapEditor_LoveFactory:
+                    fallbackID = UI_MapEditor_HighTechFactory;
+                    break;
+                case UI_MapEditor_ChaosFactory:
+                    fallbackID = UI_MapEditor_Starport;
+                    break;
+                case UI_MapEditor_RebelHarvester:
+                    fallbackID = UI_MapEditor_Harvester;
+                    break;
+                case UI_MapEditor_RocketTrike:
+                case UI_MapEditor_SonicTrike:
+                    fallbackID = UI_MapEditor_Raider;
+                    break;
+                case UI_MapEditor_FlameTank:
+                case UI_MapEditor_EliteLauncher:
+                    fallbackID = UI_MapEditor_Launcher;
+                    break;
+                case UI_MapEditor_EliteSiegeTank:
+                case UI_MapEditor_ChemicalSiegeTank:
+                    fallbackID = UI_MapEditor_SiegeTank;
+                    break;
+                case UI_MapEditor_ChemicalCarryall:
+                    fallbackID = UI_MapEditor_Carryall;
+                    break;
+                default:
+                    break;
+            }
+            if(fallbackID != NUM_UIGRAPHICS) {
+                return getUIGraphicSurface(fallbackID, house);
+            }
             THROW(std::runtime_error, "GFXManager::getUIGraphicSurface(): UI Graphic with ID %u is not loaded!", id);
         }
 

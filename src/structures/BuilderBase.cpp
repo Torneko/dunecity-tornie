@@ -354,6 +354,7 @@ int BuilderBase::getMaxUpgradeLevel() const {
     }
 
     if(itemID == Structure_HighTechFactory && owner != nullptr
+       && ModManager::instance().getActiveModName() != "vanilla"
        && getHouseScenarioLetter(static_cast<HOUSETYPE>(owner->getHouseID())) == 'W') {
         upgradeLevel = std::max(upgradeLevel, 2);
     }
@@ -406,6 +407,7 @@ void BuilderBase::updateBuildList()
         const bool specialChemicalCarryall = itemID2Add == Unit_ChemicalCarryall
             && itemID == Structure_HighTechFactory
             && owner != nullptr
+            && activeModName != "vanilla"
             && ((isHouseFaction(static_cast<HOUSETYPE>(owner->getHouseID()), HOUSE_WILDSPADE))
                 || ((activeModName == "Tornie" || activeModName == "TornieLite")
                     && owner->getHouseID() == HOUSE_ATREIDES));
