@@ -152,6 +152,7 @@ inline int getHouseColorPaletteIndex(int house) {
 
 bool isJerichoHouseColorSlot(int colorSlot);
 bool isTornieRebelsColorSlot(int colorSlot);
+bool isVanillaRebelsColorSlot(int colorSlot);
 
 inline const Palette& getPaletteForHouseColorSlot(int colorSlot) {
     return (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot) || isJerichoHouseColorSlot(colorSlot)) && customPaletteLoaded

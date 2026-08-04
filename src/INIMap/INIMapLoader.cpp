@@ -36,6 +36,57 @@
 
 namespace {
 
+bool isVanillaModActive() {
+    return ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "vanilla";
+}
+
+bool isTornieMapObject(int itemID) {
+    switch(itemID) {
+        case Unit_RocketTrike:
+        case Unit_SonicTrike:
+        case Unit_FlameTank:
+        case Unit_EliteLauncher:
+        case Unit_EliteSiegeTank:
+        case Unit_ChemicalSiegeTank:
+        case Unit_ChemicalCarryall:
+        case Unit_RebelHarvester:
+        case Structure_AdvancedWindTrap:
+        case Structure_Worfinery:
+        case Structure_AdvancedWindTrapMK2:
+        case Structure_TechCenter:
+        case Structure_AdvancedWindTrapMK3:
+        case Structure_Scoutpost:
+        case Structure_LoveFactory:
+        case Structure_Flamepost:
+        case Structure_ChaosFactory:
+        case Structure_Chemipost:
+            return true;
+        default:
+            return false;
+    }
+}
+
+int normalizeVanillaSpiceTerrain(int terrainType) {
+    if(!isVanillaModActive()) {
+        return terrainType;
+    }
+
+    switch(terrainType) {
+        case Terrain_GreenSpice:
+        case Terrain_RedSpice:
+            return Terrain_Spice;
+        case Terrain_ThickGreenSpice:
+        case Terrain_ThickRedSpice:
+            return Terrain_ThickSpice;
+        case Terrain_GreenSpiceBloom:
+        case Terrain_RedSpiceBloom:
+            return Terrain_SpiceBloom;
+        default:
+            return terrainType;
+    }
+}
+
 bool isJerichoWildspade(Game* pGame, int houseID) {
     return pGame != nullptr
         && houseID == HOUSE_NEUTRAL
@@ -442,7 +493,8 @@ void INIMapLoader::loadMap() {
                     } break;
                 }
 
-                currentGameMap->getTile(x,y)->setType(type);
+                currentGameMap->getTile(x,y)->setType(
+                    normalizeVanillaSpiceTerrain(type));
             }
         }
 
@@ -523,7 +575,7 @@ void INIMapLoader::loadHouses()
 
         int colorOfHouse = houseInfo.colorOfHouse;
         if(!isValidHouseColorSlot(colorOfHouse)) {
-            colorOfHouse = houseID;
+            colorOfHouse = getDefaultHouseColorSlot(houseID);
         }
         resolvedHouseInfo.colorOfHouse = colorOfHouse;
 
@@ -730,11 +782,16 @@ void INIMapLoader::loadUnits()
                 }
             }
 
+            if(isVanillaModActive() && isTornieMapObject(itemID)) {
+                continue;
+            }
+
             itemID = replaceJerichoWildspadeUnit(pGame, houseID, itemID);
 
             // Editor-placed Chemical Carryalls are valid for every faction;
             // production availability remains controlled separately by the builder rules.
-            const bool editorPlacedChemicalCarryall = itemID == Unit_ChemicalCarryall;
+            const bool editorPlacedChemicalCarryall =
+                itemID == Unit_ChemicalCarryall && !isVanillaModActive();
             if(!pGame->objectData.data[itemID][houseID].enabled && !editorPlacedChemicalCarryall) {
                 continue;
             }
@@ -857,6 +914,10 @@ void INIMapLoader::loadStructures()
                 continue;
             }
 
+            if(isVanillaModActive() && isTornieMapObject(itemID)) {
+                continue;
+            }
+
             if (itemID != 0 && pGame->objectData.data[itemID][houseID].enabled) {
                 ObjectBase* newStructure = getOrCreateHouse(houseID)->placeStructure(NONE_ID, itemID, getXPos(pos), getYPos(pos), true);
                 if(newStructure == nullptr) {
@@ -909,6 +970,10 @@ void INIMapLoader::loadReinforcements()
         Uint32 itemID = getItemIDByName(strUnitName);
         if((itemID == ItemID_Invalid) || !isUnit(itemID)) {
             logWarning(key.getLineNumber(), "Invalid unit string: '" + strUnitName + "'!");
+            continue;
+        }
+
+        if(isVanillaModActive() && isTornieMapObject(static_cast<int>(itemID))) {
             continue;
         }
 

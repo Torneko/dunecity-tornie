@@ -186,9 +186,33 @@ bool ModManager::isCustomHouseRegistered(int house) const {
 
 const ModMentatInfo& ModManager::getActiveMentatInfo(int house) const {
     static const ModMentatInfo noOverride;
+    static const ModMentatInfo vanillaChani = [] {
+        ModMentatInfo info;
+        info.enabled = true;
+        info.identityHouse = HOUSE_FREMEN;
+        info.backgroundAsset = "ChaniMentat.png";
+        info.eyesAsset = "ChaniMentatEyes.png";
+        info.mouthAsset = "ChaniMentatMouth.png";
+        info.eyesFrames = 5;
+        info.eyesFrameRate = 0.5;
+        info.doubleEyes = true;
+        info.eyesX = 128;
+        info.eyesY = 160;
+        info.mouthFrames = 5;
+        info.mouthFrameRate = 5.0;
+        info.doubleMouth = true;
+        info.mouthX = 112;
+        info.mouthY = 192;
+        info.useBaseExtras = false;
+        return info;
+    }();
     if(house >= HOUSE_WILDSPADE && house <= HOUSE_THARPIQUE
        && (activeMod == TORNIE_MOD_NAME || activeMod == JERICHO_MOD_NAME)) {
         house = HOUSE_NEUTRAL + (house - HOUSE_WILDSPADE);
+    }
+    if(initialized && activeMod == VANILLA_MOD_NAME
+       && (house == HOUSE_NEUTRAL || house == HOUSE_REBELS)) {
+        return vanillaChani;
     }
     if(!initialized || house < 0 || static_cast<std::size_t>(house) >= activeMentats.size()) {
         return noOverride;
@@ -225,9 +249,9 @@ int ModManager::getEffectiveMentatIdentity(int house) const {
         case HOUSE_MERCENARY:
             return identity;
         case HOUSE_NEUTRAL:
-            return HOUSE_ATREIDES;
+            return activeMod == VANILLA_MOD_NAME ? HOUSE_FREMEN : HOUSE_ATREIDES;
         case HOUSE_REBELS:
-            return HOUSE_HARKONNEN;
+            return activeMod == VANILLA_MOD_NAME ? HOUSE_FREMEN : HOUSE_HARKONNEN;
         default:
             return HOUSE_HARKONNEN;
     }

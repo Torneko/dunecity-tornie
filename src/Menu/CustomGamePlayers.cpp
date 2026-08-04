@@ -128,7 +128,10 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
 }
 
 int resolveSelectedColorSlot(int selectedColor, int selectedHouse) {
-    if(!isValidHouseColorSlot(selectedColor)) {
+    if(!isValidHouseColorSlot(selectedColor)
+       && selectedHouse >= 0
+       && selectedHouse < NUM_HOUSES
+       && isHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
         selectedColor = getDefaultHouseColorSlot(static_cast<HOUSETYPE>(selectedHouse));
     }
 

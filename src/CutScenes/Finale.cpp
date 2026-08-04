@@ -83,7 +83,8 @@ Finale::Finale(int house) {
         || (customPaletteLoaded
             && (colorSlot == HOUSE_CUSTOM
                 || isCustomHouseColorSlot(colorSlot)
-                || isJerichoHouseColorSlot(colorSlot)));
+                || isJerichoHouseColorSlot(colorSlot)
+                || isVanillaRebelsColorSlot(colorSlot)));
     const int targetPaletteBase = usesPrivateVisualRamp
         ? houseToPaletteIndex[HOUSE_HARKONNEN]
         : getHouseColorPaletteIndexFromSlot(colorSlot);

@@ -3466,6 +3466,12 @@ bool Game::loadSaveGame(InputStream& stream) {
                 if (ModManager::instance().setActiveMod(savedModName)) {
                     SDL_Log("Game::loadSaveGame(): switched active mod to '%s' for save load",
                             savedModName.c_str());
+                    // Refresh every object surface through the newly active mod,
+                    // while preserving menu-owned UI and background textures.
+                    if(pGFXManager) {
+                        pGFXManager->reloadAllObjectGraphicsForActiveMod();
+                    }
+
                     citySimEnabled_ = ModManager::instance().isCityModeActive();
                 } else {
                     SDL_Log("Game::loadSaveGame(): WARNING - failed to switch to mod '%s'; loading anyway",

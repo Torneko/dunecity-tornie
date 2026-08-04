@@ -152,6 +152,12 @@ bool isTornieRebelsColorSlot(int colorSlot) {
         || (activeMod == "Jericho" && colorSlot == HOUSECOLOR_GUEST_2);
 }
 
+bool isVanillaRebelsColorSlot(int colorSlot) {
+    return colorSlot == HOUSE_REBELS
+        && ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "vanilla";
+}
+
 int getHouseColorPaletteIndexFromSlot(int colorSlot) {
     if(!isValidHouseColorSlot(colorSlot)) {
         return PALCOLOR_HARKONNEN;
@@ -186,6 +192,10 @@ int getHouseColorPaletteIndexFromSlot(int colorSlot) {
 SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset) {
     if(!isValidHouseColorSlot(colorSlot) || shadeOffset < 0 || shadeOffset >= 8) {
         return SDL_Color{ 0, 0, 0, 255 };
+    }
+
+    if(isVanillaRebelsColorSlot(colorSlot)) {
+        return darkGreyRamp[shadeOffset];
     }
 
     if(colorSlot == HOUSECOLOR_CUSTOM_APPLE_GREEN) {
@@ -333,6 +343,12 @@ bool isHouseFaction(HOUSETYPE house, HOUSETYPE identity) {
 }
 
 int getDefaultHouseColorSlot(HOUSETYPE house) {
+    if(house == HOUSE_REBELS
+       && ModManager::instance().isInitialized()
+       && ModManager::instance().getActiveModName() == "vanilla") {
+        return HOUSECOLOR_CUSTOM_APPLE_GREEN;
+    }
+
     if(house >= HOUSE_WILDSPADE && house <= HOUSE_THARPIQUE) {
         return HOUSECOLOR_GUEST_1 + (house - HOUSE_WILDSPADE);
     }

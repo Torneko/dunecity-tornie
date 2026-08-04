@@ -102,8 +102,15 @@ void Palace::handleDeathhandClick(int xPos, int yPos) {
 bool Palace::usesTornieMainRebelsCooldown() const {
     if(!ModManager::instance().isInitialized()) return false;
     const std::string activeMod = ModManager::instance().getActiveModName();
+
+    const HOUSETYPE faction =
+        getHouseFactionIdentity(static_cast<HOUSETYPE>(originalHouseID));
+    if(activeMod == "vanilla") {
+        return faction == HOUSE_NEUTRAL || faction == HOUSE_REBELS;
+    }
+
     return (activeMod == "Tornie" || activeMod == "Jericho")
-        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_REBELS);
+        && faction == HOUSE_REBELS;
 }
 
 bool Palace::usesTornieMainRebelsRandomSpecial() const {
@@ -134,9 +141,14 @@ bool Palace::usesTargetedSpecialWeapon() const {
 }
 
 void Palace::selectTornieMainRebelsSpecialWeapon() {
+    const bool vanillaRandom = ModManager::instance().isInitialized()
+        && ModManager::instance().getActiveModName() == "vanilla";
+    const TornieRebelsSpecialWeapon lastWeapon = vanillaRandom
+        ? TornieRebelsSpecialWeapon::Saboteur
+        : TornieRebelsSpecialWeapon::Ornithopters;
     const Sint32 selectedWeapon = currentGame->randomGen.rand(
         static_cast<Sint32>(TornieRebelsSpecialWeapon::Missile),
-        static_cast<Sint32>(TornieRebelsSpecialWeapon::Ornithopters));
+        static_cast<Sint32>(lastWeapon));
     specialWeaponTimer = -selectedWeapon;
 }
 
