@@ -904,8 +904,7 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
                 && ModManager::instance().getActiveModName() == "Jericho";
             const int houseID = Owner->getHouseID();
             const bool corruptiqueActive = modInitialized
-                && houseID == HOUSE_CUSTOM
-                && ModManager::instance().getActiveModName() == "Tornie";
+                && isHouseFaction(static_cast<HOUSETYPE>(houseID), HOUSE_CUSTOM);
             const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
                 const auto& data = currentGame->objectData.data[candidate][houseID];
                 return HouseSpecialVehicleCandidateData{

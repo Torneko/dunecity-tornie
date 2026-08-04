@@ -76,7 +76,9 @@ public:
         return getActiveModName() == "TornieLite";
     }
     const CustomHouseInfo& getActiveCustomHouseInfo() const;
+    const CustomHouseInfo& getCustomHouseInfo(int house) const;
     bool isCustomHouseRegistered() const;
+    bool isCustomHouseRegistered(int house) const;
     const ModMentatInfo& getActiveMentatInfo(int house) const;
     int getEffectiveMentatIdentity(int house) const;
 
@@ -281,7 +283,8 @@ private:
     
     std::string modsBasePath;        ///< Base path for mods directory
     std::string activeMod;
-    CustomHouseInfo activeCustomHouse;           ///< Currently active mod name
+    CustomHouseInfo activeCustomHouse;           ///< Active mod's campaign custom house
+    CustomHouseInfo activeGuestCustomHouse;      ///< Guest custom house used only by cross-mod custom games
     std::vector<ModMentatInfo> activeMentats;     ///< Mentat overrides owned by the active mod
     mutable ModChecksums cachedChecksums;  ///< Cached checksums
     mutable bool checksumsDirty;     ///< Do checksums need recalculation?

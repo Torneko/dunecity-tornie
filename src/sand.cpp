@@ -535,8 +535,12 @@ HOUSETYPE getHouseByName(const std::string& name) {
     else if(lowerName == "fremen")       return HOUSE_FREMEN;
     else if(lowerName == "sardaukar")    return HOUSE_SARDAUKAR;
     else if(lowerName == "mercenary")    return HOUSE_MERCENARY;
-    else if((lowerName == "wildspade") || (lowerName == "neutral")) return HOUSE_NEUTRAL;
-    else if((lowerName == "kleshmersh") || (lowerName == "rebel") || (lowerName == "rebels")) return HOUSE_REBELS;
+    else if(lowerName == "neutral")     return getRuntimeHouseForIdentity(HOUSE_NEUTRAL);
+    else if((lowerName == "rebel") || (lowerName == "rebels")) return getRuntimeHouseForIdentity(HOUSE_REBELS);
+    else if(lowerName == "corruptique") return getRuntimeHouseForIdentity(HOUSE_CUSTOM);
+    else if(lowerName == "wildspade")   return getRuntimeHouseForIdentity(HOUSE_WILDSPADE);
+    else if(lowerName == "kleshmersh")  return getRuntimeHouseForIdentity(HOUSE_KLESHMERSH);
+    else if(lowerName == "tharpique")   return getRuntimeHouseForIdentity(HOUSE_THARPIQUE);
     else if(isHouseAvailable(HOUSE_CUSTOM)
             && lowerName == strToLower(ModManager::instance().getActiveCustomHouseInfo().displayName)) return HOUSE_CUSTOM;
     else                                return HOUSE_INVALID;
@@ -548,21 +552,20 @@ HOUSETYPE getHouseByName(const std::string& name) {
     \return the name of the house (e.g. "Atreides").
 */
 std::string getHouseNameByNumber(HOUSETYPE house) {
-    if(house == HOUSE_CUSTOM) {
-        if(isHouseAvailable(house)) return ModManager::instance().getActiveCustomHouseInfo().displayName;
-        return "Custom";
-    }
-    if(house >= 0 && house < NUM_LEGACY_HOUSES) {
-        const bool jerichoActive = ModManager::instance().isInitialized()
-            && ModManager::instance().getActiveModName() == "Jericho";
-        if(jerichoActive && house == HOUSE_NEUTRAL) return "Wildspade";
-        if(jerichoActive && house == HOUSE_REBELS) return "Kleshmersh";
-
+    const HOUSETYPE identity = getHouseFactionIdentity(house);
+    if(identity >= 0 && identity < NUM_LEGACY_HOUSES) {
         static const char* const houseName[NUM_LEGACY_HOUSES] = {
             "Harkonnen", "Atreides", "Ordos", "Fremen", "Sardaukar",
             "Mercenary", "Neutral", "Rebels"
         };
-        return houseName[house];
+        return houseName[identity];
+    }
+    if(identity == HOUSE_CUSTOM) return "Corruptique";
+    if(identity == HOUSE_WILDSPADE) return "Wildspade";
+    if(identity == HOUSE_KLESHMERSH) return "Kleshmersh";
+    if(identity == HOUSE_THARPIQUE) return "Tharpique";
+    if(house == HOUSE_CUSTOM && isHouseAvailable(house)) {
+        return ModManager::instance().getActiveCustomHouseInfo().displayName;
     }
     THROW(std::invalid_argument, "Invalid house number %d!", house);
 }

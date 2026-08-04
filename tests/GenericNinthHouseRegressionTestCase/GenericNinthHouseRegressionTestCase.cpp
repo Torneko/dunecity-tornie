@@ -171,10 +171,6 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
 
     const auto tornieIxCandidates = discoverHouseSpecialVehicleCandidates(
         [&](int itemID) { return objectData[itemID]; });
-    const std::vector<int> expectedCandidates = {
-        Unit_Deviator,
-        Unit_EliteLauncher
-    };
     const std::vector<int> expectedCorruptiqueCandidates = {
         Unit_Devastator,
         Unit_EliteSiegeTank
@@ -182,7 +178,7 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
 
     REQUIRE(resolveSpecialVehiclePoolForHouse(
                 HOUSE_CUSTOM, true, false, tornieIxCandidates)
-            == expectedCandidates);
+            == expectedCorruptiqueCandidates);
     REQUIRE(resolveSpecialVehiclePoolForHouse(
                 HOUSE_CUSTOM, true, false, tornieIxCandidates, true)
             == expectedCorruptiqueCandidates);
@@ -196,18 +192,22 @@ TEST_CASE("Tornie custom house prefers its ObjectData IX vehicles",
         Unit_Harvester, objectData[Unit_Harvester]));
 }
 
-TEST_CASE("Custom house uses the generic special-vehicle fallback only when needed",
+TEST_CASE("House fallback follows the active faction plan when ObjectData has no candidates",
           "[custom-house][special-vehicle][fallback]") {
     const std::vector<int> noModOwnedCandidates;
     const std::vector<int> genericFallback = {
         Unit_SonicTank,
         Unit_Devastator
     };
+    const std::vector<int> expectedTornieFremen = {
+        Unit_EliteSiegeTank,
+        Unit_FlameTank
+    };
 
     REQUIRE(resolveSpecialVehiclePoolForHouse(
-                HOUSE_CUSTOM, false, false, noModOwnedCandidates)
+                HOUSE_FREMEN, false, false, noModOwnedCandidates)
             == genericFallback);
     REQUIRE(resolveSpecialVehiclePoolForHouse(
-                HOUSE_CUSTOM, true, false, noModOwnedCandidates)
-            == genericFallback);
+                HOUSE_FREMEN, true, false, noModOwnedCandidates)
+            == expectedTornieFremen);
 }

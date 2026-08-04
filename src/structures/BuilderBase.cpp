@@ -406,9 +406,7 @@ void BuilderBase::updateBuildList()
         const bool specialChemicalCarryall = itemID2Add == Unit_ChemicalCarryall
             && itemID == Structure_HighTechFactory
             && owner != nullptr
-            && ((activeModName == "Jericho"
-                 && owner->getHouseID() == HOUSE_NEUTRAL
-                 && getHouseScenarioLetter(static_cast<HOUSETYPE>(owner->getHouseID())) == 'W')
+            && ((isHouseFaction(static_cast<HOUSETYPE>(owner->getHouseID()), HOUSE_WILDSPADE))
                 || ((activeModName == "Tornie" || activeModName == "TornieLite")
                     && owner->getHouseID() == HOUSE_ATREIDES));
         if(itemID2Add == Unit_ChemicalCarryall && !specialChemicalCarryall) {

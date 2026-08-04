@@ -100,9 +100,10 @@ void Palace::handleDeathhandClick(int xPos, int yPos) {
 }
 
 bool Palace::usesTornieMainRebelsCooldown() const {
-    return originalHouseID == HOUSE_REBELS
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie";
+    if(!ModManager::instance().isInitialized()) return false;
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    return (activeMod == "Tornie" || activeMod == "Jericho")
+        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_REBELS);
 }
 
 bool Palace::usesTornieMainRebelsRandomSpecial() const {
@@ -140,23 +141,19 @@ void Palace::selectTornieMainRebelsSpecialWeapon() {
 }
 
 bool Palace::usesJerichoOrnithopterStrike() const {
-    return originalHouseID == HOUSE_NEUTRAL
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
+    return ModManager::instance().isInitialized()
+        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_WILDSPADE);
 }
 
 bool Palace::usesJerichoKleshmershFremenCall() const {
-    return originalHouseID == HOUSE_REBELS
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
+    return ModManager::instance().isInitialized()
+        && isHouseFaction(static_cast<HOUSETYPE>(originalHouseID), HOUSE_KLESHMERSH);
 }
 
 bool Palace::usesLightVehicleCall() const {
     const HOUSETYPE originalHouse = static_cast<HOUSETYPE>(originalHouseID);
-    const bool jerichoActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
 
-    if(jerichoActive && originalHouse == HOUSE_CUSTOM) {
+    if(isHouseFaction(originalHouse, HOUSE_THARPIQUE)) {
         return true;
     }
     if(usesJerichoKleshmershFremenCall()) {

@@ -84,8 +84,38 @@ std::array<int, NUM_HOUSES> houseToVisualHouse = {
     HOUSE_MERCENARY,
     HOUSE_NEUTRAL,
     HOUSE_REBELS,
-    HOUSE_CUSTOM
+    HOUSE_CUSTOM,
+    HOUSECOLOR_GUEST_1,
+    HOUSECOLOR_GUEST_2,
+    HOUSECOLOR_GUEST_3
 };
+
+namespace {
+
+bool crossModCustomGameHousesActive() {
+    if(!ModManager::instance().isInitialized()) return false;
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    return activeMod == "Tornie" || activeMod == "Jericho";
+}
+
+const std::array<SDL_Color, 8> wildspadeRamp{{
+    {168, 20, 96, 255}, {148, 12, 84, 255}, {128, 12, 72, 255}, {108, 8, 60, 255},
+    {88, 4, 48, 255}, {68, 4, 40, 255}, {48, 0, 28, 255}, {28, 0, 16, 255}
+}};
+const std::array<SDL_Color, 8> kleshmershRamp{{
+    {112, 84, 64, 255}, {100, 76, 56, 255}, {88, 64, 52, 255}, {76, 56, 44, 255},
+    {64, 48, 36, 255}, {52, 36, 28, 255}, {40, 28, 24, 255}, {28, 20, 16, 255}
+}};
+const std::array<SDL_Color, 8> tharpiqueRamp{{
+    {108, 176, 228, 255}, {72, 156, 212, 255}, {48, 136, 196, 255}, {36, 120, 180, 255},
+    {20, 96, 152, 255}, {12, 76, 120, 255}, {8, 52, 88, 255}, {4, 32, 52, 255}
+}};
+const std::array<SDL_Color, 8> darkGreyRamp{{
+    {82, 82, 82, 255}, {72, 72, 72, 255}, {62, 62, 62, 255}, {52, 52, 52, 255},
+    {42, 42, 42, 255}, {34, 34, 34, 255}, {27, 27, 27, 255}, {20, 20, 20, 255}
+}};
+
+}
 
 void loadCustomPalette() {
     customPaletteLoaded = false;
@@ -105,9 +135,17 @@ void loadCustomPalette() {
 }
 
 bool isJerichoHouseColorSlot(int colorSlot) {
-    return (colorSlot == HOUSE_NEUTRAL || colorSlot == HOUSE_REBELS)
-        && ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
+    if(!ModManager::instance().isInitialized()) return false;
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    return (activeMod == "Jericho" && (colorSlot == HOUSE_NEUTRAL || colorSlot == HOUSE_REBELS))
+        || (activeMod == "Tornie" && (colorSlot == HOUSECOLOR_GUEST_1 || colorSlot == HOUSECOLOR_GUEST_2));
+}
+
+bool isTornieRebelsColorSlot(int colorSlot) {
+    if(!ModManager::instance().isInitialized()) return colorSlot == HOUSE_REBELS;
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    return (activeMod == "Tornie" && colorSlot == HOUSE_REBELS)
+        || (activeMod == "Jericho" && colorSlot == HOUSECOLOR_GUEST_2);
 }
 
 int getHouseColorPaletteIndexFromSlot(int colorSlot) {
@@ -121,16 +159,82 @@ int getHouseColorPaletteIndexFromSlot(int colorSlot) {
         return PALCOLOR_NEUTRAL;
     }
 
+    if(colorSlot >= HOUSECOLOR_GUEST_1 && colorSlot <= HOUSECOLOR_GUEST_3) {
+        const bool jerichoActive = ModManager::instance().isInitialized()
+            && ModManager::instance().getActiveModName() == "Jericho";
+        if(jerichoActive) {
+            static const int jerichoGuestPalette[3] = {
+                PALCOLOR_NEUTRAL, PALCOLOR_REBELS, PALCOLOR_FREMEN
+            };
+            return jerichoGuestPalette[colorSlot - HOUSECOLOR_GUEST_1];
+        }
+        static const int tornieGuestPalette[3] = {
+            PALCOLOR_NEUTRAL, PALCOLOR_REBELS, 136
+        };
+        return tornieGuestPalette[colorSlot - HOUSECOLOR_GUEST_1];
+    }
+
     return colorSlot == HOUSE_CUSTOM
         ? getHousePaletteIndex(HOUSE_CUSTOM)
         : houseColorToPaletteIndex[colorSlot];
 }
 
+SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset) {
+    if(!isValidHouseColorSlot(colorSlot) || shadeOffset < 0 || shadeOffset >= 8) {
+        return SDL_Color{ 0, 0, 0, 255 };
+    }
+
+    if(colorSlot == HOUSECOLOR_CUSTOM_APPLE_GREEN) {
+        return darkGreyRamp[shadeOffset];
+    }
+
+    if(isTornieRebelsColorSlot(colorSlot)) {
+        return rebelsColorRamp[shadeOffset];
+    }
+
+    if(colorSlot >= HOUSECOLOR_GUEST_1 && colorSlot <= HOUSECOLOR_GUEST_3
+       && ModManager::instance().isInitialized()) {
+        const bool jerichoActive = ModManager::instance().getActiveModName() == "Jericho";
+        if(!jerichoActive) {
+            if(colorSlot == HOUSECOLOR_GUEST_1) return wildspadeRamp[shadeOffset];
+            if(colorSlot == HOUSECOLOR_GUEST_2) return kleshmershRamp[shadeOffset];
+            return tharpiqueRamp[shadeOffset];
+        }
+        if(colorSlot == HOUSECOLOR_GUEST_1) {
+            const int index = PALCOLOR_NEUTRAL + shadeOffset;
+            return index < palette.getNumColors() ? palette[index] : SDL_Color{ 0, 0, 0, 255 };
+        }
+        if(colorSlot == HOUSECOLOR_GUEST_3 && customPaletteLoaded) {
+            return customPalette[PALCOLOR_FREMEN + shadeOffset];
+        }
+    }
+
+    const Palette& sourcePalette = getPaletteForHouseColorSlot(colorSlot);
+    const int paletteIndex = getHouseColorPaletteIndexFromSlot(colorSlot) + shadeOffset;
+    if(paletteIndex >= 0 && paletteIndex < sourcePalette.getNumColors()) {
+        SDL_Color color = sourcePalette[paletteIndex];
+        if(colorSlot == HOUSECOLOR_CUSTOM_DARK_VIOLET) {
+            color.r = static_cast<Uint8>((static_cast<unsigned int>(color.r) * 9U) / 10U);
+            color.g = static_cast<Uint8>((static_cast<unsigned int>(color.g) * 9U) / 10U);
+            color.b = static_cast<Uint8>((static_cast<unsigned int>(color.b) * 9U) / 10U);
+        }
+        return color;
+    }
+    return SDL_Color{ 0, 0, 0, 255 };
+}
+
+Uint32 getHouseColorRGB(int colorSlot, int shadeOffset) {
+    return SDL2RGB(getHouseColorSDL(colorSlot, shadeOffset));
+}
+
 void applyCustomPaletteRuntimeHouseRamps() {
     static const Uint8 rebelsGreyRamp[8] = { 82, 72, 62, 52, 42, 34, 27, 20 };
-    const bool swapTornieRebelsWithDarkGreen =
+    const bool tornieMainActive =
         ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Tornie"
+        && ModManager::instance().getActiveModName() == "Tornie";
+    const bool crossModHouseColorsActive =
+        ModManager::instance().isInitialized()
+        && (tornieMainActive || ModManager::instance().getActiveModName() == "Jericho")
         && customPaletteLoaded
         && customPalette.getNumColors() >= PALCOLOR_SARDAUKAR + 8;
 
@@ -140,14 +244,16 @@ void applyCustomPaletteRuntimeHouseRamps() {
         };
         SDL_Color rebelsColor = greyColor;
 
-        if(swapTornieRebelsWithDarkGreen) {
+        if(crossModHouseColorsActive) {
             const SDL_Color customRebelsColor = customPalette[PALCOLOR_SARDAUKAR + k];
             const bool customSlotAlreadySwapped = customRebelsColor.r == greyColor.r
                 && customRebelsColor.g == greyColor.g
                 && customRebelsColor.b == greyColor.b;
             rebelsColor = customSlotAlreadySwapped ? rebelsColorRamp[k] : customRebelsColor;
             rebelsColor.a = 255;
-            customPalette[PALCOLOR_SARDAUKAR + k] = greyColor;
+            if(tornieMainActive) {
+                customPalette[PALCOLOR_SARDAUKAR + k] = greyColor;
+            }
         }
 
         rebelsColorRamp[k] = rebelsColor;
@@ -164,48 +270,112 @@ int getNumAvailableHouses() {
     return NUM_LEGACY_HOUSES + (isHouseAvailable(HOUSE_CUSTOM) ? 1 : 0);
 }
 
-char getHouseScenarioLetter(HOUSETYPE house) {
-    const bool jerichoActive = ModManager::instance().isInitialized()
-        && ModManager::instance().getActiveModName() == "Jericho";
-    if(jerichoActive && house == HOUSE_NEUTRAL) return 'W';
-    if(jerichoActive && house == HOUSE_REBELS) return 'K';
-    if(house == HOUSE_CUSTOM) {
-        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
-        return isHouseAvailable(house) ? info.scenarioLetter : '?';
+bool isCustomGameHouseAvailable(HOUSETYPE house) {
+    if(isHouseAvailable(house)) return true;
+    return crossModCustomGameHousesActive()
+        && house >= HOUSE_WILDSPADE && house <= HOUSE_THARPIQUE;
+}
+
+int getNumCustomGameHouses() {
+    return crossModCustomGameHousesActive() ? NUM_HOUSES : getNumAvailableHouses();
+}
+
+HOUSETYPE getHouseFactionIdentity(HOUSETYPE house) {
+    if(!crossModCustomGameHousesActive()
+       || ModManager::instance().getActiveModName() != "Jericho") {
+        return house;
     }
-    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) ? houseChar[house] : '?';
+    switch(house) {
+        case HOUSE_NEUTRAL:    return HOUSE_WILDSPADE;
+        case HOUSE_REBELS:     return HOUSE_KLESHMERSH;
+        case HOUSE_CUSTOM:     return HOUSE_THARPIQUE;
+        case HOUSE_WILDSPADE:  return HOUSE_NEUTRAL;
+        case HOUSE_KLESHMERSH: return HOUSE_REBELS;
+        case HOUSE_THARPIQUE:  return HOUSE_CUSTOM;
+        default:               return house;
+    }
+}
+
+HOUSETYPE getRuntimeHouseForIdentity(HOUSETYPE identity) {
+    if(!crossModCustomGameHousesActive()
+       || ModManager::instance().getActiveModName() != "Jericho") {
+        return identity;
+    }
+    switch(identity) {
+        case HOUSE_NEUTRAL:    return HOUSE_WILDSPADE;
+        case HOUSE_REBELS:     return HOUSE_KLESHMERSH;
+        case HOUSE_CUSTOM:     return HOUSE_THARPIQUE;
+        case HOUSE_WILDSPADE:  return HOUSE_NEUTRAL;
+        case HOUSE_KLESHMERSH: return HOUSE_REBELS;
+        case HOUSE_THARPIQUE:  return HOUSE_CUSTOM;
+        default:               return identity;
+    }
+}
+
+bool isHouseFaction(HOUSETYPE house, HOUSETYPE identity) {
+    return getHouseFactionIdentity(house) == identity;
+}
+
+int getDefaultHouseColorSlot(HOUSETYPE house) {
+    if(house >= HOUSE_WILDSPADE && house <= HOUSE_THARPIQUE) {
+        return HOUSECOLOR_GUEST_1 + (house - HOUSE_WILDSPADE);
+    }
+    return house >= HOUSE_HARKONNEN && house < NUM_CAMPAIGN_HOUSES
+        ? static_cast<int>(house)
+        : HOUSE_HARKONNEN;
+}
+
+char getHouseScenarioLetter(HOUSETYPE house) {
+    switch(getHouseFactionIdentity(house)) {
+        case HOUSE_HARKONNEN: return 'H';
+        case HOUSE_ATREIDES: return 'A';
+        case HOUSE_ORDOS: return 'O';
+        case HOUSE_FREMEN: return 'F';
+        case HOUSE_SARDAUKAR: return 'S';
+        case HOUSE_MERCENARY: return 'M';
+        case HOUSE_NEUTRAL: return 'N';
+        case HOUSE_REBELS: return 'R';
+        case HOUSE_CUSTOM: return 'C';
+        case HOUSE_WILDSPADE: return 'W';
+        case HOUSE_KLESHMERSH: return 'K';
+        case HOUSE_THARPIQUE: return 'T';
+        default: return '?';
+    }
 }
 
 std::string getHouseRegionPrefix(HOUSETYPE house) {
-    if(house == HOUSE_CUSTOM) {
-        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
-        return isHouseAvailable(house) ? info.regionPrefix : std::string();
-    }
-    static const char* const prefixes[NUM_LEGACY_HOUSES] = {
-        "HAR", "ATR", "ORD", "FRE", "SAR", "MER", "NEU", "REB"
+    static const char* const prefixes[NUM_HOUSES] = {
+        "HAR", "ATR", "ORD", "FRE", "SAR", "MER", "NEU", "REB", "COR", "WIL", "KLE", "THA"
     };
-    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES) ? prefixes[house] : std::string();
+    const HOUSETYPE identity = getHouseFactionIdentity(house);
+    return identity >= HOUSE_HARKONNEN && identity < NUM_HOUSES ? prefixes[identity] : std::string();
 }
 
 int getHousePaletteIndex(HOUSETYPE house) {
-    if(house == HOUSE_CUSTOM) {
-        const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
-        return isHouseAvailable(house) ? info.paletteIndex : PALCOLOR_HARKONNEN;
+    const HOUSETYPE identity = getHouseFactionIdentity(house);
+    if(identity == HOUSE_CUSTOM || identity == HOUSE_THARPIQUE) {
+        const CustomHouseInfo& info = ModManager::instance().getCustomHouseInfo(house);
+        return info.enabled ? info.paletteIndex : PALCOLOR_HARKONNEN;
     }
-    return (house >= HOUSE_HARKONNEN && house < NUM_LEGACY_HOUSES)
-        ? houseToPaletteIndex[house]
+    return (identity >= HOUSE_HARKONNEN && identity < NUM_HOUSES)
+        ? houseToPaletteIndex[identity]
         : PALCOLOR_HARKONNEN;
 }
 
 HOUSETYPE getHouseFallbackHouse(HOUSETYPE house) {
-    if(house != HOUSE_CUSTOM) return house;
-    const CustomHouseInfo& info = ModManager::instance().getActiveCustomHouseInfo();
-    return isHouseAvailable(house) ? static_cast<HOUSETYPE>(info.fallbackHouse) : HOUSE_HARKONNEN;
+    const HOUSETYPE identity = getHouseFactionIdentity(house);
+    if(identity == HOUSE_CUSTOM || identity == HOUSE_THARPIQUE) {
+        const CustomHouseInfo& info = ModManager::instance().getCustomHouseInfo(house);
+        return info.enabled ? static_cast<HOUSETYPE>(info.fallbackHouse) : HOUSE_HARKONNEN;
+    }
+    if(identity == HOUSE_WILDSPADE) return HOUSE_NEUTRAL;
+    if(identity == HOUSE_KLESHMERSH) return HOUSE_REBELS;
+    return identity;
 }
 
 void resetHouseVisualHouseMapping() {
     for(int house = 0; house < NUM_HOUSES; ++house) {
-        houseToVisualHouse[house] = house;
+        houseToVisualHouse[house] = getDefaultHouseColorSlot(static_cast<HOUSETYPE>(house));
     }
 }
 
@@ -215,7 +385,7 @@ void setHouseVisualHouse(HOUSETYPE house, int visualHouse) {
     }
 
     if(!isValidHouseColorSlot(visualHouse)) {
-        houseToVisualHouse[house] = house;
+        houseToVisualHouse[house] = getDefaultHouseColorSlot(house);
         return;
     }
 

@@ -3257,7 +3257,14 @@ void Game::onOptions()
 
 void Game::onMentat()
 {
-    pInGameMentat = std::make_unique<MentatHelp>(pLocalHouse->getHouseID(), techLevel, gameInitSettings.getMission());
+    int mentatHouse = pLocalHouse->getHouseID();
+    const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
+    if(selectedHouse >= 0 && selectedHouse < NUM_HOUSE_COLOR_SLOTS
+       && getHouseFactionIdentity(selectedHouse) == HOUSE_CUSTOM) {
+        mentatHouse = selectedHouse;
+    }
+
+    pInGameMentat = std::make_unique<MentatHelp>(mentatHouse, techLevel, gameInitSettings.getMission());
     bMenu = true;
     pauseGame();
 }
@@ -3513,7 +3520,7 @@ bool Game::loadSaveGame(InputStream& stream) {
             }
         }
         if(!isValidHouseColorSlot(colorOfHouse)) {
-            colorOfHouse = setupHouseInfo.houseID;
+            colorOfHouse = getDefaultHouseColorSlot(setupHouseInfo.houseID);
         }
         setHouseVisualHouse(setupHouseInfo.houseID, colorOfHouse);
     }
@@ -3542,7 +3549,9 @@ bool Game::loadSaveGame(InputStream& stream) {
     //   "dunelegacy*"               → 41 items (original Dune Legacy 0.99.x)
     //   "dunecity1.0.0"–"1.0.7"    → 48 items
     //   "dunecity1.0.8"–"1.0.10"   → 52 items
-    const int savedHouseCount = (savegameVersion >= 9821) ? NUM_HOUSES : NUM_LEGACY_HOUSES;
+    const int savedHouseCount = savegameVersion >= 9823
+        ? NUM_HOUSES
+        : (savegameVersion >= 9821 ? NUM_CAMPAIGN_HOUSES : NUM_LEGACY_HOUSES);
     int savedItemCount = determineLegacySavedItemCount(savegameVersion, duneVersion);
     if(savedItemCount != 0) {
         SDL_Log("Game::loadSaveGame(): legacy save v%d (%s) — loading %d items (current: %d)",

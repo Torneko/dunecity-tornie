@@ -11,6 +11,7 @@
 #define SPECIALVEHICLE_H
 
 #include <data.h>
+#include <globals.h>
 
 #include <units/HarvesterHelpers.h>
 
@@ -56,22 +57,19 @@ inline std::vector<int> getSpecialVehicleFallbackPoolForHouse(
         bool tornieActive,
         bool jerichoActive) {
     if(tornieActive) {
-        switch(house) {
+        switch(getHouseFactionIdentity(static_cast<HOUSETYPE>(house))) {
             case HOUSE_HARKONNEN:  return { Unit_Devastator, Unit_FlameTank };
             case HOUSE_ATREIDES:   return { Unit_SonicTank, Unit_EliteLauncher };
             case HOUSE_ORDOS:      return { Unit_Deviator, Unit_EliteSiegeTank };
             case HOUSE_FREMEN:     return { Unit_EliteSiegeTank, Unit_FlameTank };
             case HOUSE_SARDAUKAR:  return { Unit_Devastator, Unit_SonicTank };
             case HOUSE_MERCENARY:  return { Unit_Devastator, Unit_Deviator };
-            case HOUSE_NEUTRAL:
-                return jerichoActive
-                    ? std::vector<int>{ Unit_EliteLauncher, Unit_FlameTank }
-                    : std::vector<int>{ Unit_EliteLauncher, Unit_EliteSiegeTank };
-            case HOUSE_REBELS:
-                return jerichoActive
-                    ? std::vector<int>{ Unit_FlameTank, Unit_EliteSiegeTank }
-                    : std::vector<int>{ Unit_SonicTank, Unit_FlameTank };
-            case HOUSE_CUSTOM:     break;
+            case HOUSE_NEUTRAL:    return { Unit_EliteLauncher, Unit_EliteSiegeTank };
+            case HOUSE_REBELS:     return { Unit_SonicTank, Unit_FlameTank };
+            case HOUSE_CUSTOM:     return { Unit_Devastator, Unit_EliteSiegeTank };
+            case HOUSE_WILDSPADE:  return { Unit_EliteLauncher, Unit_FlameTank };
+            case HOUSE_KLESHMERSH: return { Unit_FlameTank, Unit_EliteSiegeTank };
+            case HOUSE_THARPIQUE:  return { Unit_Deviator, Unit_EliteLauncher };
             default:               return {};
         }
     }
@@ -96,7 +94,7 @@ inline std::vector<int> resolveSpecialVehiclePoolForHouse(
         bool jerichoActive,
         const std::vector<int>& objectDataIxCandidates,
         bool corruptiqueActive = false) {
-    if(corruptiqueActive && house == HOUSE_CUSTOM) {
+    if(getHouseFactionIdentity(static_cast<HOUSETYPE>(house)) == HOUSE_CUSTOM) {
         return { Unit_Devastator, Unit_EliteSiegeTank };
     }
 

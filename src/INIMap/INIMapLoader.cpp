@@ -44,7 +44,8 @@ bool isJerichoWildspade(Game* pGame, int houseID) {
 }
 
 int replaceJerichoWildspadeUnit(Game* pGame, int houseID, int itemID) {
-    if(!isJerichoWildspade(pGame, houseID)) {
+    if(houseID < 0 || houseID >= NUM_HOUSES
+            || !isHouseFaction(static_cast<HOUSETYPE>(houseID), HOUSE_WILDSPADE)) {
         return itemID;
     }
 
