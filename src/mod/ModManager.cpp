@@ -292,7 +292,11 @@ bool ModManager::setActiveMod(const std::string& name) {
     }
     if(pGFXManager != nullptr) {
         pGFXManager->invalidateAllSpriteTextures();
-        pGFXManager->reloadModDependentUiGraphics();
+        // A partial UI refresh cannot create object atlases that were skipped
+        // when the game originally started in Vanilla. Rebuild the complete
+        // object set so switching to Tornie/Jericho also installs their editor
+        // previews, terrain sprites and structure graphics without a restart.
+        pGFXManager->reloadAllObjectGraphicsForActiveMod();
     }
     if(pSFXManager != nullptr) {
         pSFXManager->reloadVoices();

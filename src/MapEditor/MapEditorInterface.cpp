@@ -568,7 +568,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     editorModeStructs_LoveFactory.setTooltipText(resolveItemName(Structure_LoveFactory));
     editorModeStructs_LoveFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_LoveFactory));
     editorModeStructs_ChaosFactory.setToggleButton(true);
-    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory) + _(" (Tech Level 9)"));
+    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory));
     editorModeStructs_ChaosFactory.setOnClick(std::bind(&MapEditorInterface::onStructButton, this, Structure_ChaosFactory));
 
     // DuneCity: expose SimCity-style buildings (R/C/I zones, Road, nuclear
@@ -1563,7 +1563,7 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeStructs_Chemipost.setTooltipText(resolveItemName(Structure_Chemipost));
     editorModeStructs_LoveFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_LoveFactory, newHouse));
     editorModeStructs_ChaosFactory.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ChaosFactory, newHouse));
-    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory) + _(" (Tech Level 9)"));
+    editorModeStructs_ChaosFactory.setTooltipText(resolveItemName(Structure_ChaosFactory));
 
     editorModeStructs_ZoneResidential.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneResidential, newHouse));
     editorModeStructs_ZoneCommercial.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ZoneCommercial, newHouse));
