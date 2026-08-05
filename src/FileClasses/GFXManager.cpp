@@ -5364,7 +5364,8 @@ void GFXManager::rebuildModDependentEditorGraphics() {
         { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_Flamepost,           ObjPic_Flamepost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_Chemipost,           ObjPic_Chemipost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
-        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE },
+        { UI_MapEditor_ChaosFactory,        ObjPic_ChaosFactory,        2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE }
     };
 
     const bool tornieActive = ModManager::instance().isInitialized()
@@ -5784,8 +5785,11 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                 ObjPic_RebelHarvester,  // falls back to vanilla Harvester
                 ObjPic_Worfinery,       // falls back to vanilla WOR
                 ObjPic_TechCenter,      // falls back to vanilla Palace
-                ObjPic_Scoutpost        , // falls back to vanilla Rocket Turret
-                ObjPic_LoveFactory      // falls back to vanilla Heavy Factory
+                ObjPic_Scoutpost,       // falls back to vanilla Rocket Turret
+                ObjPic_Flamepost,       // falls back to vanilla Rocket Turret
+                ObjPic_Chemipost,       // falls back to vanilla Rocket Turret
+                ObjPic_LoveFactory,     // falls back to vanilla Heavy Factory
+                ObjPic_ChaosFactory     // falls back to vanilla Heavy Factory
             };
             bool isDuneCityCivic = false;
             for(auto cid : duneCityCivicIds) {
@@ -5826,9 +5830,12 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                     fallbackId = ObjPic_Palace;
                 } else if(id == ObjPic_AdvancedWindTrap || id == ObjPic_AdvancedWindTrap2x3 || id == ObjPic_AdvancedWindTrap3x2) {
                     fallbackId = ObjPic_Windtrap;
-                } else if(id == ObjPic_Scoutpost) {
+                } else if(id == ObjPic_Scoutpost
+                          || id == ObjPic_Flamepost
+                          || id == ObjPic_Chemipost) {
                     fallbackId = ObjPic_RocketTurret;
-                } else if(id == ObjPic_LoveFactory) {
+                } else if(id == ObjPic_LoveFactory
+                          || id == ObjPic_ChaosFactory) {
                     fallbackId = ObjPic_HeavyFactory;
                 }
                 if(objPic[fallbackId][HOUSE_HARKONNEN][z] == nullptr) {
