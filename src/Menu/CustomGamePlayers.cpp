@@ -131,7 +131,7 @@ int resolveSelectedColorSlot(int selectedColor, int selectedHouse) {
     if(!isValidHouseColorSlot(selectedColor)
        && selectedHouse >= 0
        && selectedHouse < NUM_HOUSES
-       && isHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
+       && isCustomGameHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
         selectedColor = getDefaultHouseColorSlot(static_cast<HOUSETYPE>(selectedHouse));
     }
 
@@ -1591,11 +1591,19 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 }
 
 void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int houseInfoNum) {
+    if(bInteractive && houseInfoNum >= 0 && houseInfoNum < numHouses) {
+        HouseInfo& changedHouseInfo = houseInfo[houseInfoNum];
+        addColorDropDownEntries(changedHouseInfo.colorDropDown, HOUSE_INVALID,
+                                changedHouseInfo.bonusColorCheckbox.isChecked());
+    }
+
     if(bInteractive && houseInfoNum >= 0 && pNetworkManager != nullptr) {
         int selectedHouseID = houseInfo[houseInfoNum].houseDropDown.getSelectedEntryIntData();
 
         ChangeEventList changeEventList;
         changeEventList.changeEventList.emplace_back(ChangeEventList::ChangeEvent::EventType::ChangeHouse, houseInfoNum, selectedHouseID);
+        changeEventList.changeEventList.emplace_back(ChangeEventList::ChangeEvent::EventType::ChangeColor, houseInfoNum,
+                                                     HOUSE_INVALID);
 
         pNetworkManager->sendChangeEventList(changeEventList);
     }

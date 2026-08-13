@@ -54,14 +54,14 @@ protected:
         producedEnergyLabel.setTextColor(color);
         textVBox.addWidget(&producedEnergyLabel, (Sint32)18);
 
-        flamepostUpgradeButton.setText(_("Upgrade to Flamepost"));
+        flamepostUpgradeButton.setText(_("Upgrade"));
         flamepostUpgradeButton.setTextColor(color);
         flamepostUpgradeButton.setTooltipText(_("Requires House IX"));
         flamepostUpgradeButton.setVisible(false);
         flamepostUpgradeButton.setOnClick(std::bind(&WindTrapInterface::onFlamepostUpgrade, this));
         textVBox.addWidget(&flamepostUpgradeButton, (Sint32)26);
 
-        chemipostUpgradeButton.setText(_("Upgrade to Chemipost"));
+        chemipostUpgradeButton.setText(_("Upgrade"));
         chemipostUpgradeButton.setTextColor(color);
         chemipostUpgradeButton.setTooltipText(_("Requires House IX and Tech Level 7"));
         chemipostUpgradeButton.setVisible(false);
@@ -96,8 +96,7 @@ protected:
             && pOwner->getNumItems(Structure_IX) > 0;
         flamepostUpgradeButton.setVisible(showFlamepostUpgrade);
         if(showFlamepostUpgrade) {
-            const int cost = pScoutpost->getFlamepostUpgradeCost();
-            flamepostUpgradeButton.setText(_("Upgrade to Flamepost") + " (" + std::to_string(cost) + ")");
+            flamepostUpgradeButton.setText(_("Upgrade"));
             flamepostUpgradeButton.setTooltipText(_("Upgrade this Scoutpost to a Flamepost"));
         }
 
@@ -106,8 +105,7 @@ protected:
             && pOwner->getNumItems(Structure_IX) > 0;
         chemipostUpgradeButton.setVisible(showChemipostUpgrade);
         if(showChemipostUpgrade) {
-            const int cost = pScoutpost->getChemipostUpgradeCost();
-            chemipostUpgradeButton.setText(_("Upgrade to Chemipost") + " (" + std::to_string(cost) + ")");
+            chemipostUpgradeButton.setText(_("Upgrade"));
             chemipostUpgradeButton.setTooltipText(_("Upgrade this Scoutpost to a healing Chemipost"));
         }
 

@@ -3247,11 +3247,7 @@ void Game::onOptions()
         // don't show menu
         quitGame();
     } else {
-        int optionsHouse = pLocalHouse->getHouseID();
-        const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
-        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
-            optionsHouse = selectedHouse;
-        }
+        const int optionsHouse = pLocalHouse->getHouseID();
         Uint32 color = getHouseColorRGB(getHouseVisualHouse(optionsHouse), 3);
         pInGameMenu = std::make_unique<InGameMenu>((gameType == GameType::CustomMultiplayer), color);
         bMenu = true;
@@ -3262,12 +3258,7 @@ void Game::onOptions()
 
 void Game::onMentat()
 {
-    int mentatHouse = pLocalHouse->getHouseID();
-    const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
-    if(selectedHouse >= 0 && selectedHouse < NUM_HOUSE_COLOR_SLOTS
-       && getHouseFactionIdentity(selectedHouse) == HOUSE_CUSTOM) {
-        mentatHouse = selectedHouse;
-    }
+    const int mentatHouse = pLocalHouse->getHouseID();
 
     pInGameMentat = std::make_unique<MentatHelp>(mentatHouse, techLevel, gameInitSettings.getMission());
     bMenu = true;

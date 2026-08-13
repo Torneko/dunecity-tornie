@@ -355,7 +355,8 @@ int BuilderBase::getMaxUpgradeLevel() const {
 
     if(itemID == Structure_HighTechFactory && owner != nullptr
        && ModManager::instance().getActiveModName() != "vanilla"
-       && getHouseScenarioLetter(static_cast<HOUSETYPE>(owner->getHouseID())) == 'W') {
+       && getHouseScenarioLetter(static_cast<HOUSETYPE>(owner->getHouseID())) == 'W'
+       && currentGame->techLevel >= 7) {
         upgradeLevel = std::max(upgradeLevel, 2);
     }
     return upgradeLevel;

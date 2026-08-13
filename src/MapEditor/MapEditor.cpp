@@ -285,7 +285,6 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
 
     // setup default choam
     choam[Unit_Carryall] = 2;
-    choam[Unit_ChemicalCarryall] = 0;
     choam[Unit_Harvester] = 4;
     choam[Unit_Launcher] = 5;
     choam[Unit_MCV] = 2;
