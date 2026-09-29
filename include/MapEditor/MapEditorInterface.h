@@ -170,6 +170,8 @@ private:
     HBox                editorModeTerrain_HBox3;
     HBox                editorModeTerrain_HBox4;
     HBox                editorModeTerrain_HBox5;
+    HBox                editorModeTerrain_HBox6;
+    HBox                editorModeTerrain_HBox7;
 
     SymbolButton        editorModeTerrain_Sand;
     SymbolButton        editorModeTerrain_Dunes;
@@ -182,6 +184,12 @@ private:
     SymbolButton        editorModeTerrain_RedSpice;
     SymbolButton        editorModeTerrain_ThickRedSpice;
     SymbolButton        editorModeTerrain_RedSpiceBloom;
+    SymbolButton        editorModeTerrain_PaleLilacSpice;
+    SymbolButton        editorModeTerrain_ThickPaleLilacSpice;
+    SymbolButton        editorModeTerrain_PaleLilacSpiceBloom;
+    SymbolButton        editorModeTerrain_WhiteSpice;
+    SymbolButton        editorModeTerrain_ThickWhiteSpice;
+    SymbolButton        editorModeTerrain_WhiteSpiceBloom;
     SymbolButton        editorModeTerrain_SpiceBloom;
     SymbolButton        editorModeTerrain_Rock;
     SymbolButton        editorModeTerrain_Mountain;

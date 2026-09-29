@@ -131,16 +131,6 @@ void loadCustomPalette() {
     try {
         customPalette = LoadPalette_RW(pFileManager->openFile("Custom_IBM.PAL").get());
         customPaletteLoaded = customPalette.getNumColors() >= 256;
-
-    if(customPaletteLoaded) {
-        const int darkVioletBase = houseColorToPaletteIndex[HOUSECOLOR_CUSTOM_DARK_VIOLET];
-        for(int i = 0; i < 8; ++i) {
-            SDL_Color& color = customPalette[darkVioletBase + i];
-            color.r = static_cast<Uint8>((static_cast<unsigned int>(color.r) * 9U) / 10U);
-            color.g = static_cast<Uint8>((static_cast<unsigned int>(color.g) * 9U) / 10U);
-            color.b = static_cast<Uint8>((static_cast<unsigned int>(color.b) * 9U) / 10U);
-        }
-    }
     } catch(const std::exception& e) {
         SDL_Log("Warning: Could not load Custom_IBM.PAL: %s", e.what());
         customPalette = Palette();
@@ -177,6 +167,9 @@ int getHouseColorPaletteIndexFromSlot(int colorSlot) {
         && ModManager::instance().getActiveModName() == "Tornie";
     if(tornieMainActive && colorSlot == HOUSECOLOR_CUSTOM_BRIGHT_YELLOW) {
         return PALCOLOR_NEUTRAL;
+    }
+    if(tornieMainActive && colorSlot == HOUSECOLOR_CUSTOM_LIGHT_PINK) {
+        return PALCOLOR_FREMEN;
     }
 
     if(colorSlot >= HOUSECOLOR_GUEST_1 && colorSlot <= HOUSECOLOR_GUEST_3) {
@@ -249,6 +242,11 @@ SDL_Color getHouseColorSDL(int colorSlot, int shadeOffset) {
     const int paletteIndex = getHouseColorPaletteIndexFromSlot(colorSlot) + shadeOffset;
     if(paletteIndex >= 0 && paletteIndex < sourcePalette.getNumColors()) {
         SDL_Color color = sourcePalette[paletteIndex];
+        if(colorSlot == HOUSECOLOR_CUSTOM_DARK_VIOLET) {
+            color.r = static_cast<Uint8>((static_cast<unsigned int>(color.r) * 9U) / 10U);
+            color.g = static_cast<Uint8>((static_cast<unsigned int>(color.g) * 9U) / 10U);
+            color.b = static_cast<Uint8>((static_cast<unsigned int>(color.b) * 9U) / 10U);
+        }
         return color;
     }
     return SDL_Color{ 0, 0, 0, 255 };

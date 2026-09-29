@@ -55,7 +55,13 @@ GameInterface::GameInterface() : Window(0,0,0,0) {
 
     setWindowWidget(&windowWidget);
 
-    const int interfaceHouse = pLocalHouse->getHouseID();
+    int interfaceHouse = pLocalHouse->getHouseID();
+    if(currentGame != nullptr) {
+        const HOUSETYPE selectedHouse = currentGame->getGameInitSettings().getHouseID();
+        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
+            interfaceHouse = selectedHouse;
+        }
+    }
 
     // top bar
     SDL_Texture* pTopBarTex = pGFXManager->getUIGraphic(UI_TopBar, interfaceHouse);

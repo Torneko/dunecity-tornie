@@ -5,6 +5,7 @@
  */
 
 #include <Menu/HowToPlayMenu.h>
+#include <Menu/MainMenuButtonColor.h>
 
 #include <globals.h>
 
@@ -110,6 +111,7 @@ HowToPlayMenu::HowToPlayMenu() : MenuBase()
                            Point(640, 320));
 
     backButton.setText(_("Back"));
+    MainMenuButtonColor::apply(backButton);
     backButton.setOnClick(std::bind(&HowToPlayMenu::onBack, this));
     windowWidget.addWidget(&backButton,
                            Point(getRendererWidth() / 2 - 60,

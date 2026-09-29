@@ -16,6 +16,7 @@
  */
 
 #include <MapEditor/MapEditorInterface.h>
+#include <mod/ModManager.h>
 #include <MapEditor/MapEditor.h>
 #include <MapEditor/NewMapWindow.h>
 #include <MapEditor/LoadMapWindow.h>
@@ -328,6 +329,34 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeTerrain_RedSpiceBloom.setToggleButton(true);
         editorModeTerrain_RedSpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_RedSpiceBloom));
         editorModeTerrain_HBox5.addWidget(&editorModeTerrain_RedSpiceBloom);
+
+        editorModeTerrain_VBox.addWidget(VSpacer::create(2));
+        editorModeTerrain_VBox.addWidget(&editorModeTerrain_HBox6);
+        editorModeTerrain_PaleLilacSpice.setToggleButton(true);
+        editorModeTerrain_PaleLilacSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_PaleLilacSpice));
+        editorModeTerrain_HBox6.addWidget(&editorModeTerrain_PaleLilacSpice);
+        editorModeTerrain_HBox6.addWidget(HSpacer::create(2));
+        editorModeTerrain_ThickPaleLilacSpice.setToggleButton(true);
+        editorModeTerrain_ThickPaleLilacSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_ThickPaleLilacSpice));
+        editorModeTerrain_HBox6.addWidget(&editorModeTerrain_ThickPaleLilacSpice);
+        editorModeTerrain_HBox6.addWidget(HSpacer::create(2));
+        editorModeTerrain_PaleLilacSpiceBloom.setToggleButton(true);
+        editorModeTerrain_PaleLilacSpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_PaleLilacSpiceBloom));
+        editorModeTerrain_HBox6.addWidget(&editorModeTerrain_PaleLilacSpiceBloom);
+
+        editorModeTerrain_VBox.addWidget(VSpacer::create(2));
+        editorModeTerrain_VBox.addWidget(&editorModeTerrain_HBox7);
+        editorModeTerrain_WhiteSpice.setToggleButton(true);
+        editorModeTerrain_WhiteSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_WhiteSpice));
+        editorModeTerrain_HBox7.addWidget(&editorModeTerrain_WhiteSpice);
+        editorModeTerrain_HBox7.addWidget(HSpacer::create(2));
+        editorModeTerrain_ThickWhiteSpice.setToggleButton(true);
+        editorModeTerrain_ThickWhiteSpice.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_ThickWhiteSpice));
+        editorModeTerrain_HBox7.addWidget(&editorModeTerrain_ThickWhiteSpice);
+        editorModeTerrain_HBox7.addWidget(HSpacer::create(2));
+        editorModeTerrain_WhiteSpiceBloom.setToggleButton(true);
+        editorModeTerrain_WhiteSpiceBloom.setOnClick(std::bind(&MapEditorInterface::onTerrainButton, this, Terrain_WhiteSpiceBloom));
+        editorModeTerrain_HBox7.addWidget(&editorModeTerrain_WhiteSpiceBloom);
     }
 
     editorModeTerrain_VBox.addWidget(VSpacer::create(2));
@@ -1231,6 +1260,12 @@ void MapEditorInterface::onTerrainButton(int terrainType) {
     editorModeTerrain_RedSpice.setToggleState( (terrainType == Terrain_RedSpice) );
     editorModeTerrain_ThickRedSpice.setToggleState( (terrainType == Terrain_ThickRedSpice) );
     editorModeTerrain_RedSpiceBloom.setToggleState( (terrainType == Terrain_RedSpiceBloom) );
+    editorModeTerrain_PaleLilacSpice.setToggleState( (terrainType == Terrain_PaleLilacSpice) );
+    editorModeTerrain_ThickPaleLilacSpice.setToggleState( (terrainType == Terrain_ThickPaleLilacSpice) );
+    editorModeTerrain_PaleLilacSpiceBloom.setToggleState( (terrainType == Terrain_PaleLilacSpiceBloom) );
+    editorModeTerrain_WhiteSpice.setToggleState( (terrainType == Terrain_WhiteSpice) );
+    editorModeTerrain_ThickWhiteSpice.setToggleState( (terrainType == Terrain_ThickWhiteSpice) );
+    editorModeTerrain_WhiteSpiceBloom.setToggleState( (terrainType == Terrain_WhiteSpiceBloom) );
     editorModeTerrain_SpiceBloom.setToggleState( (terrainType == Terrain_SpiceBloom) );
     editorModeTerrain_Rock.setToggleState( (terrainType == Terrain_Rock) );
     editorModeTerrain_Mountain.setToggleState( (terrainType == Terrain_Mountain) );
@@ -1519,6 +1554,30 @@ void MapEditorInterface::changeInterfaceColor(HOUSETYPE newHouse) {
     editorModeTerrain_RedSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_RedSpice, newHouse));
     editorModeTerrain_ThickRedSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ThickRedSpice, newHouse));
     editorModeTerrain_RedSpiceBloom.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_RedSpiceBloom, newHouse));
+    editorModeTerrain_PaleLilacSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_PaleLilacSpice, newHouse));
+    editorModeTerrain_ThickPaleLilacSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ThickPaleLilacSpice, newHouse));
+    editorModeTerrain_PaleLilacSpiceBloom.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_PaleLilacSpiceBloom, newHouse));
+    editorModeTerrain_WhiteSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_WhiteSpice, newHouse));
+    editorModeTerrain_ThickWhiteSpice.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_ThickWhiteSpice, newHouse));
+    editorModeTerrain_WhiteSpiceBloom.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_WhiteSpiceBloom, newHouse));
+
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    const bool useTornieSpice = activeMod == "Tornie" || activeMod == "TornieLite";
+    const bool useJerichoSpice = activeMod == "Jericho";
+    // Hide complete rows as well as their buttons so inactive spice types do
+    // not reserve vertical space and push the active choices out of the panel.
+    editorModeTerrain_HBox4.setVisible(useTornieSpice);
+    editorModeTerrain_HBox5.setVisible(useJerichoSpice);
+    editorModeTerrain_HBox6.setVisible(useTornieSpice);
+    editorModeTerrain_HBox7.setVisible(useJerichoSpice);
+    for(SymbolButton* button : { &editorModeTerrain_GreenSpice, &editorModeTerrain_ThickGreenSpice, &editorModeTerrain_GreenSpiceBloom,
+                                 &editorModeTerrain_PaleLilacSpice, &editorModeTerrain_ThickPaleLilacSpice, &editorModeTerrain_PaleLilacSpiceBloom }) {
+        button->setVisible(useTornieSpice);
+    }
+    for(SymbolButton* button : { &editorModeTerrain_RedSpice, &editorModeTerrain_ThickRedSpice, &editorModeTerrain_RedSpiceBloom,
+                                 &editorModeTerrain_WhiteSpice, &editorModeTerrain_ThickWhiteSpice, &editorModeTerrain_WhiteSpiceBloom }) {
+        button->setVisible(useJerichoSpice);
+    }
     editorModeTerrain_SpiceBloom.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_SpiceBloom, newHouse));
     editorModeTerrain_Rock.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Rock, newHouse));
     editorModeTerrain_Mountain.setSymbol(pGFXManager->getUIGraphicSurface(UI_MapEditor_Mountain, newHouse));

@@ -16,6 +16,7 @@
  */
 
 #include <Menu/ModMenu.h>
+#include <Menu/MainMenuButtonColor.h>
 #include <Menu/ModEditorMenu.h>
 
 #include <globals.h>
@@ -102,6 +103,7 @@ ModMenu::ModMenu() : MenuBase(), selectedModIndex(-1) {
     newModHBox.addWidget(&newModNameTextBox, 200);
     newModHBox.addWidget(HSpacer::create(10));
     createButton.setText(_("CREATE"));
+    MainMenuButtonColor::apply(createButton);
     createButton.setOnClick(std::bind(&ModMenu::onCreateNew, this));
     newModHBox.addWidget(&createButton, 80);
     newModHBox.addWidget(Spacer::create());
@@ -112,24 +114,28 @@ ModMenu::ModMenu() : MenuBase(), selectedModIndex(-1) {
     mainVBox.addWidget(&buttonHBox, 25);
     
     activateButton.setText(_("ACTIVATE"));
+    MainMenuButtonColor::apply(activateButton);
     activateButton.setOnClick(std::bind(&ModMenu::onActivate, this));
     buttonHBox.addWidget(&activateButton, 100);
     
     buttonHBox.addWidget(HSpacer::create(10));
     
     editButton.setText(_("EDIT"));
+    MainMenuButtonColor::apply(editButton);
     editButton.setOnClick(std::bind(&ModMenu::onEdit, this));
     buttonHBox.addWidget(&editButton, 70);
     
     buttonHBox.addWidget(HSpacer::create(10));
     
     deleteButton.setText(_("DELETE"));
+    MainMenuButtonColor::apply(deleteButton);
     deleteButton.setOnClick(std::bind(&ModMenu::onDelete, this));
     buttonHBox.addWidget(&deleteButton, 80);
     
     buttonHBox.addWidget(HSpacer::create(10));
     
     backButton.setText(_("BACK"));
+    MainMenuButtonColor::apply(backButton);
     backButton.setOnClick(std::bind(&ModMenu::onBack, this));
     buttonHBox.addWidget(&backButton, 70);
     

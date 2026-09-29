@@ -44,6 +44,7 @@ MapChoice::MapChoice(int newHouse, unsigned int lastMission, Uint32 oldAlreadyPl
     lastScenario = (lastMission + 1)/3 + 1;
     alreadyPlayedRegions = oldAlreadyPlayedRegions;
     house = newHouse;
+    pGFXManager->invalidateMapChoiceGraphics(house);
 
     // set up window
     SDL_Texture *pBackground = pGFXManager->getUIGraphic(UI_MapChoiceScreen, house);

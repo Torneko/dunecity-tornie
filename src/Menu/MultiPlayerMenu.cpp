@@ -1,5 +1,6 @@
 
 #include <Menu/MultiPlayerMenu.h>
+#include <Menu/MainMenuButtonColor.h>
 #include <Menu/CustomGameMenu.h>
 #include <Menu/CustomGamePlayers.h>
 
@@ -52,6 +53,7 @@ MultiPlayerMenu::MultiPlayerMenu() : MenuBase() {
     connectHBox.addWidget(&connectPortTextBox, 90);
     connectHBox.addWidget(HSpacer::create(20));
     connectButton.setText(_("Connect"));
+    MainMenuButtonColor::apply(connectButton);
     connectButton.setOnClick(std::bind(&MultiPlayerMenu::onConnect, this));
     connectHBox.addWidget(&connectButton, 100);
 
@@ -66,12 +68,14 @@ MultiPlayerMenu::MultiPlayerMenu() : MenuBase() {
     mainHBox.addWidget(&leftVBox, 180);
 
     createLANGameButton.setText(_("Create LAN Game"));
+    MainMenuButtonColor::apply(createLANGameButton);
     createLANGameButton.setOnClick(std::bind(&MultiPlayerMenu::onCreateLANGame, this));
     leftVBox.addWidget(&createLANGameButton, 0.1);
 
     leftVBox.addWidget(VSpacer::create(8));
 
     createInternetGameButton.setText(_("Create Internet Game"));
+    MainMenuButtonColor::apply(createInternetGameButton);
     createInternetGameButton.setOnClick(std::bind(&MultiPlayerMenu::onCreateInternetGame, this));
     leftVBox.addWidget(&createInternetGameButton, 0.1);
 
@@ -83,11 +87,13 @@ MultiPlayerMenu::MultiPlayerMenu() : MenuBase() {
     mainHBox.addWidget(Spacer::create(), 0.05);
 
     LANGamesButton.setText(_("LAN Games"));
+    MainMenuButtonColor::apply(LANGamesButton);
     LANGamesButton.setToggleButton(true);
     LANGamesButton.setOnClick(std::bind(&MultiPlayerMenu::onGameTypeChange, this, 0));
     gameTypeButtonsHBox.addWidget(&LANGamesButton, 0.35);
 
     internetGamesButton.setText(_("Internet Games"));
+    MainMenuButtonColor::apply(internetGamesButton);
     internetGamesButton.setToggleButton(true);
     internetGamesButton.setOnClick(std::bind(&MultiPlayerMenu::onGameTypeChange, this, 1));
     gameTypeButtonsHBox.addWidget(&internetGamesButton, 0.35);
@@ -109,12 +115,14 @@ MultiPlayerMenu::MultiPlayerMenu() : MenuBase() {
 
     buttonHBox.addWidget(HSpacer::create(70));
     backButton.setText(_("Back"));
+    MainMenuButtonColor::apply(backButton);
     backButton.setOnClick(std::bind(&MultiPlayerMenu::onQuit, this));
     buttonHBox.addWidget(&backButton, 0.1);
 
     buttonHBox.addWidget(Spacer::create(), 0.8);
 
     joinButton.setText(_("Join"));
+    MainMenuButtonColor::apply(joinButton);
     joinButton.setOnClick(std::bind(&MultiPlayerMenu::onJoin, this));
     buttonHBox.addWidget(&joinButton, 0.1);
     buttonHBox.addWidget(HSpacer::create(90));

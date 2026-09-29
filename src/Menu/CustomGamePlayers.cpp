@@ -75,6 +75,11 @@ bool isBonusColorSlot(int colorSlot) {
 
 Uint32 getMenuColorForHouse(int house) {
     if(isValidHouseColorSlot(house)) {
+        if(ModManager::instance().isInitialized()
+           && ModManager::instance().getActiveModName() == "Jericho"
+           && house == HOUSE_REBELS) {
+            return getHouseColorRGB(HOUSECOLOR_CUSTOM_APPLE_GREEN, 3);
+        }
         return getHouseColorRGB(house, 3);
     }
 
@@ -87,7 +92,8 @@ const char* getCustomColorName(int colorSlot) {
         case HOUSECOLOR_CUSTOM_FUCHSIA:     return "Fuchsia";
         case HOUSECOLOR_CUSTOM_TEAL:        return "Teal";
         case HOUSECOLOR_CUSTOM_APPLE_GREEN: return "Dark Grey";
-        case HOUSECOLOR_CUSTOM_LIGHT_PINK:  return "Pink";
+        case HOUSECOLOR_CUSTOM_LIGHT_PINK:
+            return ModManager::instance().getActiveModName() == "Tornie" ? "Yellow" : "Pink";
         case HOUSECOLOR_CUSTOM_BRIGHT_YELLOW: return "Brown";
         default:                            return "Custom";
     }
@@ -131,7 +137,7 @@ int resolveSelectedColorSlot(int selectedColor, int selectedHouse) {
     if(!isValidHouseColorSlot(selectedColor)
        && selectedHouse >= 0
        && selectedHouse < NUM_HOUSES
-       && isCustomGameHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
+       && isHouseAvailable(static_cast<HOUSETYPE>(selectedHouse))) {
         selectedColor = getDefaultHouseColorSlot(static_cast<HOUSETYPE>(selectedHouse));
     }
 
@@ -223,14 +229,6 @@ CustomGamePlayers::CustomGamePlayers(const GameInitSettings& newGameInitSettings
     } else {
         INIFile inimap(gameInitSettings.getFilename());
         extractMapInfo(&inimap);
-    }
-
-    // House and color uniqueness is enforced when starting a game. Keep the
-    // lobby consistent with that rule instead of exposing an unusable second
-    // player slot. Loaded multiplayer saves retain their recorded layout.
-    if(gameInitSettings.getGameType() == GameType::CustomGame
-       || gameInitSettings.getGameType() == GameType::CustomMultiplayer) {
-        gameInitSettings.setMultiplePlayersPerHouse(false);
     }
 
     rightVBox.addWidget(VSpacer::create(10));
@@ -1295,7 +1293,8 @@ void CustomGamePlayers::onNext()
     if(numUsedHouses < 2) {
         // No game possible with only 1 house
         openWindow(MsgBox::create(_("At least 2 houses must be controlled\nby a human player or an AI player!")));
-    } else if(bTwoPlayersInSameHouse) {
+    // Archon mode intentionally allows two players to share one house and color.
+    } else if(bTwoPlayersInSameHouse && !gameInitSettings.isMultiplePlayersPerHouse()) {
         openWindow(MsgBox::create(_("Each player must use a different house/color.")));
     } else if(bDuplicateHouse) {
         openWindow(MsgBox::create(_("The same house cannot be used twice.")));
@@ -1591,19 +1590,11 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
 }
 
 void CustomGamePlayers::onChangeHousesDropDownBoxes(bool bInteractive, int houseInfoNum) {
-    if(bInteractive && houseInfoNum >= 0 && houseInfoNum < numHouses) {
-        HouseInfo& changedHouseInfo = houseInfo[houseInfoNum];
-        addColorDropDownEntries(changedHouseInfo.colorDropDown, HOUSE_INVALID,
-                                changedHouseInfo.bonusColorCheckbox.isChecked());
-    }
-
     if(bInteractive && houseInfoNum >= 0 && pNetworkManager != nullptr) {
         int selectedHouseID = houseInfo[houseInfoNum].houseDropDown.getSelectedEntryIntData();
 
         ChangeEventList changeEventList;
         changeEventList.changeEventList.emplace_back(ChangeEventList::ChangeEvent::EventType::ChangeHouse, houseInfoNum, selectedHouseID);
-        changeEventList.changeEventList.emplace_back(ChangeEventList::ChangeEvent::EventType::ChangeColor, houseInfoNum,
-                                                     HOUSE_INVALID);
 
         pNetworkManager->sendChangeEventList(changeEventList);
     }
@@ -1971,7 +1962,7 @@ void CustomGamePlayers::checkPlayerBoxes() {
             numPlayers++;
         }
 
-        if((gameInitSettings.isMultiplePlayersPerHouse() == false) || (player1 == PLAYER_OPEN && player2 == PLAYER_OPEN) || (curHouseInfo.player2DropDown.getNumEntries() == 0)) {
+        if((gameInitSettings.isMultiplePlayersPerHouse() == false) || (curHouseInfo.player2DropDown.getNumEntries() == 0)) {
             curHouseInfo.player2DropDown.setVisible(false);
             curHouseInfo.player2DropDown.setEnabled(false);
             curHouseInfo.player2Label.setVisible(false);

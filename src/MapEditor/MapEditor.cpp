@@ -52,13 +52,17 @@ namespace {
 bool isThinSpiceTerrain(int terrainType) noexcept {
     return terrainType == Terrain_Spice
         || terrainType == Terrain_GreenSpice
-        || terrainType == Terrain_RedSpice;
+        || terrainType == Terrain_RedSpice
+        || terrainType == Terrain_PaleLilacSpice
+        || terrainType == Terrain_WhiteSpice;
 }
 
 bool isThickSpiceTerrain(int terrainType) noexcept {
     return terrainType == Terrain_ThickSpice
         || terrainType == Terrain_ThickGreenSpice
-        || terrainType == Terrain_ThickRedSpice;
+        || terrainType == Terrain_ThickRedSpice
+        || terrainType == Terrain_ThickPaleLilacSpice
+        || terrainType == Terrain_ThickWhiteSpice;
 }
 
 bool isSpiceTerrain(int terrainType) noexcept {
@@ -71,6 +75,10 @@ int getThinSpiceTerrain(int terrainType) noexcept {
         case Terrain_ThickGreenSpice: return Terrain_GreenSpice;
         case Terrain_RedSpice:
         case Terrain_ThickRedSpice: return Terrain_RedSpice;
+        case Terrain_PaleLilacSpice:
+        case Terrain_ThickPaleLilacSpice: return Terrain_PaleLilacSpice;
+        case Terrain_WhiteSpice:
+        case Terrain_ThickWhiteSpice: return Terrain_WhiteSpice;
         default: return Terrain_Spice;
     }
 }
@@ -89,6 +97,14 @@ unsigned int getTerrainObjPic(int terrainType) noexcept {
         case Terrain_ThickRedSpice:
         case Terrain_RedSpiceBloom:
             return ObjPic_Terrain_RedSpice;
+        case Terrain_PaleLilacSpice:
+        case Terrain_ThickPaleLilacSpice:
+        case Terrain_PaleLilacSpiceBloom:
+            return ObjPic_Terrain_PaleLilacSpice;
+        case Terrain_WhiteSpice:
+        case Terrain_ThickWhiteSpice:
+        case Terrain_WhiteSpiceBloom:
+            return ObjPic_Terrain_WhiteSpice;
         default:
             return ObjPic_Terrain;
     }
@@ -285,6 +301,7 @@ void MapEditor::setMap(const MapData& mapdata, const MapInfo& newMapInfo) {
 
     // setup default choam
     choam[Unit_Carryall] = 2;
+    choam[Unit_ChemicalCarryall] = 0;
     choam[Unit_Harvester] = 4;
     choam[Unit_Launcher] = 5;
     choam[Unit_MCV] = 2;
@@ -674,6 +691,13 @@ void MapEditor::saveMap(const std::string& filepath) {
                         row += 'B';
                     } break;
 
+                    case Terrain_PaleLilacSpice: row += 'l'; break;
+                    case Terrain_ThickPaleLilacSpice: row += 'L'; break;
+                    case Terrain_PaleLilacSpiceBloom: row += 'i'; break;
+                    case Terrain_WhiteSpice: row += 'w'; break;
+                    case Terrain_ThickWhiteSpice: row += 'W'; break;
+                    case Terrain_WhiteSpiceBloom: row += 'x'; break;
+
                     case Terrain_Rock: {
                         // Rock
                         row += '%';
@@ -1041,7 +1065,9 @@ void MapEditor::performTerrainChange(int x, int y, TERRAINTYPE terrainType) {
 
         case Terrain_ThickSpice:
         case Terrain_ThickGreenSpice:
-        case Terrain_ThickRedSpice: {
+        case Terrain_ThickRedSpice:
+        case Terrain_ThickPaleLilacSpice:
+        case Terrain_ThickWhiteSpice: {
             const auto thinSpice = static_cast<TERRAINTYPE>(getThinSpiceTerrain(terrainType));
             if(map.isInsideMap(x-1, y) && !isSameSpiceFamily(map(x-1,y), terrainType))     performTerrainChange(x-1,y,thinSpice);
             if(map.isInsideMap(x, y-1) && !isSameSpiceFamily(map(x,y-1), terrainType))     performTerrainChange(x,y-1,thinSpice);
@@ -1058,7 +1084,9 @@ void MapEditor::performTerrainChange(int x, int y, TERRAINTYPE terrainType) {
 
         case Terrain_Spice:
         case Terrain_GreenSpice:
-        case Terrain_RedSpice: {
+        case Terrain_RedSpice:
+        case Terrain_PaleLilacSpice:
+        case Terrain_WhiteSpice: {
             if(map.isInsideMap(x-1, y) && (map(x-1,y) == Terrain_Mountain))     performTerrainChange(x-1,y,Terrain_Rock);
             if(map.isInsideMap(x, y-1) && (map(x,y-1) == Terrain_Mountain))     performTerrainChange(x,y-1,Terrain_Rock);
             if(map.isInsideMap(x+1, y) && (map(x+1,y) == Terrain_Mountain))     performTerrainChange(x+1,y,Terrain_Rock);
@@ -1070,6 +1098,8 @@ void MapEditor::performTerrainChange(int x, int y, TERRAINTYPE terrainType) {
         case Terrain_SpiceBloom:
         case Terrain_GreenSpiceBloom:
         case Terrain_RedSpiceBloom:
+        case Terrain_PaleLilacSpiceBloom:
+        case Terrain_WhiteSpiceBloom:
         case Terrain_SpecialBloom: {
             if(map.isInsideMap(x-1, y) && (map(x-1,y) == Terrain_Mountain))     performTerrainChange(x-1,y,Terrain_Rock);
             if(map.isInsideMap(x, y-1) && (map(x,y-1) == Terrain_Mountain))     performTerrainChange(x,y-1,Terrain_Rock);
@@ -1559,7 +1589,9 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
 
                 case Terrain_Spice:
                 case Terrain_GreenSpice:
-                case Terrain_RedSpice: {
+                case Terrain_RedSpice:
+                case Terrain_PaleLilacSpice:
+                case Terrain_WhiteSpice: {
                     //determine which surounding tiles are spice
                     bool up = (y-1 < 0) || isSameSpiceFamily(getTerrain(x, y-1), terrainType);
                     bool right = (x+1 >= map.getSizeX()) || isSameSpiceFamily(getTerrain(x+1, y), terrainType);
@@ -1571,7 +1603,9 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
 
                 case Terrain_ThickSpice:
                 case Terrain_ThickGreenSpice:
-                case Terrain_ThickRedSpice: {
+                case Terrain_ThickRedSpice:
+                case Terrain_ThickPaleLilacSpice:
+                case Terrain_ThickWhiteSpice: {
                     //determine which surounding tiles are thick spice
                     bool up = (y-1 < 0) || (getTerrain(x, y-1) == terrainType);
                     bool right = (x+1 >= map.getSizeX()) || (getTerrain(x+1, y) == terrainType);
@@ -1583,7 +1617,9 @@ void MapEditor::drawMap(ScreenBorder* pScreenborder, bool bCompleteMap) {
 
                 case Terrain_SpiceBloom:
                 case Terrain_GreenSpiceBloom:
-                case Terrain_RedSpiceBloom: {
+                case Terrain_RedSpiceBloom:
+                case Terrain_PaleLilacSpiceBloom:
+                case Terrain_WhiteSpiceBloom: {
                     tile = Tile::TerrainTile_SpiceBloom;
                 } break;
 

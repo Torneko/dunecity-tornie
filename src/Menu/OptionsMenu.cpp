@@ -16,6 +16,7 @@
  */
 
 #include <Menu/OptionsMenu.h>
+#include <Menu/MainMenuButtonColor.h>
 
 #include <globals.h>
 
@@ -80,6 +81,7 @@ OptionsMenu::OptionsMenu() : MenuBase()
 
     gameOptionsHBox.addWidget(Label::create(_("Default Game Options")), 190);
     gameOptionsButton.setText(_("Change..."));
+    MainMenuButtonColor::apply(gameOptionsButton);
     gameOptionsButton.setOnClick(std::bind(&OptionsMenu::onGameOptions, this));
     gameOptionsHBox.addWidget(&gameOptionsButton, 130);
 
@@ -277,6 +279,7 @@ OptionsMenu::OptionsMenu() : MenuBase()
 
     restoreDefaultsHBox.addWidget(Spacer::create(), 0.5);
     restoreDefaultsButton.setText(_("Restore Config Defaults"));
+    MainMenuButtonColor::apply(restoreDefaultsButton);
     restoreDefaultsButton.setOnClick(std::bind(&OptionsMenu::onRestoreDefaults, this));
     restoreDefaultsHBox.addWidget(&restoreDefaultsButton, 320);
     restoreDefaultsHBox.addWidget(Spacer::create(), 0.5);
@@ -287,12 +290,14 @@ OptionsMenu::OptionsMenu() : MenuBase()
     okCancelHBox.addWidget(Spacer::create());
 
     backButton.setText(_("Back"));
+    MainMenuButtonColor::apply(backButton);
     backButton.setOnClick(std::bind(&OptionsMenu::onOptionsCancel, this));
     okCancelHBox.addWidget(&backButton);
 
     okCancelHBox.addWidget(Spacer::create());
 
     acceptButton.setText(_("Accept"));
+    MainMenuButtonColor::apply(acceptButton);
     acceptButton.setVisible(false);
     acceptButton.setOnClick(std::bind(&OptionsMenu::onOptionsOK, this));
     okCancelHBox.addWidget(&acceptButton);
@@ -492,6 +497,7 @@ void OptionsMenu::saveConfiguration2File() {
     myINIFile.setBoolValue("Game Options","Rocket-Turrets Need Power",settings.gameOptions.rocketTurretsNeedPower);
     myINIFile.setBoolValue("Game Options","Sandworms Respawn",settings.gameOptions.sandwormsRespawn);
     myINIFile.setBoolValue("Game Options","Killed Sandworms Drop Spice",settings.gameOptions.killedSandwormsDropSpice);
+    myINIFile.setBoolValue("Game Options","Random Spice Blooms",settings.gameOptions.randomSpiceBlooms);
     myINIFile.setBoolValue("Game Options","Manual Carryall Drops",settings.gameOptions.manualCarryallDrops);
     myINIFile.setIntValue("Game Options","Maximum Number of Units Override",settings.gameOptions.maximumNumberOfUnitsOverride);
     myINIFile.setIntValue("Game Options","Maximum Number of Harvesters Override",settings.gameOptions.maximumNumberOfHarvestersOverride);

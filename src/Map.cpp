@@ -773,6 +773,10 @@ void Map::spiceRemoved(const Coord& coord) {
                     pTile->setType(Terrain_GreenSpice);
                 } else if(pTile->getType() == Terrain_ThickRedSpice) {
                     pTile->setType(Terrain_RedSpice);
+                } else if(pTile->getType() == Terrain_ThickPaleLilacSpice) {
+                    pTile->setType(Terrain_PaleLilacSpice);
+                } else if(pTile->getType() == Terrain_ThickWhiteSpice) {
+                    pTile->setType(Terrain_WhiteSpice);
                 } else {
                     pTile->setType(Terrain_Spice);
                 }

@@ -292,11 +292,7 @@ bool ModManager::setActiveMod(const std::string& name) {
     }
     if(pGFXManager != nullptr) {
         pGFXManager->invalidateAllSpriteTextures();
-        // A partial UI refresh cannot create object atlases that were skipped
-        // when the game originally started in Vanilla. Rebuild the complete
-        // object set so switching to Tornie/Jericho also installs their editor
-        // previews, terrain sprites and structure graphics without a restart.
-        pGFXManager->reloadAllObjectGraphicsForActiveMod();
+        pGFXManager->reloadModDependentUiGraphics();
     }
     if(pSFXManager != nullptr) {
         pSFXManager->reloadVoices();
@@ -427,6 +423,13 @@ SettingsClass::GameOptionsClass ModManager::loadEffectiveGameOptions(
     
     // Start with base options
     SettingsClass::GameOptionsClass result = baseOptions;
+
+    // Random spice blooms are enabled by default in the Tornie-family mods.
+    // The in-game Game Options window can still override this per match.
+    if(initialized && (activeMod == "Tornie" || activeMod == "TornieLite"
+                       || activeMod == "Tornie Lite" || activeMod == "Jericho")) {
+        result.randomSpiceBlooms = true;
+    }
     
     // If vanilla mod or no mod system, just return base options
     if (!initialized || activeMod == VANILLA_MOD_NAME) {
@@ -481,6 +484,7 @@ SettingsClass::GameOptionsClass ModManager::loadEffectiveGameOptions(
             else if (key == "Rocket-Turrets Need Power") result.rocketTurretsNeedPower = parseBool(value);
             else if (key == "Sandworms Respawn") result.sandwormsRespawn = parseBool(value);
             else if (key == "Killed Sandworms Drop Spice") result.killedSandwormsDropSpice = parseBool(value);
+            else if (key == "Random Spice Blooms") result.randomSpiceBlooms = parseBool(value);
             else if (key == "Manual Carryall Drops") result.manualCarryallDrops = parseBool(value);
             else if (key == "Maximum Number of Units Override") result.maximumNumberOfUnitsOverride = std::stoi(value);
             else if (key == "Maximum Number of Harvesters Override") result.maximumNumberOfHarvestersOverride = std::stoi(value);
@@ -1156,6 +1160,7 @@ bool ModManager::bundledTornieModNeedsReseed(const std::string& modName) const {
             QUANTBOT_CONFIG_FILE,
             GAME_OPTIONS_FILE,
             CUSTOM_HOUSE_CONFIG,
+            "data/HeraldCorruptique.png",
             "manifest.json",
             "checksums.sha256"
         };
