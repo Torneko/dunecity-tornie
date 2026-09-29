@@ -116,6 +116,8 @@ typedef enum {
     ObjPic_Terrain,
     ObjPic_Terrain_GreenSpice,
     ObjPic_Terrain_RedSpice,
+    ObjPic_Terrain_PaleLilacSpice,
+    ObjPic_Terrain_WhiteSpice,
     ObjPic_DestroyedStructure,
     ObjPic_RockDamage,
     ObjPic_SandDamage,
@@ -158,7 +160,7 @@ static const std::array<std::string, NUM_OBJPICS> ObjPicNames =  { { "Tank_Base"
     "Bullet_SmallRocket", "Bullet_MediumRocket", "Bullet_LargeRocket", "Bullet_Small", "Bullet_Medium", "Bullet_Large", "Bullet_Sonic",
     "Bullet_SonicTemp", "Hit_Gas", "Hit_ShellSmall", "Hit_ShellMedium", "Hit_ShellLarge", "ExplosionSmall", "ExplosionMedium1",
     "ExplosionMedium2", "ExplosionLarge1", "ExplosionLarge2", "ExplosionSmallUnit", "ExplosionFlames", "ExplosionSpiceBloom",
-    "DeadInfantry", "DeadAirUnit", "Smoke", "SandwormShimmerMask", "SandwormShimmerTemp", "Terrain", "Terrain_GreenSpice", "Terrain_RedSpice", "DestroyedStructure", "RockDamage",
+    "DeadInfantry", "DeadAirUnit", "Smoke", "SandwormShimmerMask", "SandwormShimmerTemp", "Terrain", "Terrain_GreenSpice", "Terrain_RedSpice", "Terrain_PaleLilacSpice", "Terrain_WhiteSpice", "DestroyedStructure", "RockDamage",
     "SandDamage", "Terrain_Hidden", "Terrain_HiddenFog", "Terrain_Tracks", "Star", "RebelHarvester", "Worfinery", "TechCenter", "Scoutpost", "LoveFactory",
     "ZoneResidential", "ZoneCommercial", "ZoneIndustrial", "CityRoad", "NuclearPlant", "PoliceStation",
     "Stadium", "Airport", "Hospital", "Church", "SonicTrike", "EliteLauncherGunTornie", "RebelSonicTankGun",
@@ -445,6 +447,12 @@ typedef enum {
     UI_MapEditor_RedSpice,
     UI_MapEditor_ThickRedSpice,
     UI_MapEditor_RedSpiceBloom,
+    UI_MapEditor_PaleLilacSpice,
+    UI_MapEditor_ThickPaleLilacSpice,
+    UI_MapEditor_PaleLilacSpiceBloom,
+    UI_MapEditor_WhiteSpice,
+    UI_MapEditor_ThickWhiteSpice,
+    UI_MapEditor_WhiteSpiceBloom,
     UI_MapEditor_SpiceBloom,
     UI_MapEditor_Slab,
     UI_MapEditor_Rock,
@@ -634,6 +642,7 @@ public:
 
     SDL_Surface*     getUIGraphicSurface(unsigned int id, int house=HOUSE_HARKONNEN);
     SDL_Surface*     getMapChoicePieceSurface(unsigned int num, int house);
+    void             invalidateMapChoiceGraphics(int house);
 
     SDL_Surface*     getBackgroundSurface() { return pBackgroundSurface.get(); };
 

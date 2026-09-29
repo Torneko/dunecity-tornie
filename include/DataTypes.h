@@ -216,7 +216,7 @@ public:
         GameOptionsClass()
          : gameSpeed(GAMESPEED_DEFAULT), concreteRequired(true), structuresDegradeOnConcrete(true), fogOfWar(false),
            startWithExploredMap(false), instantBuild(false), onlyOnePalace(false), rocketTurretsNeedPower(false),
-           sandwormsRespawn(false), killedSandwormsDropSpice(false), manualCarryallDrops(false), maximumNumberOfUnitsOverride(-1),
+           sandwormsRespawn(false), killedSandwormsDropSpice(false), randomSpiceBlooms(false), manualCarryallDrops(false), maximumNumberOfUnitsOverride(-1),
            maximumNumberOfHarvestersOverride(-1), immortalHumanPlayer(false), cityEffects(false)  {
         }
 
@@ -232,6 +232,7 @@ public:
                     && (rocketTurretsNeedPower == goc.rocketTurretsNeedPower)
                     && (sandwormsRespawn == goc.sandwormsRespawn)
                     && (killedSandwormsDropSpice == goc.killedSandwormsDropSpice)
+                    && (randomSpiceBlooms == goc.randomSpiceBlooms)
                     && (manualCarryallDrops == goc.manualCarryallDrops)
                     && (maximumNumberOfUnitsOverride == goc.maximumNumberOfUnitsOverride)
                     && (maximumNumberOfHarvestersOverride == goc.maximumNumberOfHarvestersOverride)
@@ -260,6 +261,7 @@ public:
             optStr += std::to_string(rocketTurretsNeedPower);
             optStr += std::to_string(sandwormsRespawn);
             optStr += std::to_string(killedSandwormsDropSpice);
+            optStr += std::to_string(randomSpiceBlooms);
             optStr += std::to_string(manualCarryallDrops);
             optStr += std::to_string(maximumNumberOfUnitsOverride);
             optStr += std::to_string(maximumNumberOfHarvestersOverride);
@@ -289,6 +291,7 @@ public:
         bool        rocketTurretsNeedPower;
         bool        sandwormsRespawn;
         bool        killedSandwormsDropSpice;
+        bool        randomSpiceBlooms;
         bool        manualCarryallDrops;
         int         maximumNumberOfUnitsOverride;
         int         maximumNumberOfHarvestersOverride;

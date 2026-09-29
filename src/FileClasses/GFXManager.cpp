@@ -127,6 +127,8 @@ static const Coord objPicTiles[] {
     { NUM_TERRAIN_TILES_X, NUM_TERRAIN_TILES_Y },  // ObjPic_Terrain
     { NUM_TERRAIN_TILES_X, NUM_TERRAIN_TILES_Y },  // ObjPic_Terrain_GreenSpice
     { NUM_TERRAIN_TILES_X, NUM_TERRAIN_TILES_Y },  // ObjPic_Terrain_RedSpice
+    { NUM_TERRAIN_TILES_X, NUM_TERRAIN_TILES_Y },  // ObjPic_Terrain_PaleLilacSpice
+    { NUM_TERRAIN_TILES_X, NUM_TERRAIN_TILES_Y },  // ObjPic_Terrain_WhiteSpice
     { 14, 1 },  // ObjPic_DestroyedStructure
     { 6, 1 },   // ObjPic_RockDamage
     { 3, 1 },   // ObjPic_SandDamage
@@ -1291,6 +1293,14 @@ GFXManager::GFXManager() {
         createTintedTerrainSpiceSurface(objPic[ObjPic_Terrain][HOUSE_HARKONNEN][0].get(),
                                         SDL_Color{ 136, 48, 40, 255 },
                                         SDL_Color{ 136, 48, 40, 255 });
+    objPic[ObjPic_Terrain_PaleLilacSpice][HOUSE_HARKONNEN][0] =
+        createTintedTerrainSpiceSurface(objPic[ObjPic_Terrain][HOUSE_HARKONNEN][0].get(),
+                                        SDL_Color{ 82, 62, 148, 255 },
+                                        SDL_Color{ 82, 62, 148, 255 });
+    objPic[ObjPic_Terrain_WhiteSpice][HOUSE_HARKONNEN][0] =
+        createTintedTerrainSpiceSurface(objPic[ObjPic_Terrain][HOUSE_HARKONNEN][0].get(),
+                                        SDL_Color{ 72, 132, 148, 255 },
+                                        SDL_Color{ 72, 132, 148, 255 });
     objPic[ObjPic_DestroyedStructure][HOUSE_HARKONNEN][0] = icon->getPictureRow2(14, 33, 125, 213, 214, 215, 223, 224, 225, 232, 233, 234, 240, 246, 247);
     objPic[ObjPic_RockDamage][HOUSE_HARKONNEN][0] = icon->getPictureRow(1,6);
     objPic[ObjPic_SandDamage][HOUSE_HARKONNEN][0] = icon->getPictureRow(7,12);
@@ -3138,6 +3148,18 @@ GFXManager::GFXManager() {
         createTintedMapEditorIcon(uiGraphic[UI_MapEditor_SpiceBloom][HOUSE_HARKONNEN].get(),
                                   uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(),
                                   SDL_Color{ 136, 48, 40, 255 });
+    uiGraphic[UI_MapEditor_PaleLilacSpice][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_Spice][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 82, 62, 148, 255 });
+    uiGraphic[UI_MapEditor_ThickPaleLilacSpice][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_ThickSpice][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 82, 62, 148, 255 });
+    uiGraphic[UI_MapEditor_PaleLilacSpiceBloom][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_SpiceBloom][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 82, 62, 148, 255 });
+    uiGraphic[UI_MapEditor_WhiteSpice][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_Spice][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 72, 132, 148, 255 });
+    uiGraphic[UI_MapEditor_ThickWhiteSpice][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_ThickSpice][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 72, 132, 148, 255 });
+    uiGraphic[UI_MapEditor_WhiteSpiceBloom][HOUSE_HARKONNEN] =
+        createTintedMapEditorIcon(uiGraphic[UI_MapEditor_SpiceBloom][HOUSE_HARKONNEN].get(), uiGraphic[UI_MapEditor_Sand][HOUSE_HARKONNEN].get(), SDL_Color{ 72, 132, 148, 255 });
     uiGraphic[UI_MapEditor_Slab][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon->getPicture(126).get());
     uiGraphic[UI_MapEditor_Rock][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon->getPicture(143).get());
     uiGraphic[UI_MapEditor_Mountain][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon->getPicture(175).get());
@@ -4938,7 +4960,11 @@ void GFXManager::loadCustomHouseHerald() {
             try {
                 if(pFileManager->exists(info.heraldAsset)) {
                     herald = LoadPNG_RW(pFileManager->openFile(info.heraldAsset).get());
-                    if(herald != nullptr) SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
+                    // Custom heralds may be authored as RGBA. Preserve their
+                    // alpha channel and avoid turning opaque black artwork transparent.
+                    if(herald != nullptr && herald->format->Amask == 0) {
+                        SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
+                    }
                 }
             } catch(const std::exception& e) {
                 SDL_Log("GFXManager: Custom-house herald '%s' failed (%s); using fallback",
@@ -4950,7 +4976,9 @@ void GFXManager::loadCustomHouseHerald() {
 
         uiGraphic[UI_Herald_Colored][house] = std::move(herald);
         uiGraphic[UI_Herald_ColoredLarge][house] =
-            Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][house].get());
+            uiGraphic[UI_Herald_Colored][house]->format->BytesPerPixel == 1
+                ? Scaler::defaultDoubleSurface(uiGraphic[UI_Herald_Colored][house].get())
+                : Scaler::doubleSurfaceNN(uiGraphic[UI_Herald_Colored][house].get());
         uiGraphic[UI_Herald_Grey][house] =
             pictureFactory->createGreyHouseChoice(uiGraphic[UI_Herald_Colored][house].get());
     };
@@ -5364,8 +5392,7 @@ void GFXManager::rebuildModDependentEditorGraphics() {
         { UI_MapEditor_Scoutpost,           ObjPic_Scoutpost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_Flamepost,           ObjPic_Flamepost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
         { UI_MapEditor_Chemipost,           ObjPic_Chemipost,           2*D2_TILESIZE,   0, D2_TILESIZE,   D2_TILESIZE },
-        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE },
-        { UI_MapEditor_ChaosFactory,        ObjPic_ChaosFactory,        2*3*D2_TILESIZE, 0, 3*D2_TILESIZE, 2*D2_TILESIZE }
+        { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
 
     const bool tornieActive = ModManager::instance().isInitialized()
@@ -5654,7 +5681,8 @@ void GFXManager::reloadModDependentUiGraphics() {
         if(pFileManager->exists(filename)) {
             auto herald = LoadPNG_RW(pFileManager->openFile(filename).get());
             if(herald != nullptr) {
-                if(!isHouseFaction(static_cast<HOUSETYPE>(house), HOUSE_REBELS)) {
+                if(herald->format->Amask == 0
+                   && !isHouseFaction(static_cast<HOUSETYPE>(house), HOUSE_REBELS)) {
                     SDL_SetColorKey(herald.get(), SDL_TRUE, 0);
                 }
                 uiGraphic[UI_Herald_Colored][house] = std::move(herald);
@@ -5785,11 +5813,8 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                 ObjPic_RebelHarvester,  // falls back to vanilla Harvester
                 ObjPic_Worfinery,       // falls back to vanilla WOR
                 ObjPic_TechCenter,      // falls back to vanilla Palace
-                ObjPic_Scoutpost,       // falls back to vanilla Rocket Turret
-                ObjPic_Flamepost,       // falls back to vanilla Rocket Turret
-                ObjPic_Chemipost,       // falls back to vanilla Rocket Turret
-                ObjPic_LoveFactory,     // falls back to vanilla Heavy Factory
-                ObjPic_ChaosFactory     // falls back to vanilla Heavy Factory
+                ObjPic_Scoutpost        , // falls back to vanilla Rocket Turret
+                ObjPic_LoveFactory      // falls back to vanilla Heavy Factory
             };
             bool isDuneCityCivic = false;
             for(auto cid : duneCityCivicIds) {
@@ -5830,12 +5855,9 @@ SDL_Texture* GFXManager::getZoomedObjPic(unsigned int id, int house, unsigned in
                     fallbackId = ObjPic_Palace;
                 } else if(id == ObjPic_AdvancedWindTrap || id == ObjPic_AdvancedWindTrap2x3 || id == ObjPic_AdvancedWindTrap3x2) {
                     fallbackId = ObjPic_Windtrap;
-                } else if(id == ObjPic_Scoutpost
-                          || id == ObjPic_Flamepost
-                          || id == ObjPic_Chemipost) {
+                } else if(id == ObjPic_Scoutpost) {
                     fallbackId = ObjPic_RocketTurret;
-                } else if(id == ObjPic_LoveFactory
-                          || id == ObjPic_ChaosFactory) {
+                } else if(id == ObjPic_LoveFactory) {
                     fallbackId = ObjPic_HeavyFactory;
                 }
                 if(objPic[fallbackId][HOUSE_HARKONNEN][z] == nullptr) {
@@ -6063,6 +6085,20 @@ SDL_Texture* GFXManager::getTinyPicture(unsigned int id) {
     return tinyPictureTex[id].get();
 }
 
+
+void GFXManager::invalidateMapChoiceGraphics(int house) {
+    if(house < 0 || house >= NUM_HOUSE_COLOR_SLOTS) {
+        return;
+    }
+    if(house != HOUSE_HARKONNEN) {
+        uiGraphic[UI_MapChoiceScreen][house].reset();
+        uiGraphicTex[UI_MapChoiceScreen][house].reset();
+    }
+    for(unsigned int piece = 0; piece < NUM_MAPCHOICEPIECES; ++piece) {
+        mapChoicePieces[piece][house].reset();
+        mapChoicePiecesTex[piece][house].reset();
+    }
+}
 
 SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {

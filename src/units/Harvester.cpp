@@ -567,7 +567,12 @@ void Harvester::move()
                     if(tile->hasSpice()) {
 
                         int beforeTileType = tile->getType();
-                        spice += tile->harvestSpice();
+                        const bool harvestingLilacSpice = tile->isPaleLilacSpice();
+                        const FixPoint harvested = tile->harvestSpice();
+                        spice += harvested;
+                        if(harvestingLilacSpice && harvested > 0) {
+                            addHealth();
+                        }
                         int afterTileType = tile->getType();
 
                         if(beforeTileType != afterTileType) {

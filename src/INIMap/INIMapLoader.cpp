@@ -68,19 +68,26 @@ bool isTornieMapObject(int itemID) {
 }
 
 int normalizeVanillaSpiceTerrain(int terrainType) {
-    if(!isVanillaModActive()) {
+    const std::string activeMod = ModManager::instance().getActiveModName();
+    if(activeMod == "Tornie" || activeMod == "TornieLite" || activeMod == "Jericho") {
         return terrainType;
     }
 
     switch(terrainType) {
         case Terrain_GreenSpice:
         case Terrain_RedSpice:
+        case Terrain_PaleLilacSpice:
+        case Terrain_WhiteSpice:
             return Terrain_Spice;
         case Terrain_ThickGreenSpice:
         case Terrain_ThickRedSpice:
+        case Terrain_ThickPaleLilacSpice:
+        case Terrain_ThickWhiteSpice:
             return Terrain_ThickSpice;
         case Terrain_GreenSpiceBloom:
         case Terrain_RedSpiceBloom:
+        case Terrain_PaleLilacSpiceBloom:
+        case Terrain_WhiteSpiceBloom:
             return Terrain_SpiceBloom;
         default:
             return terrainType;
@@ -466,6 +473,13 @@ void INIMapLoader::loadMap() {
                         // Tornie red spice bloom
                         type = Terrain_RedSpiceBloom;
                     } break;
+
+                    case 'l': type = Terrain_PaleLilacSpice; break;
+                    case 'L': type = Terrain_ThickPaleLilacSpice; break;
+                    case 'i': type = Terrain_PaleLilacSpiceBloom; break;
+                    case 'w': type = Terrain_WhiteSpice; break;
+                    case 'W': type = Terrain_ThickWhiteSpice; break;
+                    case 'x': type = Terrain_WhiteSpiceBloom; break;
 
                     case '%': {
                         // Rock

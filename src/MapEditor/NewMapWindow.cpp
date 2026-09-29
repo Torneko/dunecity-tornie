@@ -165,7 +165,8 @@ NewMapWindow::NewMapWindow(HOUSETYPE currentHouse) : Window(0,0,0,0), house(curr
 
     centralVBox.addWidget(&basicMapPropertiesHBox);
 
-    greenSpiceCheckbox.setText(_("Green spice"));
+    const bool isJericho = ModManager::instance().getActiveModName() == "Jericho";
+    greenSpiceCheckbox.setText(isJericho ? _("Red spice") : _("Green spice"));
     greenSpiceCheckbox.setTextColor(color);
     greenSpiceCheckbox.setOnClick(std::bind(&NewMapWindow::onMapPropertiesChanged,this));
     tornieSpiceHBox.addWidget(&greenSpiceCheckbox, 120);
@@ -177,7 +178,7 @@ NewMapWindow::NewMapWindow(HOUSETYPE currentHouse) : Window(0,0,0,0), house(curr
 
     tornieSpiceHBox.addWidget(HSpacer::create(18));
 
-    redSpiceCheckbox.setText(_("Red spice"));
+    redSpiceCheckbox.setText(isJericho ? _("Blue spice") : _("Purple spice"));
     redSpiceCheckbox.setTextColor(color);
     redSpiceCheckbox.setOnClick(std::bind(&NewMapWindow::onMapPropertiesChanged,this));
     tornieSpiceHBox.addWidget(&redSpiceCheckbox, 110);
@@ -363,7 +364,11 @@ void NewMapWindow::onMapPropertiesChanged() {
         MirrorMode mirrorMode = (MirrorMode) mirrorModeDropDownBox.getSelectedEntryIntData();
 
         mapSeed = INVALID;
-        mapdata = generateRandomMap(sizeX, sizeY, seed, rock, spice, mirrorMode, greenSpice, redSpice);
+        const bool isJericho = ModManager::instance().getActiveModName() == "Jericho";
+        const TERRAINTYPE firstCustomSpice = isJericho ? Terrain_RedSpice : Terrain_GreenSpice;
+        const TERRAINTYPE secondCustomSpice = isJericho ? Terrain_WhiteSpice : Terrain_PaleLilacSpice;
+        mapdata = generateRandomMap(sizeX, sizeY, seed, rock, spice, mirrorMode, greenSpice, redSpice,
+                                    firstCustomSpice, secondCustomSpice);
 
     } else if(seedMapRadioButton.isChecked()) {
         int seed = rngSeedTextBox.getValue();

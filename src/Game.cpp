@@ -2770,6 +2770,44 @@ void Game::updateGameState() {
     pInterface->getRadarView().update();
     cmdManager.executeCommands(gameCycleCount);
 
+    // Occasionally seed a few spice blooms on empty sand. Checking on a
+    // coarse interval with a random roll gives irregular, infrequent timing
+    // while remaining deterministic in lockstep multiplayer.
+    const auto& gameOptions = gameInitSettings.getGameOptions();
+    static constexpr Uint32 kRandomSpiceBloomCheckInterval = MILLI2CYCLES(30000);
+    static constexpr int kMaximumRandomSpiceBlooms = 3;
+    if(gameOptions.randomSpiceBlooms && gameCycleCount > 0
+       && (gameCycleCount % kRandomSpiceBloomCheckInterval) == 0
+       && currentGame->randomGen.rand(0, 9) == 0) {
+        int activeBloomCount = 0;
+        std::vector<Coord> freeSandLocations;
+        for(int x = 0; x < currentGameMap->getSizeX(); ++x) {
+            for(int y = 0; y < currentGameMap->getSizeY(); ++y) {
+                Tile* pTile = currentGameMap->getTile(x, y);
+                if(pTile->isSpiceBloom()) {
+                    ++activeBloomCount;
+                } else if(pTile->isSand() && !pTile->hasAnObject()) {
+                    freeSandLocations.emplace_back(x, y);
+                }
+            }
+        }
+
+        if(activeBloomCount < kMaximumRandomSpiceBlooms && !freeSandLocations.empty()) {
+            const Coord bloomLocation = freeSandLocations[
+                currentGame->randomGen.rand(0, static_cast<int>(freeSandLocations.size()) - 1)];
+            const auto spiceTerrain = currentGameMap->chooseGeneratedSpiceTerrain();
+            int bloomType = Terrain_SpiceBloom;
+            switch(spiceTerrain.first) {
+                case Terrain_GreenSpice: bloomType = Terrain_GreenSpiceBloom; break;
+                case Terrain_RedSpice: bloomType = Terrain_RedSpiceBloom; break;
+                case Terrain_PaleLilacSpice: bloomType = Terrain_PaleLilacSpiceBloom; break;
+                case Terrain_WhiteSpice: bloomType = Terrain_WhiteSpiceBloom; break;
+                default: break;
+            }
+            currentGameMap->getTile(bloomLocation)->setType(bloomType);
+        }
+    }
+
     // Time AI/house updates (this is where QuantBot and other AI runs).
     // Track per-house worst case so a frame-spike log can name the
     // offending player if one house ate most of the AI budget.
@@ -3247,7 +3285,11 @@ void Game::onOptions()
         // don't show menu
         quitGame();
     } else {
-        const int optionsHouse = pLocalHouse->getHouseID();
+        int optionsHouse = pLocalHouse->getHouseID();
+        const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
+        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
+            optionsHouse = selectedHouse;
+        }
         Uint32 color = getHouseColorRGB(getHouseVisualHouse(optionsHouse), 3);
         pInGameMenu = std::make_unique<InGameMenu>((gameType == GameType::CustomMultiplayer), color);
         bMenu = true;
@@ -3258,7 +3300,12 @@ void Game::onOptions()
 
 void Game::onMentat()
 {
-    const int mentatHouse = pLocalHouse->getHouseID();
+    int mentatHouse = pLocalHouse->getHouseID();
+    const HOUSETYPE selectedHouse = gameInitSettings.getHouseID();
+    if(selectedHouse >= 0 && selectedHouse < NUM_HOUSE_COLOR_SLOTS
+       && getHouseFactionIdentity(selectedHouse) == HOUSE_CUSTOM) {
+        mentatHouse = selectedHouse;
+    }
 
     pInGameMentat = std::make_unique<MentatHelp>(mentatHouse, techLevel, gameInitSettings.getMission());
     bMenu = true;

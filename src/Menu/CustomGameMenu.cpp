@@ -111,7 +111,7 @@ CustomGameMenu::CustomGameMenu(bool multiplayer, bool LANServer)
 
     leftVBox.addWidget(VSpacer::create(10));
 
-    multiplePlayersPerHouseCheckbox.setText(_("Multiple players per house"));
+    multiplePlayersPerHouseCheckbox.setText(_("Multiple players per house") + " (Archon)");
     optionsHBox.addWidget(&multiplePlayersPerHouseCheckbox);
     optionsHBox.addWidget(Spacer::create());
     gameOptionsButton.setText(_("Game Options..."));

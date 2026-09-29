@@ -63,6 +63,17 @@ HouseChoiceInfoMenu::HouseChoiceInfoMenu(int newHouse) : MentatMenu(HOUSE_INVALI
                     continue;
                 }
 
+                if(opaqueHerald->format->BytesPerPixel > 1
+                   && customFrame->format->BytesPerPixel == 1) {
+                    sdl2::surface_ptr trueColorFrame{
+                        SDL_ConvertSurfaceFormat(customFrame.get(), SDL_PIXELFORMAT_RGBA32, 0)
+                    };
+                    if(trueColorFrame == nullptr) {
+                        continue;
+                    }
+                    customFrame = std::move(trueColorFrame);
+                }
+
                 SDL_Rect sourceRect{0, 0,
                                     std::min(opaqueHerald->w, customFrame->w - 12),
                                     std::min(126, opaqueHerald->h)};

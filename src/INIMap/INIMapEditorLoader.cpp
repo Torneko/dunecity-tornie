@@ -266,6 +266,13 @@ void INIMapEditorLoader::loadMap() {
                         type = Terrain_RedSpiceBloom;
                     } break;
 
+                    case 'l': type = Terrain_PaleLilacSpice; break;
+                    case 'L': type = Terrain_ThickPaleLilacSpice; break;
+                    case 'i': type = Terrain_PaleLilacSpiceBloom; break;
+                    case 'w': type = Terrain_WhiteSpice; break;
+                    case 'W': type = Terrain_ThickWhiteSpice; break;
+                    case 'x': type = Terrain_WhiteSpiceBloom; break;
+
                     case '%': {
                         // Rock
                         type = Terrain_Rock;

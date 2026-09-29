@@ -96,6 +96,7 @@ GameInitSettings::GameInitSettings(const std::string& savegame, const std::strin
 }
 
 GameInitSettings::GameInitSettings(InputStream& stream) {
+    constexpr Uint32 GAMEINIT_MOD3_MARKER = GAMEINIT_MOD2_MARKER + 1;
     gameType = static_cast<GameType>(stream.readSint8());
     houseID = static_cast<HOUSETYPE>(stream.readSint8());
 
@@ -132,11 +133,11 @@ GameInitSettings::GameInitSettings(InputStream& stream) {
     // Use marker to detect presence for backward compatibility
     try {
         Uint32 modMarker = stream.readUint32();
-        if (modMarker == GAMEINIT_MOD_MARKER || modMarker == GAMEINIT_MOD2_MARKER) {
+        if (modMarker == GAMEINIT_MOD_MARKER || modMarker == GAMEINIT_MOD2_MARKER || modMarker == GAMEINIT_MOD3_MARKER) {
             modName = stream.readString();
             modChecksum = stream.readString();
 
-            if(modMarker == GAMEINIT_MOD2_MARKER) {
+            if(modMarker == GAMEINIT_MOD2_MARKER || modMarker == GAMEINIT_MOD3_MARKER) {
                 Uint32 numHouseColors = stream.readUint32();
                 for(Uint32 i = 0; i < numHouseColors; i++) {
                     const int colorOfHouse = stream.readSint32();
@@ -144,6 +145,10 @@ GameInitSettings::GameInitSettings(InputStream& stream) {
                         houseInfoList[i].colorOfHouse = colorOfHouse;
                     }
                 }
+            }
+
+            if(modMarker == GAMEINIT_MOD3_MARKER) {
+                gameOptions.randomSpiceBlooms = stream.readBool();
             }
         }
     } catch (InputStream::eof&) {
@@ -157,6 +162,7 @@ GameInitSettings::~GameInitSettings() {
 }
 
 void GameInitSettings::save(OutputStream& stream) const {
+    constexpr Uint32 GAMEINIT_MOD3_MARKER = GAMEINIT_MOD2_MARKER + 1;
     stream.writeSint8(static_cast<Sint8>(gameType));
     stream.writeSint8(houseID);
 
@@ -190,7 +196,7 @@ void GameInitSettings::save(OutputStream& stream) const {
     }
     
     // Write mod info with marker for forward compatibility
-    stream.writeUint32(GAMEINIT_MOD2_MARKER);
+    stream.writeUint32(GAMEINIT_MOD3_MARKER);
     stream.writeString(modName);
     stream.writeString(modChecksum);
 
@@ -198,6 +204,7 @@ void GameInitSettings::save(OutputStream& stream) const {
     for(const HouseInfo& houseInfo : houseInfoList) {
         stream.writeSint32(houseInfo.colorOfHouse);
     }
+    stream.writeBool(gameOptions.randomSpiceBlooms);
 }
 
 

@@ -175,7 +175,13 @@ typedef enum {
     Terrain_GreenSpiceBloom,
     Terrain_RedSpice,
     Terrain_ThickRedSpice,
-    Terrain_RedSpiceBloom
+    Terrain_RedSpiceBloom,
+    Terrain_PaleLilacSpice,
+    Terrain_ThickPaleLilacSpice,
+    Terrain_PaleLilacSpiceBloom,
+    Terrain_WhiteSpice,
+    Terrain_ThickWhiteSpice,
+    Terrain_WhiteSpiceBloom
 } TERRAINTYPE;
 
 typedef enum {
