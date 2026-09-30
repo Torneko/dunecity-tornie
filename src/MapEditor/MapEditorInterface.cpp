@@ -661,12 +661,8 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_ChaosFactory);
 
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxLoveFactory, 3*D2_TILESIZE + 4);
-        editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
-        editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
-
         // Arrange the three native-size post previews in a 2x2 grid in one
-        // 3x3-tile editor slot, immediately after the Love Factory.
+        // 3x3-tile editor slot, before the Love Factory.
         const Sint32 scoutpostSlotSize = 3*D2_TILESIZE + 4;
         const Sint32 scoutpostFirstRowSize = scoutpostSlotSize / 2;
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpostSlot, scoutpostSlotSize);
@@ -683,6 +679,10 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxScoutpostRow2.addWidget(&editorModeStructs_Chemipost);
         editorModeStructs_HBoxScoutpostRow2.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxScoutpostRow2.addWidget(Spacer::create());
+
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxLoveFactory, 3*D2_TILESIZE + 4);
+        editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
+        editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
     }
 
     // setup units mode
