@@ -3271,11 +3271,11 @@ GFXManager::GFXManager() {
     if(objPic[ObjPic_Scoutpost][HOUSE_HARKONNEN][0]) {
         auto icon = getSubPicture(
             objPic[ObjPic_Scoutpost][HOUSE_HARKONNEN][0].get(), 2*D2_TILESIZE, 0, D2_TILESIZE, D2_TILESIZE);
-        uiGraphic[UI_MapEditor_Scoutpost][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon.get());
+        uiGraphic[UI_MapEditor_Scoutpost][HOUSE_HARKONNEN] = std::move(icon);
     } else {
         auto icon = getSubPicture(
             objPic[ObjPic_RocketTurret][HOUSE_HARKONNEN][0].get(), 2*D2_TILESIZE, 0, D2_TILESIZE, D2_TILESIZE);
-        uiGraphic[UI_MapEditor_Scoutpost][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(icon.get());
+        uiGraphic[UI_MapEditor_Scoutpost][HOUSE_HARKONNEN] = std::move(icon);
     }
 
     // Custom structures are prebuilt for every visual colour slot. Install
@@ -3313,7 +3313,7 @@ GFXManager::GFXManager() {
                 if(preview.uiID == UI_MapEditor_Scoutpost
                    || preview.uiID == UI_MapEditor_Flamepost
                    || preview.uiID == UI_MapEditor_Chemipost) {
-                    uiGraphic[preview.uiID][colorSlot] = Scaler::defaultDoubleSurface(icon.get());
+                    uiGraphic[preview.uiID][colorSlot] = std::move(icon);
                 } else {
                     uiGraphic[preview.uiID][colorSlot] = std::move(icon);
                 }
@@ -5532,7 +5532,7 @@ void GFXManager::rebuildModDependentEditorGraphics() {
                 if(preview.uiID == UI_MapEditor_Scoutpost
                    || preview.uiID == UI_MapEditor_Flamepost
                    || preview.uiID == UI_MapEditor_Chemipost) {
-                    uiGraphic[preview.uiID][colorSlot] = Scaler::defaultDoubleSurface(icon.get());
+                    uiGraphic[preview.uiID][colorSlot] = std::move(icon);
                 } else {
                     uiGraphic[preview.uiID][colorSlot] = std::move(icon);
                 }
@@ -5644,6 +5644,17 @@ void GFXManager::reloadAllObjectGraphicsForActiveMod() {
 }
 
 void GFXManager::reloadModDependentUiGraphics() {
+    // These in-game buttons are remapped by house color. Discard their cached
+    // custom-house variants on mod changes so old faction colors cannot leak.
+    for(const unsigned int id : { UI_Options, UI_Options_Pressed, UI_Mentat, UI_Mentat_Pressed }) {
+        for(int house = HOUSE_HARKONNEN; house < NUM_HOUSE_COLOR_SLOTS; ++house) {
+            uiGraphicTex[id][house].reset();
+            if(house != HOUSE_HARKONNEN) {
+                uiGraphic[id][house].reset();
+            }
+        }
+    }
+
     // House-coloured interface borders are generated from the active palette.
     // Keep the Harkonnen master surfaces: every other house is rebuilt from them.
     for(int house = 0; house < NUM_HOUSES; ++house) {

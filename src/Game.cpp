@@ -3737,6 +3737,11 @@ bool Game::loadSaveGame(InputStream& stream) {
     logLoadStage("command history");
     cmdManager.load(stream);
 
+    // Save loading can change the active mod after the in-game interface exists.
+    if(pInterface != nullptr) {
+        pInterface->refreshHouseGraphics();
+    }
+
     logLoadStage("complete");
     finished = false;
 
