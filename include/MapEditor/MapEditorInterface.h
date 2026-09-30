@@ -254,7 +254,10 @@ private:
     HBox                editorModeStructs_HBoxTechCenter;
     SymbolButton        editorModeStructs_TechCenter;   ///< Tornie: Palace-equivalent that spawns vehicles
     SymbolButton        editorModeStructs_ChaosFactory; ///< Tornie: random factory
-    HBox                editorModeStructs_HBoxScoutpost;
+    HBox                editorModeStructs_HBoxScoutpostSlot;
+    VBox                editorModeStructs_VBoxScoutpostGrid;
+    HBox                editorModeStructs_HBoxScoutpostRow1;
+    HBox                editorModeStructs_HBoxScoutpostRow2;
     SymbolButton        editorModeStructs_Scoutpost;     ///< Tornie: power/defense/recon post
     SymbolButton        editorModeStructs_Flamepost;     ///< Tornie: flame defense post
     SymbolButton        editorModeStructs_Chemipost;     ///< Tornie: healing defense post

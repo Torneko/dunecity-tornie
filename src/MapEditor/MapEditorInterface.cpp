@@ -665,13 +665,24 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
         editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
 
-        // Keep the three 2x2 post buttons at the end of the structure list,
-        // immediately after the Love Factory.
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, 2*D2_TILESIZE + 4);
-        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
-        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Flamepost);
-        editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Chemipost);
-        editorModeStructs_HBoxScoutpost.addWidget(Spacer::create());
+        // Arrange the three native-size post previews in a 2x2 grid in one
+        // 3x3-tile editor slot, immediately after the Love Factory.
+        const Sint32 scoutpostSlotSize = 3*D2_TILESIZE + 4;
+        const Sint32 scoutpostFirstRowSize = scoutpostSlotSize / 2;
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpostSlot, scoutpostSlotSize);
+        editorModeStructs_HBoxScoutpostSlot.addWidget(&editorModeStructs_VBoxScoutpostGrid, scoutpostSlotSize);
+        editorModeStructs_HBoxScoutpostSlot.addWidget(Spacer::create());
+
+        editorModeStructs_VBoxScoutpostGrid.addWidget(&editorModeStructs_HBoxScoutpostRow1, scoutpostFirstRowSize);
+        editorModeStructs_HBoxScoutpostRow1.addWidget(&editorModeStructs_Scoutpost);
+        editorModeStructs_HBoxScoutpostRow1.addWidget(HSpacer::create(2));
+        editorModeStructs_HBoxScoutpostRow1.addWidget(&editorModeStructs_Flamepost);
+
+        editorModeStructs_VBoxScoutpostGrid.addWidget(&editorModeStructs_HBoxScoutpostRow2,
+                                                       scoutpostSlotSize - scoutpostFirstRowSize);
+        editorModeStructs_HBoxScoutpostRow2.addWidget(&editorModeStructs_Chemipost);
+        editorModeStructs_HBoxScoutpostRow2.addWidget(HSpacer::create(2));
+        editorModeStructs_HBoxScoutpostRow2.addWidget(Spacer::create());
     }
 
     // setup units mode

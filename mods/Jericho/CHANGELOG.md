@@ -2,10 +2,10 @@
 
 ## Jericho 1.0.524-12 - Release 1.0.524-25 gameplay and campaign follow-up
 
-- Rotate the nine opening-campaign opponents so every faction appears exactly once as the first adversary.
+- Give the nine opening campaigns one distinct first adversary each in a full faction cycle: Atreides -> Fremen -> Harkonnen -> Kleshmersh -> Mercenary -> Ordos -> Tharpique -> Wildspade -> Sardaukar -> Atreides.
 - Balance the Tharpique Chemical Siege Tank healing reload and make Sandworms take 35% extra flame damage.
 - Move the Ordos Siege Tank upgrade to level 3 and gate Wildspade Hightech Factory upgrades at tech level 7.
-- Place each Scoutpost, Flamepost, and Chemipost editor button in a 2x2 tile cell after the Love Factory without enlarging its icon.
+- Arrange the Scoutpost, Flamepost, and Chemipost previews in a 2x2 grid inside one 3x3-tile editor slot after the Love Factory; keep their icon scale unchanged.
 - Reload the saved mod whenever its name differs, even when two mods share an effective checksum.
 - Refresh the house-colored Options and Mentat buttons when loading a save switches mods.
 
