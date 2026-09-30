@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <cstdlib>
 #include <ctype.h>
 
 #include <SDL_filesystem.h>
@@ -605,6 +606,21 @@ std::string getDuneLegacyDataDir() {
            && androidDataPath[0] != '\0') {
             dataDir = androidDataPath;
             SDL_Log("Using Android app storage as data dir: %s", dataDir.c_str());
+        }
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
+        // AppImage data is installed under APPDIR/usr/share/DuneCity, not beside the executable.
+        if(dataDir.empty()) {
+            const char* appDir = std::getenv("APPDIR");
+            if(appDir != nullptr && appDir[0] != '\0') {
+                std::string appImageDataDir = std::string(appDir) + "/usr/share/DuneCity";
+                struct stat dirCheck{};
+                if(stat(appImageDataDir.c_str(), &dirCheck) == 0 && S_ISDIR(dirCheck.st_mode)) {
+                    dataDir = appImageDataDir;
+                    SDL_Log("Using AppImage data directory: %s", dataDir.c_str());
+                }
+            }
         }
 #endif
 
