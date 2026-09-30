@@ -870,8 +870,8 @@ int main(int argc, char *argv[]) {
 
         SDL_Log("Starting DuneCity %s on %s", VERSION, SDL_GetPlatform());
 
-#if defined(__linux__) && !defined(__ANDROID__)
-  std::vector<std::string> missingFiles = FileManager::getMissingFiles();
+        // Check for missing data files.
+        std::vector<std::string> missingFiles = FileManager::getMissingFiles();
 
         if(!missingFiles.empty()) {
             // create data directory inside config directory
