@@ -115,6 +115,11 @@ jobs:
           if (-not (Test-Path -LiteralPath "install/locale/French.fr.po")) {
             throw "French catalog is missing from the Windows install tree."
           }
+          foreach ($asset in @("install/data/ANEU.VOC", "install/data/EliteSiegeTank.png")) {
+            if (-not (Test-Path -LiteralPath $asset)) {
+              throw "Required loose Windows runtime asset is missing: $asset"
+            }
+          }
           cpack -G ZIP -C Release
 
       - name: Upload Installer
@@ -259,6 +264,8 @@ jobs:
           cd build
           cmake --install . --prefix install --config Release
           test -f install/share/DuneCity/locale/French.fr.po || { echo "::error::French catalog is missing from the Linux install tree."; exit 1; }
+          test -f install/share/DuneCity/ANEU.VOC || { echo "::error::ANEU.VOC is missing from the Linux install tree."; exit 1; }
+          test -f install/share/DuneCity/EliteSiegeTank.png || { echo "::error::EliteSiegeTank.png is missing from the Linux install tree."; exit 1; }
           cpack -G "DEB;RPM;TGZ" -C Release
 
       - name: Create AppImage
