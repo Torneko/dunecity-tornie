@@ -634,6 +634,15 @@ if(WIN32)
         FILES "${DATA_DIR}/HeraldNeu.png"
         DESTINATION data
     )
+
+    # Preserve the loose runtime assets included in portable Windows releases.
+    # They are separate from the PAKs and are not covered by the rules above.
+    install(
+        DIRECTORY ${DATA_DIR}/
+        DESTINATION data
+        PATTERN "*.PAK" EXCLUDE
+        PATTERN "*.pak" EXCLUDE
+    )
     
     # Install config files from config directory to root installation directory
     install(

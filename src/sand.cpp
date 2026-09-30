@@ -570,6 +570,20 @@ std::string getHouseNameByNumber(HOUSETYPE house) {
     THROW(std::invalid_argument, "Invalid house number %d!", house);
 }
 
+std::string getHouseDisplayNameByNumber(HOUSETYPE house) {
+    switch(getHouseFactionIdentity(house)) {
+        case HOUSE_HARKONNEN: return _("Harkonnen");
+        case HOUSE_ATREIDES:  return _("Atreides");
+        case HOUSE_ORDOS:     return _("Ordos");
+        case HOUSE_FREMEN:    return _("Fremen");
+        case HOUSE_SARDAUKAR: return _("Sardaukar");
+        case HOUSE_MERCENARY: return _("Mercenary");
+        case HOUSE_NEUTRAL:   return _("Neutral");
+        case HOUSE_REBELS:    return _("Rebels");
+        default:              return getHouseNameByNumber(house);
+    }
+}
+
 ATTACKMODE getAttackModeByName(const std::string& name) {
     const std::string lowerName = strToLower(name);
 
