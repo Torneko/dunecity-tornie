@@ -254,11 +254,13 @@ private:
     HBox                editorModeStructs_HBoxTechCenter;
     SymbolButton        editorModeStructs_TechCenter;   ///< Tornie: Palace-equivalent that spawns vehicles
     SymbolButton        editorModeStructs_ChaosFactory; ///< Tornie: random factory
-    HBox                editorModeStructs_HBoxScoutpost;
+    HBox                editorModeStructs_HBoxScoutpostSlot;
+    VBox                editorModeStructs_VBoxScoutpostGrid;
+    HBox                editorModeStructs_HBoxScoutpostRow1;
+    HBox                editorModeStructs_HBoxScoutpostRow2;
     SymbolButton        editorModeStructs_Scoutpost;     ///< Tornie: power/defense/recon post
     SymbolButton        editorModeStructs_Flamepost;     ///< Tornie: flame defense post
     SymbolButton        editorModeStructs_Chemipost;     ///< Tornie: healing defense post
-    HBox                editorModeStructs_HBoxLoveFactory;
     SymbolButton        editorModeStructs_LoveFactory;
     // DuneCity: SimCity-style buildings, only added to the picker when the
     // dune city mod is active. Buttons are always declared so the shared

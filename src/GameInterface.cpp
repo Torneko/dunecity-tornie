@@ -204,6 +204,23 @@ GameInterface::GameInterface() : Window(0,0,0,0) {
     }
 }
 
+void GameInterface::refreshHouseGraphics() {
+    int interfaceHouse = pLocalHouse != nullptr ? pLocalHouse->getHouseID() : HOUSE_HARKONNEN;
+    if(currentGame != nullptr) {
+        const HOUSETYPE selectedHouse = currentGame->getGameInitSettings().getHouseID();
+        if(selectedHouse >= HOUSE_HARKONNEN && selectedHouse < NUM_HOUSES) {
+            interfaceHouse = selectedHouse;
+        }
+    }
+
+    topBar.setTexture(pGFXManager->getUIGraphic(UI_TopBar, interfaceHouse));
+    sideBar.setTexture(pGFXManager->getUIGraphic(UI_SideBar, interfaceHouse));
+    optionsButton.setTextures(pGFXManager->getUIGraphic(UI_Options, interfaceHouse),
+                              pGFXManager->getUIGraphic(UI_Options_Pressed, interfaceHouse));
+    mentatButton.setTextures(pGFXManager->getUIGraphic(UI_Mentat, interfaceHouse),
+                             pGFXManager->getUIGraphic(UI_Mentat_Pressed, interfaceHouse));
+}
+
 GameInterface::~GameInterface() {
     removeOldContainer();
 }

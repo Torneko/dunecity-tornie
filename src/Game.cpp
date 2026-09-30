@@ -3488,7 +3488,7 @@ bool Game::loadSaveGame(InputStream& stream) {
         std::string currentModName = ModManager::instance().getActiveModName();
         std::string currentChecksum = ModManager::instance().getEffectiveChecksums().combined;
 
-        if (savedModChecksum != currentChecksum) {
+        if (savedModName != currentModName || savedModChecksum != currentChecksum) {
             SDL_Log("Game::loadSaveGame(): Save mod mismatch detected");
             SDL_Log("  Save mod: %s (checksum: %s)", savedModName.c_str(), savedModChecksum.c_str());
             SDL_Log("  Current mod: %s (checksum: %s)", currentModName.c_str(), currentChecksum.c_str());
@@ -3736,6 +3736,11 @@ bool Game::loadSaveGame(InputStream& stream) {
     // CommandManager is at the very end of the file. DO NOT CHANGE THIS!
     logLoadStage("command history");
     cmdManager.load(stream);
+
+    // Save loading can change the active mod after the in-game interface exists.
+    if(pInterface != nullptr) {
+        pInterface->refreshHouseGraphics();
+    }
 
     logLoadStage("complete");
     finished = false;
