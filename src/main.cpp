@@ -1099,12 +1099,25 @@ int main(int argc, char *argv[]) {
 
             if(bFirstInit == true) {
                 SDL_Log("Initializing audio...");
-                if( Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0 ) {
-                    SDL_Quit();
-                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, SDL_GetError());
-                } else {
-                    SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
+                if(Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0) {
+                    const std::string deviceError = Mix_GetError();
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                "Audio device unavailable (%s); retrying with SDL dummy audio driver.",
+                                deviceError.c_str());
+
+                    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+                    SDL_SetHint(SDL_HINT_AUDIODRIVER, "dummy");
+                    if(Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0) {
+                        const std::string fallbackError = Mix_GetError();
+                        THROW(sdl_error,
+                              "Couldn't initialize audio. Device error: %s. Dummy driver error: %s!",
+                              deviceError.c_str(), fallbackError.c_str());
+                    }
+
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                "Audio output unavailable; continuing with silent dummy audio.");
                 }
+                SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
             }
 
             pFileManager = std::make_unique<FileManager>();
