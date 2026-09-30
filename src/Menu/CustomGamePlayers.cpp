@@ -118,7 +118,7 @@ void addColorDropDownEntries(DropDownBox& colorDropDown, int selectedColor, bool
     } else {
         for(int h = 0; h < getCustomGameHouseCount(); ++h) {
             colorDropDown.addEntry(
-                getHouseNameByNumber(static_cast<HOUSETYPE>(h)),
+                getHouseDisplayNameByNumber(static_cast<HOUSETYPE>(h)),
                 getDefaultHouseColorSlot(static_cast<HOUSETYPE>(h)));
         }
     }
@@ -1172,9 +1172,9 @@ void CustomGamePlayers::updateDiscordGameStarting() {
         // Get house name
         std::string houseName;
         if(houseID == HOUSE_INVALID) {
-            houseName = "Random";
+            houseName = _("Random");
         } else {
-            houseName = getHouseNameByNumber((HOUSETYPE)houseID);
+            houseName = getHouseDisplayNameByNumber((HOUSETYPE)houseID);
         }
         
         // Get player names
@@ -1412,7 +1412,7 @@ bool CustomGamePlayers::addPlayerToHouseInfo(GameInitSettings::HouseInfo& newHou
                 return false;
             }
 
-            playerName = (houseID == HOUSE_INVALID) ? pPlayerData->getName() : getHouseNameByNumber(houseID);
+            playerName = (houseID == HOUSE_INVALID) ? pPlayerData->getName() : getHouseDisplayNameByNumber(houseID);
             playerClass = pPlayerData->getPlayerClass();
 
         } break;
@@ -2007,7 +2007,7 @@ void CustomGamePlayers::addToHouseDropDown(DropDownBox& houseDropDownBox, int ho
         if(house == HOUSE_INVALID) {
             houseDropDownBox.addEntry(_("Random"), HOUSE_INVALID);
         } else {
-            houseDropDownBox.addEntry(getHouseNameByNumber((HOUSETYPE) house), house);
+            houseDropDownBox.addEntry(getHouseDisplayNameByNumber((HOUSETYPE) house), house);
         }
 
         if(bSelect) {
@@ -2039,7 +2039,7 @@ void CustomGamePlayers::addToHouseDropDown(DropDownBox& houseDropDownBox, int ho
                     currentItemIndex++;
                 } else {
                     if(h == house) {
-                        houseDropDownBox.insertEntry(currentItemIndex, getHouseNameByNumber((HOUSETYPE) h), h);
+                        houseDropDownBox.insertEntry(currentItemIndex, getHouseDisplayNameByNumber((HOUSETYPE) h), h);
 
                         if(bSelect) {
                             houseDropDownBox.setSelectedItem(currentItemIndex);

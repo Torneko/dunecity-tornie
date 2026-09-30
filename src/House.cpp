@@ -635,7 +635,7 @@ void House::win() {
 void House::lose(bool bSilent) {
     if(!bSilent) {
         try {
-            currentGame->addToNewsTicker(fmt::sprintf(_("House '%s' has been defeated."), getHouseNameByNumber( (HOUSETYPE) getHouseID())));
+            currentGame->addToNewsTicker(fmt::sprintf(_("House '%s' has been defeated."), getHouseDisplayNameByNumber( (HOUSETYPE) getHouseID())));
         } catch (std::exception& e) {
             SDL_Log("House::lose(): %s", e.what());
         }

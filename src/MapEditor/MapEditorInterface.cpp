@@ -973,7 +973,7 @@ void MapEditorInterface::onHouseChanges() {
     int currentIndex = 0;
     int currentPlayerNum = 1;
     for(const MapEditor::Player& player : pMapEditor->getPlayers()) {
-        std::string entryName = player.bActive ? (player.bAnyHouse ? (_("Player") + " " + std::to_string(currentPlayerNum++)) : player.name) : ("(" + player.name + ")");
+        std::string entryName = player.bActive ? (player.bAnyHouse ? (_("Player") + " " + std::to_string(currentPlayerNum++)) : getHouseDisplayNameByNumber(player.house)) : ("(" + getHouseDisplayNameByNumber(player.house) + ")");
 
         houseDropDownBox.addEntry(entryName, player.house);
 

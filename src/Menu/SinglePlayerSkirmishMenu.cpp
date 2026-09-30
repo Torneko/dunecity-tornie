@@ -286,14 +286,14 @@ void SinglePlayerSkirmishMenu::onStart()
             humanHouseInfo.addPlayerInfo(GameInitSettings::PlayerInfo(settings.general.playerName, HUMANPLAYERCLASS));
 
             if(supportSelected && supportPlayerClass != nullptr && *supportPlayerClass != '\0') {
-                std::string allyName = getHouseNameByNumber(static_cast<HOUSETYPE>(houseID)) + " " + _("(AI Support)");
+                std::string allyName = getHouseDisplayNameByNumber(static_cast<HOUSETYPE>(houseID)) + " " + _("(AI Support)");
                 humanHouseInfo.addPlayerInfo(GameInitSettings::PlayerInfo(allyName, supportPlayerClass));
             }
 
             init.addHouseInfo(humanHouseInfo);
         } else {
             GameInitSettings::HouseInfo aiHouseInfo(static_cast<HOUSETYPE>(houseID), 2);
-            aiHouseInfo.addPlayerInfo(GameInitSettings::PlayerInfo(getHouseNameByNumber(static_cast<HOUSETYPE>(houseID)), enemyAIClass));
+            aiHouseInfo.addPlayerInfo(GameInitSettings::PlayerInfo(getHouseDisplayNameByNumber(static_cast<HOUSETYPE>(houseID)), enemyAIClass));
             init.addHouseInfo(aiHouseInfo);
         }
     }
