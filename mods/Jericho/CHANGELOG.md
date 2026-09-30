@@ -5,7 +5,7 @@
 - Give the nine opening campaigns one distinct first adversary each in a full faction cycle: Atreides -> Fremen -> Harkonnen -> Kleshmersh -> Mercenary -> Ordos -> Tharpique -> Wildspade -> Sardaukar -> Atreides.
 - Balance the Tharpique Chemical Siege Tank healing reload and make Sandworms take 35% extra flame damage.
 - Move the Ordos Siege Tank upgrade to level 3 and gate Wildspade Hightech Factory upgrades at tech level 7.
-- Arrange the Scoutpost, Flamepost, and Chemipost previews in a 2x2 grid inside one 3x3-tile editor slot before the Love Factory; keep their icon scale unchanged.
+- Arrange the Scoutpost, Flamepost, and Chemipost previews in a 2x2 grid inside one 3x3-tile editor slot, with the Love Factory directly to their right; keep their icon scale unchanged.
 - Align each campaign's first regional territories and localized summaries with its new opening adversary.
 - Reload the saved mod whenever its name differs, even when two mods share an effective checksum.
 - Refresh the house-colored Options and Mentat buttons when loading a save switches mods.
