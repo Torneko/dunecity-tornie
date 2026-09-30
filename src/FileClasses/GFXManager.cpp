@@ -200,6 +200,51 @@ static sdl2::surface_ptr scaleSurfaceNearest(SDL_Surface* source, int factor);
 static std::unique_ptr<Animation> loadPngStripAnimation(const std::string& filename, int frameCount, double frameRate, bool bDoublePic = true, int transparentColorKey = -1);
 
 
+static bool isTornieGraphicsVisible() {
+    const ModManager& modManager = ModManager::instance();
+    return !modManager.isInitialized()
+        || modManager.getActiveModName() == "vanilla"
+        || modManager.isTornieContentActive();
+}
+
+static sdl2::RWops_ptr openTornieAsset(const char* filename, const char* label) {
+    const ModManager& modManager = ModManager::instance();
+    const bool tornieActive =
+        modManager.isInitialized() && modManager.isTornieContentActive();
+    const bool vanillaActive =
+        !modManager.isInitialized() || modManager.getActiveModName() == "vanilla";
+    const std::string assetName{filename};
+    const bool sharedChemicalCarryallAsset =
+        assetName == "ChemicalCarryall.png"
+        || assetName == "ChemicalCarryallIcon.png";
+    const bool deviatorAsset = assetName.find("Deviator") != std::string::npos;
+
+    // The custom Deviator turret is reserved for the three Tornie-family mods.
+    if(deviatorAsset && !tornieActive) {
+        return nullptr;
+    }
+
+    // Make shared custom art available in Vanilla while preserving the
+    // active-mod-only lookup behavior for every other mod.
+    if(!tornieActive && !vanillaActive && !sharedChemicalCarryallAsset) {
+        return nullptr;
+    }
+
+    if(pFileManager != nullptr && pFileManager->exists(filename)) {
+        SDL_Log("GFXManager: %s asset '%s' loaded through custom graphics lookup", label, filename);
+        return pFileManager->openFile(filename);
+    }
+
+    if(pFileManager != nullptr) {
+        if(auto packedAsset = pFileManager->openFileFromNamedPak(filename, "Tornie.PAK")) {
+            SDL_Log("GFXManager: %s asset '%s' loaded directly from Tornie.PAK", label, filename);
+            return packedAsset;
+        }
+    }
+
+    return nullptr;
+}
+
 GFXManager::GFXManager() {
 
     // open all shp files
@@ -1328,34 +1373,6 @@ GFXManager::GFXManager() {
     } catch(const std::exception& e) {
         SDL_Log("GFXManager: ibmPalette load failed (%s) — Tornie sprite tinting disabled", e.what());
     }
-
-    auto openTornieAsset = [&](const char* filename, const char* label) -> sdl2::RWops_ptr {
-        const bool tornieActive = ModManager::instance().isInitialized()
-            && ModManager::instance().isTornieContentActive();
-        const std::string assetName{filename};
-        const bool sharedChemicalCarryallAsset =
-            assetName == "ChemicalCarryall.png"
-            || assetName == "ChemicalCarryallIcon.png";
-
-        // These graphics are shared by every mod that can use the unit. Load
-        // them from base data even when Jericho was not the first active mod,
-        // before the one-time object-picture cache records a vanilla fallback.
-        if(!tornieActive && !sharedChemicalCarryallAsset) {
-            return nullptr;
-        }
-
-        if(pFileManager->exists(filename)) {
-            SDL_Log("GFXManager: %s asset '%s' loaded through active Tornie lookup", label, filename);
-            return pFileManager->openFile(filename);
-        }
-
-        if(auto packedAsset = pFileManager->openFileFromNamedPak(filename, "Tornie.PAK")) {
-            SDL_Log("GFXManager: %s asset '%s' loaded directly from Tornie.PAK", label, filename);
-            return packedAsset;
-        }
-
-        return nullptr;
-    };
 
     auto getTornieFrameCount = [](SDL_Surface* surface, int frameWidth, int frameHeight) -> int {
         if(!surface || frameWidth <= 0 || frameHeight <= 0) {
@@ -2903,8 +2920,7 @@ GFXManager::GFXManager() {
 
     PicFactory->drawFrame(uiGraphic[UI_DuneLegacy][HOUSE_HARKONNEN].get(),PictureFactory::SimpleFrame);
 
-    const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().isTornieContentActive();
+    const bool tornieGraphicsVisible = isTornieGraphicsVisible();
     loadMentatGraphics();
 
     uiGraphic[UI_MentatBackgroundBene][HOUSE_HARKONNEN] = Scaler::defaultDoubleSurface(LoadCPS_RW(pFileManager->openFile("MENTATM.CPS").get()).get());
@@ -3328,7 +3344,12 @@ GFXManager::GFXManager() {
     uiGraphic[UI_MapEditor_Devastator][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Devastator_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[ObjPic_Devastator_Gun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 2, -4);
     uiGraphic[UI_MapEditor_SonicTank][HOUSE_HARKONNEN] = combinePictures(getSubFrame(objPic[ObjPic_Tank_Base][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), getSubFrame(objPic[ObjPic_Sonictank_Gun][HOUSE_HARKONNEN][0].get(),0,0,8,1).get(), 3, 1);
     auto selectEditorSprite = [&](unsigned int customSprite, unsigned int fallbackSprite) {
-        return tornieActive && objPic[customSprite][HOUSE_HARKONNEN][0]
+        const bool deviatorGraphicRestricted =
+            customSprite == ObjPic_DeviatorGunTornie
+            && (!ModManager::instance().isInitialized()
+                || !ModManager::instance().isTornieContentActive());
+        return !deviatorGraphicRestricted
+                && objPic[customSprite][HOUSE_HARKONNEN][0]
             ? customSprite
             : fallbackSprite;
     };
@@ -3375,7 +3396,7 @@ GFXManager::GFXManager() {
         // Tornie custom colour slots must be rebuilt from the indexed Harkonnen
         // atlas. Reusing an eagerly cached custom slot can preserve the authored
         // purple tint in both the map-editor button and sidebar portrait.
-        const bool forceCustomRemap = tornieActive
+        const bool forceCustomRemap = tornieGraphicsVisible
             && (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot));
         SDL_Surface* atlas = forceCustomRemap
             ? nullptr
@@ -3433,11 +3454,11 @@ GFXManager::GFXManager() {
     };
 
     for(int colorSlot = 0; colorSlot < NUM_HOUSE_COLOR_SLOTS; ++colorSlot) {
-        const int fixedTornieGunSlot = tornieActive ? HOUSE_HARKONNEN : colorSlot;
+        const int fixedTornieGunSlot = tornieGraphicsVisible ? HOUSE_HARKONNEN : colorSlot;
 
         auto harvestank = composeEditorVehicle(
             ObjPic_Harvester, colorSlot,
-            tornieActive ? static_cast<int>(ObjPic_HarvestankGunTornie) : -1,
+            tornieGraphicsVisible ? static_cast<int>(ObjPic_HarvestankGunTornie) : -1,
             colorSlot, 0, 0);
         if(harvestank) {
             uiGraphic[UI_MapEditor_RebelHarvester][colorSlot] =
@@ -5015,8 +5036,7 @@ void GFXManager::reloadModDependentObjectGraphics() {
         }
     }
 
-    const bool torniePostsActive = ModManager::instance().isInitialized()
-        && ModManager::instance().isTornieContentActive();
+    const bool tornieGraphicsVisible = isTornieGraphicsVisible();
     auto prepareRuntimeTeamGraphic = [&](SDL_Surface* source,
                                                  bool postPaint,
                                                  bool chaosPaint) -> sdl2::surface_ptr {
@@ -5111,14 +5131,15 @@ void GFXManager::reloadModDependentObjectGraphics() {
     auto installPostGraphic = [&](unsigned int objectGraphic,
                                   const char* filename,
                                   const char* label) {
-        if(!torniePostsActive) {
+        if(!tornieGraphicsVisible) {
             return;
         }
         try {
-            if(!pFileManager->exists(filename)) {
+            auto asset = openTornieAsset(filename, label);
+            if(!asset) {
                 return;
             }
-            auto raw = LoadPNG_RW(pFileManager->openFile(filename).get());
+            auto raw = LoadPNG_RW(asset.get());
             if(!raw || raw->w != D2_TILESIZE || raw->h != 2 * D2_TILESIZE) {
                 SDL_Log("GFXManager: %s must be %dx%d",
                         label, D2_TILESIZE, 2 * D2_TILESIZE);
@@ -5163,11 +5184,10 @@ void GFXManager::reloadModDependentObjectGraphics() {
     installPostGraphic(ObjPic_Flamepost, "Flamepost.png", "Flamepost");
     installPostGraphic(ObjPic_Chemipost, "Chemipost.png", "Chemipost");
 
-    if(torniePostsActive) {
+    if(tornieGraphicsVisible) {
         try {
-            if(pFileManager->exists("ChaosFactory.png")) {
-                auto raw =
-                    LoadPNG_RW(pFileManager->openFile("ChaosFactory.png").get());
+            if(auto asset = openTornieAsset("ChaosFactory.png", "ChaosFactory")) {
+                auto raw = LoadPNG_RW(asset.get());
                 if(raw && raw->w == 3 * D2_TILESIZE
                    && raw->h == 4 * D2_TILESIZE) {
                     auto source =
@@ -5320,8 +5340,9 @@ void GFXManager::reloadRuntimeModPortraits() {
                             const char* fallbackWsa, bool enabled) {
         smallDetailPicTex[pictureID].reset();
         try {
-            if(enabled && pFileManager->exists(filename)) {
-                auto raw = LoadPNG_RW(pFileManager->openFile(filename).get());
+            if(enabled) {
+                auto asset = openTornieAsset(filename, "portrait");
+                auto raw = asset ? LoadPNG_RW(asset.get()) : nullptr;
                 if(raw) {
                     preserveOpaqueBlackIndex(raw.get());
                     normalizeTransparentPaletteIndexes(raw.get());
@@ -5348,27 +5369,27 @@ void GFXManager::reloadRuntimeModPortraits() {
     const std::string activeMod = ModManager::instance().isInitialized()
         ? ModManager::instance().getActiveModName()
         : std::string();
-    const bool tornieContentActive = ModManager::instance().isTornieContentActive();
+    const bool tornieGraphicsVisible = isTornieGraphicsVisible();
 
-    loadPortrait(Picture_RocketTrike, "RocketTrikeIcon.png", "TRIKE.WSA", tornieContentActive);
-    loadPortrait(Picture_SonicTrike, "SonicTrikeIcon.png", "TRIKE.WSA", tornieContentActive);
-    loadPortrait(Picture_FlameTank, "FlameTankIcon.png", "HTANK.WSA", tornieContentActive);
-    loadPortrait(Picture_EliteLauncher, "EliteLauncherIcon.png", "HTANK.WSA", tornieContentActive);
-    loadPortrait(Picture_EliteSiegeTank, "EliteSiegeTankIcon.png", "HTANK.WSA", tornieContentActive);
-    loadPortrait(Picture_ChemicalSiegeTank, "ChemicalSiegeTankIcon.png", "HTANK.WSA", tornieContentActive);
+    loadPortrait(Picture_RocketTrike, "RocketTrikeIcon.png", "TRIKE.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_SonicTrike, "SonicTrikeIcon.png", "TRIKE.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_FlameTank, "FlameTankIcon.png", "HTANK.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_EliteLauncher, "EliteLauncherIcon.png", "HTANK.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_EliteSiegeTank, "EliteSiegeTankIcon.png", "HTANK.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_ChemicalSiegeTank, "ChemicalSiegeTankIcon.png", "HTANK.WSA", tornieGraphicsVisible);
     loadPortrait(Picture_ChemicalCarryall, "ChemicalCarryallIcon.png", "CARRYALL.WSA", true);
-    loadPortrait(Picture_AdvancedWindTrap, "Tornie_AdvancedWindtrap_icon.png", "WINDTRAP.WSA", tornieContentActive);
-    loadPortrait(Picture_Worfinery, "WorfineryIcon.png", "WOR.WSA", tornieContentActive);
-    loadPortrait(Picture_TechCenter, "TechCenterIcon.png", "PALACE.WSA", tornieContentActive);
-    loadPortrait(Picture_Scoutpost, "ScoutpostIcon.png", "RTURRET.WSA", tornieContentActive);
-    loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA", tornieContentActive);
-    loadPortrait(Picture_Chemipost, "ChemipostIcon.png", "RTURRET.WSA", tornieContentActive);
-    loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA", tornieContentActive);
-    loadPortrait(Picture_LoveFactory, "LoveFactoryIcon.png", "STARPORT.WSA", tornieContentActive);
-    loadPortrait(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA", tornieContentActive);
+    loadPortrait(Picture_AdvancedWindTrap, "Tornie_AdvancedWindtrap_icon.png", "WINDTRAP.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_Worfinery, "WorfineryIcon.png", "WOR.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_TechCenter, "TechCenterIcon.png", "PALACE.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_Scoutpost, "ScoutpostIcon.png", "RTURRET.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_Flamepost, "FlamepostIcon.png", "RTURRET.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_Chemipost, "ChemipostIcon.png", "RTURRET.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_ChaosFactory, "ChaosFactoryIcon.png", "STARPORT.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_LoveFactory, "LoveFactoryIcon.png", "STARPORT.WSA", tornieGraphicsVisible);
+    loadPortrait(Picture_PalaceLightVehicles, "PalaceTrikeAndQuadIcon.png", "FREMEN.WSA", tornieGraphicsVisible);
     loadPortrait(Picture_PalaceRebelsCharging, "PalaceRebelsChargingIcon.png", "FREMEN.WSA",
                  activeMod == "Tornie" || activeMod == "Jericho" || activeMod == "vanilla");
-    loadPortrait(Picture_Harvestank, "HarvestankIcon.png", "HARVEST.WSA", tornieContentActive);
+    loadPortrait(Picture_Harvestank, "HarvestankIcon.png", "HARVEST.WSA", tornieGraphicsVisible);
 
 
 }
@@ -5395,10 +5416,14 @@ void GFXManager::rebuildModDependentEditorGraphics() {
         { UI_MapEditor_LoveFactory,         ObjPic_LoveFactory,         2*2*D2_TILESIZE, 0, 2*D2_TILESIZE, 3*D2_TILESIZE }
     };
 
-    const bool tornieActive = ModManager::instance().isInitialized()
-        && ModManager::instance().isTornieContentActive();
+    const bool tornieGraphicsVisible = isTornieGraphicsVisible();
     auto selectEditorSprite = [&](unsigned int customSprite, unsigned int fallbackSprite) {
-        return tornieActive && objPic[customSprite][HOUSE_HARKONNEN][0]
+        const bool deviatorGraphicRestricted =
+            customSprite == ObjPic_DeviatorGunTornie
+            && (!ModManager::instance().isInitialized()
+                || !ModManager::instance().isTornieContentActive());
+        return !deviatorGraphicRestricted
+                && objPic[customSprite][HOUSE_HARKONNEN][0]
             ? customSprite
             : fallbackSprite;
     };
@@ -5416,7 +5441,7 @@ void GFXManager::rebuildModDependentEditorGraphics() {
     auto getRuntimeEditorFrame = [&](unsigned int objPicID, int colorSlot,
                                      int frameX, int frameY, int framesX,
                                      int framesY) -> sdl2::surface_ptr {
-        const bool forceCustomRemap = tornieActive
+        const bool forceCustomRemap = tornieGraphicsVisible
             && (colorSlot == HOUSE_CUSTOM || isCustomHouseColorSlot(colorSlot));
         SDL_Surface* atlas = forceCustomRemap
             ? nullptr
@@ -5505,10 +5530,10 @@ void GFXManager::rebuildModDependentEditorGraphics() {
             uiGraphic[uiID][colorSlot].reset();
         }
 
-        const int fixedTornieGunSlot = tornieActive ? HOUSE_HARKONNEN : colorSlot;
+        const int fixedTornieGunSlot = tornieGraphicsVisible ? HOUSE_HARKONNEN : colorSlot;
         auto harvestank = composeRuntimeEditorVehicle(
             ObjPic_Harvester, colorSlot,
-            tornieActive ? static_cast<int>(ObjPic_HarvestankGunTornie) : -1,
+            tornieGraphicsVisible ? static_cast<int>(ObjPic_HarvestankGunTornie) : -1,
             colorSlot, 0, 0);
         if(harvestank) {
             uiGraphic[UI_MapEditor_RebelHarvester][colorSlot] =
