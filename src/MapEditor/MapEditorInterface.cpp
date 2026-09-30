@@ -645,8 +645,7 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     }
 
     if(tornieContentVisible_) {
-        // Tornie custom structures: two buttons per row keep the sidebar compact,
-        // and the small Scoutpost is centered by the resized SymbolButton.
+        // Tornie custom structures: two buttons per row keep the sidebar compact.
         editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxAdvancedWindTrap, 3*D2_TILESIZE + 4);
         editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_AdvancedWindTrap);
         editorModeStructs_HBoxAdvancedWindTrap.addWidget(HSpacer::create(2));
@@ -666,8 +665,9 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
         editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory);
         editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
 
-        // Keep the two compact post buttons at the end of the structure list.
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, D2_TILESIZE + 4);
+        // Keep the three 2x2 post buttons at the end of the structure list,
+        // immediately after the Love Factory.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpost, 2*D2_TILESIZE + 4);
         editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Scoutpost);
         editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Flamepost);
         editorModeStructs_HBoxScoutpost.addWidget(&editorModeStructs_Chemipost);

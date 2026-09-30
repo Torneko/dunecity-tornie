@@ -94,7 +94,7 @@ void ChemicalSiegeTank::playAttackSound() {
 
 namespace {
 constexpr int CHEMICAL_SIEGE_HEAL_AMOUNT = 15;
-constexpr int CHEMICAL_SIEGE_HEAL_RELOAD = 60;
+constexpr int CHEMICAL_SIEGE_HEAL_RELOAD = 120;
 }
 
 bool ChemicalSiegeTank::isValidHealTarget(const ObjectBase* pObject) const

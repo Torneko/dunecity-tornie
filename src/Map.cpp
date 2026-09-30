@@ -270,6 +270,9 @@ void Map::damage(Uint32 damagerID, House* damagerOwner, const Coord& realPos, Ui
                             if(pUnit->isInfantry()) {
                                 scaledDamage = std::max<int>(lround(damage), scaledDamage * 2);
                             }
+                            if(pUnit->getItemID() == Unit_Sandworm) {
+                                scaledDamage = lround(scaledDamage * 1.35);
+                            }
                             pUnit->handleDamage(applyJerichoKleshmershFireResistance(
                                 pUnit, bulletID, scaledDamage), damagerID, damagerOwner);
                         } else {

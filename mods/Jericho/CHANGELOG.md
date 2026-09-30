@@ -1,5 +1,13 @@
 # Tornie changelog
 
+## Jericho 1.0.524-12 - Release 1.0.524-25 gameplay and campaign follow-up
+
+- Rotate the nine opening-campaign opponents so every faction appears exactly once as the first adversary.
+- Balance the Tharpique Chemical Siege Tank healing reload and make Sandworms take 35% extra flame damage.
+- Move the Ordos Siege Tank upgrade to level 3 and gate Wildspade Hightech Factory upgrades at tech level 7.
+- Give the Scoutpost, Flamepost, and Chemipost 2x2 map-editor previews after the Love Factory.
+- Reload the saved mod whenever its name differs, even when two mods share an effective checksum.
+
 ## Jericho 1.0.524-11 - Campaign and roster consistency
 
 - Unified campaign and skirmish scenario loading so both modes use the same campaign tables.
