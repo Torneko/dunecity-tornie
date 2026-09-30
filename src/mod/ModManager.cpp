@@ -291,8 +291,7 @@ bool ModManager::setActiveMod(const std::string& name) {
         pTextManager->loadData();
     }
     if(pGFXManager != nullptr) {
-        pGFXManager->invalidateAllSpriteTextures();
-        pGFXManager->reloadModDependentUiGraphics();
+        pGFXManager->reloadAllObjectGraphicsForActiveMod();
     }
     if(pSFXManager != nullptr) {
         pSFXManager->reloadVoices();
