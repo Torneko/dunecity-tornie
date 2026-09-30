@@ -5,8 +5,9 @@
 - Rotate the nine opening-campaign opponents so every faction appears exactly once as the first adversary.
 - Balance the Tharpique Chemical Siege Tank healing reload and make Sandworms take 35% extra flame damage.
 - Move the Ordos Siege Tank upgrade to level 3 and gate Wildspade Hightech Factory upgrades at tech level 7.
-- Give the Scoutpost, Flamepost, and Chemipost 2x2 map-editor previews after the Love Factory.
+- Place each Scoutpost, Flamepost, and Chemipost editor button in a 2x2 tile cell after the Love Factory without enlarging its icon.
 - Reload the saved mod whenever its name differs, even when two mods share an effective checksum.
+- Refresh the house-colored Options and Mentat buttons when loading a save switches mods.
 
 ## Jericho 1.0.524-11 - Campaign and roster consistency
 
