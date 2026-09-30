@@ -65,6 +65,26 @@ jobs:
           DUNECITY_DATADIR=${{ github.workspace }}/data \
           ./build/bin/dunelegacy_tests
 
+  validate-french-locale:
+    runs-on: ubuntu-latest
+    needs: [verify-version]
+    if: always() && (needs.verify-version.result == 'success' || needs.verify-version.result == 'skipped')
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gettext tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Compile French catalog
+        run: msgfmt --check -o /tmp/French.fr.mo data/locale/French.fr.po
+
+      - name: Require explicit French faction labels
+        run: python3 scripts/check-french-locale.py
+
   build-windows:
     runs-on: windows-latest
     # Wait for version check on tag builds; run unconditionally otherwise
@@ -92,6 +112,9 @@ jobs:
         run: |
           cd build
           cmake --install . --prefix install --config Release
+          if (-not (Test-Path -LiteralPath "install/locale/French.fr.po")) {
+            throw "French catalog is missing from the Windows install tree."
+          }
           cpack -G ZIP -C Release
 
       - name: Upload Installer
@@ -147,6 +170,11 @@ jobs:
         run: |
           cd build
           cmake --install . --prefix install --config Release
+          LOCALE_FILE=$(find install -type f -name French.fr.po -print -quit)
+          if [ -z "$LOCALE_FILE" ]; then
+            echo "::error::French catalog is missing from the macOS install tree."
+            exit 1
+          fi
           cpack -G DragNDrop -C Release
 
       - name: Upload DMG
@@ -230,6 +258,7 @@ jobs:
         run: |
           cd build
           cmake --install . --prefix install --config Release
+          test -f install/share/DuneCity/locale/French.fr.po || { echo "::error::French catalog is missing from the Linux install tree."; exit 1; }
           cpack -G "DEB;RPM;TGZ" -C Release
 
       - name: Create AppImage
@@ -242,6 +271,7 @@ jobs:
           # Stage the AppDir from the cmake install tree
           cd build
           cmake --install . --prefix AppDir/usr --config Release
+          test -f AppDir/usr/share/DuneCity/locale/French.fr.po || { echo "::error::French catalog is missing from the AppImage install tree."; exit 1; }
 
           # Ensure icons and desktop file are in the right AppDir locations
           mkdir -p AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/128x128/apps
