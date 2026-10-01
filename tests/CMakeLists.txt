@@ -13,6 +13,7 @@ target_sources(dunelegacy_tests
         PathBudgetTestCase/PathBudgetTestCase.cpp
         NetworkManagerTestCase/NetworkManagerTestCase.cpp
         GenericNinthHouseRegressionTestCase/GenericNinthHouseRegressionTestCase.cpp
+        MapChoiceGraphicsCacheTestCase/MapChoiceGraphicsCacheTestCase.cpp
         ZoneStructureTestCase/ZoneStructureTestCase.cpp
         RoadPlacementTestCase/RoadPlacementTestCase.cpp
         CityBudgetIntegrationTestCase/CityBudgetIntegrationTestCase.cpp
@@ -109,4 +110,4 @@ add_custom_command(
         "${CMAKE_SOURCE_DIR}/data"
         "${CMAKE_BINARY_DIR}/tests/data"
     COMMENT "Copying test data to build directory"
-) 
+)

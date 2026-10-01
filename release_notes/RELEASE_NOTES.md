@@ -1,5 +1,20 @@
 # DuneCity Tornie Edition Release Notes
 
+## Version 1.0.524-26
+
+- Correction du plantage de la carte de campagne Harkonnen après un changement de faction ou de mod.
+- Correction de l’encodage et des listes de régions de REGIONH pour Tornie, Tornie Lite et Jericho, en conservant la rotation des adversaires de Jericho.
+- Nouvelle disposition des bâtiments personnalisés dans l’éditeur, avec les icônes à leur taille native :
+  - éolienne verticale, éolienne 3×3 et colonne de postes vert / bleu / orange ;
+  - éolienne horizontale et Worfinery ;
+  - Tech Center et Chaos Factory ;
+  - Love Factory seule en bas à gauche.
+- Correction des couleurs des factions et du texte dans les parties personnalisées, et de l’épaule de Paul Atreides dans Tornie.
+- Ajout de tâches VS Code pour compiler et lancer la version Windows locale.
+- Cette édition inclut les corrections de la 1.0.524-25 et la validation des noms de factions en français.
+
+La version du moteur reste 1.0.524. Le suffixe -26 identifie cette édition Tornie.
+
 ## Version 1.0.520
 
 - `Unit_Special` scenario entries now choose randomly from every enabled vehicle in the selected House pool when more than one result is available.
