@@ -3,6 +3,7 @@
 ## Version 1.0.524-26
 
 - Correctif de cette publication : Wildspade et Kleshmersh retrouvent leurs couleurs de faction dans les campagnes de Jericho, y compris au chargement des sauvegardes existantes.
+- Le fond des Mentats utilise le portrait configuré pour la maison, indépendamment de sa couleur : Chani est rétablie pour les maisons personnalisées de Jericho.
 - Correction du plantage de la carte de campagne Harkonnen après un changement de faction ou de mod.
 - Correction de l’encodage et des listes de régions de REGIONH pour Tornie, Tornie Lite et Jericho, en conservant la rotation des adversaires de Jericho.
 - Nouvelle disposition des bâtiments personnalisés dans l’éditeur, avec les icônes à leur taille native :

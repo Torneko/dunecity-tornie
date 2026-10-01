@@ -6156,10 +6156,12 @@ SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {
     if(id >= NUM_UIGRAPHICS) {
         THROW(std::invalid_argument, "GFXManager::getUIGraphicSurface(): UI Graphic with ID %u is not available!", id);
     }
+    // Portraits and heralds belong to the house, regardless of its team color.
     const bool useHouseIdentity =
         id == UI_Herald_Colored
         || id == UI_Herald_ColoredLarge
         || id == UI_Herald_Grey
+        || id == UI_MentatBackground
         || id == UI_MentatHouseChoiceInfoQuestion;
     if(!useHouseIdentity) {
         house = getHouseVisualHouse(house);
@@ -6253,6 +6255,7 @@ SDL_Texture* GFXManager::getUIGraphic(unsigned int id, int house) {
         id == UI_Herald_Colored
         || id == UI_Herald_ColoredLarge
         || id == UI_Herald_Grey
+        || id == UI_MentatBackground
         || id == UI_MentatHouseChoiceInfoQuestion;
     int visualHouse = useHouseIdentity ? requestedHouse : getHouseVisualHouse(requestedHouse);
     if(!isValidHouseColorSlot(visualHouse)) {
