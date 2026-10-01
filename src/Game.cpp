@@ -3557,7 +3557,9 @@ bool Game::loadSaveGame(InputStream& stream) {
     }
 
     resetHouseVisualHouseMapping();
-    for(const GameInitSettings::HouseInfo& setupHouseInfo : houseInfoListSetup) {
+    const GameType savedGameType = gameInitSettings.getGameType();
+    const bool useFactionColors = savedGameType == GameType::Campaign || savedGameType == GameType::Skirmish;
+    for(GameInitSettings::HouseInfo& setupHouseInfo : houseInfoListSetup) {
         int colorOfHouse = setupHouseInfo.colorOfHouse;
         if(!isValidHouseColorSlot(colorOfHouse)) {
             for(const GameInitSettings::HouseInfo& initHouseInfo : gameInitSettings.getHouseInfoList()) {
@@ -3568,9 +3570,12 @@ bool Game::loadSaveGame(InputStream& stream) {
                 }
             }
         }
-        if(!isValidHouseColorSlot(colorOfHouse)) {
+        // Campaigns have no color picker. Repair raw house IDs saved as colors
+        // by older builds without changing explicit colors in custom games.
+        if(useFactionColors || !isValidHouseColorSlot(colorOfHouse)) {
             colorOfHouse = getDefaultHouseColorSlot(setupHouseInfo.houseID);
         }
+        setupHouseInfo.colorOfHouse = colorOfHouse;
         setHouseVisualHouse(setupHouseInfo.houseID, colorOfHouse);
     }
 

@@ -571,6 +571,8 @@ void INIMapLoader::loadHouses()
 
     // now set up all the houses
     resetHouseVisualHouseMapping();
+    const GameType gameType = pGame->getGameInitSettings().getGameType();
+    const bool useFactionColors = gameType == GameType::Campaign || gameType == GameType::Skirmish;
     for(const GameInitSettings::HouseInfo& houseInfo : houseInfoList) {
         GameInitSettings::HouseInfo resolvedHouseInfo = houseInfo;
         HOUSETYPE houseID = houseInfo.houseID;
@@ -588,7 +590,7 @@ void INIMapLoader::loadHouses()
         }
 
         int colorOfHouse = houseInfo.colorOfHouse;
-        if(!isValidHouseColorSlot(colorOfHouse)) {
+        if(useFactionColors || !isValidHouseColorSlot(colorOfHouse)) {
             colorOfHouse = getDefaultHouseColorSlot(houseID);
         }
         resolvedHouseInfo.colorOfHouse = colorOfHouse;
