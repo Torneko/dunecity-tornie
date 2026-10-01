@@ -16,6 +16,7 @@
  */
 
 #include <FileClasses/GFXManager.h>
+#include <FileClasses/MapChoiceGraphicsCache.h>
 
 #include <globals.h>
 
@@ -6139,17 +6140,16 @@ SDL_Texture* GFXManager::getTinyPicture(unsigned int id) {
 
 
 void GFXManager::invalidateMapChoiceGraphics(int house) {
+    house = getHouseVisualHouse(house);
     if(house < 0 || house >= NUM_HOUSE_COLOR_SLOTS) {
         return;
     }
     if(house != HOUSE_HARKONNEN) {
         uiGraphic[UI_MapChoiceScreen][house].reset();
-        uiGraphicTex[UI_MapChoiceScreen][house].reset();
     }
-    for(unsigned int piece = 0; piece < NUM_MAPCHOICEPIECES; ++piece) {
-        mapChoicePieces[piece][house].reset();
-        mapChoicePiecesTex[piece][house].reset();
-    }
+    uiGraphicTex[UI_MapChoiceScreen][house].reset();
+    MapChoiceGraphicsCache::invalidatePieces(
+        mapChoicePieces, mapChoicePiecesTex, house, HOUSE_HARKONNEN);
 }
 
 SDL_Surface* GFXManager::getUIGraphicSurface(unsigned int id, int house) {

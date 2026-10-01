@@ -645,44 +645,43 @@ MapEditorInterface::MapEditorInterface(MapEditor* pMapEditor)
     }
 
     if(tornieContentVisible_) {
-        // Tornie custom structures: two buttons per row keep the sidebar compact.
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxAdvancedWindTrap, 3*D2_TILESIZE + 4);
-        editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_AdvancedWindTrap);
-        editorModeStructs_HBoxAdvancedWindTrap.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_AdvancedWindTrapMK2);
+        // SymbolButton needs five pixels around its native-size preview.
+        const Sint32 threeTileButtonSize = 3*D2_TILESIZE + 5;
+        const Sint32 twoTileButtonSize = 2*D2_TILESIZE + 5;
+        const Sint32 postButtonSize = D2_TILESIZE + 5;
+        const Sint32 postColumnHeight = 3*postButtonSize;
 
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxAdvancedWindTrapMK3, 2*D2_TILESIZE + 4);
+        // Row 1: vertical windtrap, square windtrap, then the post column.
+        // One-pixel gaps keep this row within the 113-pixel scroll viewport.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxAdvancedWindTrap, postColumnHeight);
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_AdvancedWindTrapMK2, twoTileButtonSize);
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(HSpacer::create(1));
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_AdvancedWindTrap, threeTileButtonSize);
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(HSpacer::create(1));
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(&editorModeStructs_VBoxScoutposts, postButtonSize);
+        editorModeStructs_HBoxAdvancedWindTrap.addWidget(Spacer::create());
+
+        // Green at the top, blue in the middle, orange at the bottom.
+        editorModeStructs_VBoxScoutposts.addWidget(&editorModeStructs_Scoutpost, postButtonSize);
+        editorModeStructs_VBoxScoutposts.addWidget(&editorModeStructs_Chemipost, postButtonSize);
+        editorModeStructs_VBoxScoutposts.addWidget(&editorModeStructs_Flamepost, postButtonSize);
+
+        // Row 2: horizontal windtrap and Worfinery.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxAdvancedWindTrapMK3, twoTileButtonSize);
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(&editorModeStructs_AdvancedWindTrapMK3);
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxAdvancedWindTrapMK3.addWidget(&editorModeStructs_Worfinery);
 
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, 2*D2_TILESIZE + 4);
+        // Row 3: Tech Center and Chaos Factory.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxTechCenter, twoTileButtonSize);
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_TechCenter);
         editorModeStructs_HBoxTechCenter.addWidget(HSpacer::create(2));
         editorModeStructs_HBoxTechCenter.addWidget(&editorModeStructs_ChaosFactory);
 
-        // Arrange the three native-size post previews in a 2x2 grid in one
-        // 3x3-tile editor slot, with the Love Factory directly to their right.
-        const Sint32 scoutpostSlotSize = 3*D2_TILESIZE + 4;
-        const Sint32 scoutpostFirstRowSize = scoutpostSlotSize / 2;
-        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxScoutpostSlot, scoutpostSlotSize);
-        editorModeStructs_HBoxScoutpostSlot.addWidget(&editorModeStructs_VBoxScoutpostGrid, scoutpostSlotSize);
-        editorModeStructs_HBoxScoutpostSlot.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxScoutpostSlot.addWidget(&editorModeStructs_LoveFactory);
-        editorModeStructs_HBoxScoutpostSlot.addWidget(Spacer::create());
-
-        editorModeStructs_VBoxScoutpostGrid.addWidget(&editorModeStructs_HBoxScoutpostRow1, scoutpostFirstRowSize);
-        editorModeStructs_HBoxScoutpostRow1.addWidget(&editorModeStructs_Scoutpost);
-        editorModeStructs_HBoxScoutpostRow1.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxScoutpostRow1.addWidget(&editorModeStructs_Flamepost);
-
-        editorModeStructs_VBoxScoutpostGrid.addWidget(&editorModeStructs_HBoxScoutpostRow2,
-                                                       scoutpostSlotSize - scoutpostFirstRowSize);
-        editorModeStructs_HBoxScoutpostRow2.addWidget(&editorModeStructs_Chemipost);
-        editorModeStructs_HBoxScoutpostRow2.addWidget(HSpacer::create(2));
-        editorModeStructs_HBoxScoutpostRow2.addWidget(Spacer::create());
-
-
+        // Row 4: Love Factory alone, aligned with the left edge.
+        editorModeStructs_VBox.addWidget(&editorModeStructs_HBoxLoveFactory, threeTileButtonSize);
+        editorModeStructs_HBoxLoveFactory.addWidget(&editorModeStructs_LoveFactory, twoTileButtonSize);
+        editorModeStructs_HBoxLoveFactory.addWidget(Spacer::create());
     }
 
     // setup units mode
