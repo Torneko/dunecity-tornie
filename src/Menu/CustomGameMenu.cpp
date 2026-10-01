@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <exception>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -233,7 +234,7 @@ void CustomGameMenu::onChildWindowClose(Window* pChildWindow) {
 
 void CustomGameMenu::onNext()
 {
-    if(mapList.getSelectedIndex() < 0) {
+    if(!nextButton.isEnabled() || mapList.getSelectedIndex() < 0) {
         return;
     }
 
@@ -438,9 +439,10 @@ void CustomGameMenu::onMapListSelectionChange(bool bInteractive)
     try {
         INIMapPreviewCreator mapPreviewCreator(&inimap);
         pMapSurface = mapPreviewCreator.createMinimapImageOfMap(1, DuneStyle::buttonBorderColor);
-    } catch(...) {
+    } catch(const std::exception& e) {
+        SDL_Log("CustomGameMenu: Cannot preview map '%s': %s", mapFilename.c_str(), e.what());
         pMapSurface = sdl2::surface_ptr{ GUIStyle::getInstance().createButtonSurface(130, 130, "Error", true, false) };
-        loadButton.setEnabled(false);
+        nextButton.setEnabled(false);
     }
     minimap.setSurface(std::move(pMapSurface) );
 

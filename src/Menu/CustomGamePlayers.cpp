@@ -48,6 +48,8 @@
 #include <sand.h>
 #include <globals.h>
 
+#include <exception>
+
 
 #define PLAYER_HUMAN        0
 #define PLAYER_OPEN         -1
@@ -1495,7 +1497,8 @@ void CustomGamePlayers::extractMapInfo(INIFile* pMap)
     try {
         INIMapPreviewCreator mapPreviewCreator(pMap);
         pMapSurface = mapPreviewCreator.createMinimapImageOfMap(1, DuneStyle::buttonBorderColor);
-    } catch(...) {
+    } catch(const std::exception& e) {
+        SDL_Log("CustomGamePlayers: Cannot preview map '%s': %s", gameInitSettings.getFilename().c_str(), e.what());
         pMapSurface = sdl2::surface_ptr{ GUIStyle::getInstance().createButtonSurface(130, 130, "Error", true, false) };
         nextButton.setEnabled(false);
     }

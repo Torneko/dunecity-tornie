@@ -330,6 +330,20 @@ sdl2::surface_ptr INIMapPreviewCreator::createMinimapImageOfMap(int borderWidth,
                         color = COLOR_RGB(154, 48, 38);
                     } break;
 
+                    case 'l':
+                    case 'L':
+                    case 'i': {
+                        // Pale lilac spice, thick spice and bloom.
+                        color = getColorByTerrainType(Terrain_PaleLilacSpice);
+                    } break;
+
+                    case 'w':
+                    case 'W':
+                    case 'x': {
+                        // White spice, thick spice and bloom.
+                        color = getColorByTerrainType(Terrain_WhiteSpice);
+                    } break;
+
                     case '%': {
                         // Rock
                         color = COLOR_ROCK;
