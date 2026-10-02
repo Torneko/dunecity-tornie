@@ -1,13 +1,11 @@
 # DuneCity Tornie Edition Release Notes
 
-## Modifications en préparation
+## Version 1.0.524-26
 
 - Tornie, Tornie Lite et Jericho : les bâtiments construits depuis un chantier capturé conservent la technologie de sa faction. Leurs unités utilisent cette technologie tout en appartenant au joueur qui les construit, avec ses couleurs et ses limites d’unités.
 - Cet héritage couvre les unités spéciales, les améliorations des usines et les VCM déployés. Les prérequis et le niveau technologique de la partie restent applicables.
 - Sauvegardes : la technologie des unités est enregistrée séparément de leur propriétaire permanent (format 9824). Les anciennes sauvegardes restent lisibles ; les nouvelles nécessitent cette version du jeu.
 - Mission Harkonnen 1 dans les trois mods : chaque Trooper de départ devient un groupe de trois Troopers, le Trike devient un Quad, le Quad devient un Tank et le Tank devient un Siege Tank.
-
-## Version 1.0.524-26
 
 - Correctif de cette publication : Wildspade et Kleshmersh retrouvent leurs couleurs de faction dans les campagnes de Jericho, y compris au chargement des sauvegardes existantes.
 - Le fond des Mentats utilise le portrait configuré pour la maison, indépendamment de sa couleur : Chani est rétablie pour les maisons personnalisées de Jericho.
