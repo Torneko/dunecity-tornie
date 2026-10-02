@@ -88,7 +88,7 @@ void AmbientHelicopter::checkPos()
 
 bool AmbientHelicopter::update()
 {
-    const FixPoint& maxSpeed = currentGame->objectData.data[itemID][originalHouseID].maxspeed;
+    const FixPoint& maxSpeed = currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed;
 
     currentMaxSpeed = maxSpeed;
 

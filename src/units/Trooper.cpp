@@ -39,9 +39,7 @@ void Trooper::init() {
     owner->incrementUnits(itemID);
 
     numWeapons = 1;
-    const bool kleshmershTrooper = ModManager::instance().isInitialized()
-        && isHouseFaction(static_cast<HOUSETYPE>(owner->getHouseID()), HOUSE_KLESHMERSH);
-    bulletType = kleshmershTrooper ? Bullet_Flame : Bullet_SmallRocket;
+    setProductionHouseID(getProductionHouseID());
 
     graphicID = ObjPic_Trooper;
     graphic = pGFXManager->getObjPic(graphicID,getOwner()->getHouseID());
@@ -51,6 +49,13 @@ void Trooper::init() {
 }
 
 Trooper::~Trooper() = default;
+
+void Trooper::setProductionHouseID(int houseID) {
+    UnitBase::setProductionHouseID(houseID);
+    const bool kleshmershTrooper = ModManager::instance().isInitialized()
+        && isHouseFaction(static_cast<HOUSETYPE>(getProductionHouseID()), HOUSE_KLESHMERSH);
+    bulletType = kleshmershTrooper ? Bullet_Flame : Bullet_SmallRocket;
+}
 
 bool Trooper::canAttack(const ObjectBase* object) const {
     if ((object != nullptr)

@@ -70,7 +70,7 @@ void AmbientAirplane::checkPos()
 
 bool AmbientAirplane::update()
 {
-    const FixPoint& maxSpeed = currentGame->objectData.data[itemID][originalHouseID].maxspeed;
+    const FixPoint& maxSpeed = currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed;
 
     // Constant cruise speed — ambient aircraft don't slow for approach
     currentMaxSpeed = maxSpeed;

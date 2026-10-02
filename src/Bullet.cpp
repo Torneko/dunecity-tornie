@@ -85,7 +85,8 @@ Bullet::Bullet(Uint32 shooterID, Coord* newRealLocation, Coord* newRealDestinati
         int diffY = destination.y - newRealLocation->y;
 
         const int sourceUnit = (bulletID == Bullet_SonicTrike) ? Unit_SonicTrike : Unit_SonicTank;
-        int weaponrange = currentGame->objectData.data[sourceUnit][owner->getHouseID()].weaponrange;
+        const int weaponrange = pShooter != nullptr ? pShooter->getWeaponRange()
+            : currentGame->objectData.data[sourceUnit][owner->getHouseID()].weaponrange;
 
         if((diffX == 0) && (diffY == 0)) {
             diffY = weaponrange*TILESIZE;
@@ -508,9 +509,9 @@ void Bullet::update()
                 return;
             }
 
-            const int sourceUnit = (bulletID == Bullet_SonicTrike) ? Unit_SonicTrike : Unit_SonicTank;
             const int sonicDuration = (bulletID == Bullet_SonicTrike) ? 28 : 45;
-            FixPoint weaponDamage = currentGame->objectData.data[sourceUnit][owner->getHouseID()].weapondamage;
+            // Damage is captured from the firing unit, including inherited technology.
+            const FixPoint weaponDamage = damage;
 
             FixPoint startDamage = (weaponDamage / 4 + 1) / 4.5_fix;
             FixPoint endDamage = ((weaponDamage-9) / 4 + 1) / 4.5_fix;

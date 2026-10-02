@@ -76,6 +76,13 @@ void Palace::init() {
 
 Palace::~Palace() = default;
 
+void Palace::setOriginalHouseID(int houseID) {
+    if(houseID != originalHouseID) {
+        StructureBase::setOriginalHouseID(houseID);
+        specialWeaponTimer = getMaxSpecialWeaponTimer();
+    }
+}
+
 void Palace::save(OutputStream& stream) const {
     StructureBase::save(stream);
     stream.writeSint32(specialWeaponTimer);
@@ -367,7 +374,7 @@ bool Palace::callFremen() {
                 continue;
             }
 
-            Trooper *pFremen = static_cast<Trooper*>(getOwner()->createUnit(Unit_Trooper));
+            Trooper *pFremen = static_cast<Trooper*>(getOwner()->createUnit(Unit_Trooper, false, getProductionHouseID()));
 
             int i;
             int j;
@@ -406,7 +413,7 @@ bool Palace::callFremen() {
 }
 
 bool Palace::spawnSaboteur() {
-    Saboteur* saboteur = static_cast<Saboteur*>(getOwner()->createUnit(Unit_Saboteur));
+    Saboteur* saboteur = static_cast<Saboteur*>(getOwner()->createUnit(Unit_Saboteur, false, getProductionHouseID()));
     Coord spot = currentGameMap->findDeploySpot(saboteur, getLocation(), currentGame->randomGen, getDestination(), getStructureSize());
 
     saboteur->deploy(spot);
@@ -452,7 +459,7 @@ bool Palace::callLightVehicles() {
     int spawned = 0;
 
     const auto spawnVehicle = [&](int itemID) {
-        UnitBase* newUnit = getOwner()->createUnit(itemID);
+        UnitBase* newUnit = getOwner()->createUnit(itemID, false, getProductionHouseID());
         if(newUnit == nullptr) {
             return;
         }
@@ -496,7 +503,7 @@ bool Palace::callOrnithopterStrike() {
     int spawned = 0;
 
     for(int i = 0; i < 3; ++i) {
-        UnitBase* ornithopter = getOwner()->createUnit(Unit_Ornithopter);
+        UnitBase* ornithopter = getOwner()->createUnit(Unit_Ornithopter, false, getProductionHouseID());
         if(ornithopter == nullptr) {
             continue;
         }

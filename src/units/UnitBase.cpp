@@ -32,6 +32,9 @@
 #include <players/HumanPlayer.h>
 
 #include <misc/draw_util.h>
+#include <misc/exceptions.h>
+
+#include <stdexcept>
 
 #include <AStarSearch.h>
 
@@ -127,6 +130,13 @@ UnitBase::UnitBase(InputStream& stream) : ObjectBase(stream) {
     secondaryWeaponTimer = stream.readSint32();
 
     deviationTimer = stream.readSint32();
+    if(currentGame->getLoadedSavegameVersion() >= 9824) {
+        const Uint32 savedProductionHouseID = stream.readUint32();
+        if(savedProductionHouseID >= NUM_HOUSES) {
+            THROW(std::runtime_error, "Invalid unit production house %u", savedProductionHouseID);
+        }
+        productionHouseID = static_cast<int>(savedProductionHouseID);
+    }
 
     if(findTargetTimer < 0) {
         findTargetTimer = 0;
@@ -137,6 +147,7 @@ UnitBase::UnitBase(InputStream& stream) : ObjectBase(stream) {
 }
 
 void UnitBase::init() {
+    productionHouseID = originalHouseID;
     aUnit = true;
     canAttackStuff = true;
 
@@ -152,6 +163,10 @@ void UnitBase::init() {
     pathRequestQueued = false;
 
     unitList.push_back(this);
+}
+
+void UnitBase::setProductionHouseID(int houseID) {
+    productionHouseID = (houseID >= 0 && houseID < NUM_HOUSES) ? houseID : originalHouseID;
 }
 
 UnitBase::~UnitBase() {
@@ -204,6 +219,7 @@ void UnitBase::save(OutputStream& stream) const {
     stream.writeSint32(secondaryWeaponTimer);
 
     stream.writeSint32(deviationTimer);
+    stream.writeUint32(productionHouseID);
 }
 
 bool UnitBase::attack() {
@@ -225,7 +241,7 @@ bool UnitBase::attack() {
             }
 
             int currentBulletType = bulletType;
-            Sint32 currentWeaponDamage = currentGame->objectData.data[itemID][originalHouseID].weapondamage;
+            Sint32 currentWeaponDamage = currentGame->objectData.data[itemID][getProductionHouseID()].weapondamage;
 
             if(getItemID() == Unit_Trooper && !bAirBullet) {
                 // Troopers change weapon type depending on distance
@@ -404,7 +420,7 @@ void UnitBase::destroy() {
 
     if(isVisible()) {
         if(currentGame->randomGen.rand(1,100) <= getInfSpawnProp()) {
-            UnitBase* pNewUnit = currentGame->getHouse(originalHouseID)->createUnit(Unit_Soldier);
+            UnitBase* pNewUnit = currentGame->getHouse(originalHouseID)->createUnit(Unit_Soldier, false, getProductionHouseID());
             pNewUnit->setHealth(pNewUnit->getMaxHealth()/2);
             pNewUnit->deploy(location);
 
@@ -1298,7 +1314,7 @@ void UnitBase::setPickedUp(UnitBase* newCarrier) {
 }
 
 FixPoint UnitBase::getMaxSpeed() const {
-    return currentGame->objectData.data[itemID][originalHouseID].maxspeed;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed;
 }
 
 void UnitBase::setSpeeds() {
@@ -1668,7 +1684,7 @@ void UnitBase::turn() {
 }
 
 void UnitBase::turnLeft() {
-    angle += currentGame->objectData.data[itemID][originalHouseID].turnspeed;
+    angle += currentGame->objectData.data[itemID][getProductionHouseID()].turnspeed;
     if(angle >= 7.5_fix) {
         drawnAngle = lround(angle) - NUM_ANGLES;
         angle -= NUM_ANGLES;
@@ -1678,7 +1694,7 @@ void UnitBase::turnLeft() {
 }
 
 void UnitBase::turnRight() {
-    angle -= currentGame->objectData.data[itemID][originalHouseID].turnspeed;
+    angle -= currentGame->objectData.data[itemID][getProductionHouseID()].turnspeed;
     if(angle <= -0.5_fix) {
         drawnAngle = lround(angle) + NUM_ANGLES;
         angle += NUM_ANGLES;

@@ -218,9 +218,9 @@ void InfantryBase::checkPos() {
                     UnitBase* pContainedUnit = nullptr;
 
                     if(pCapturedStructure->getItemID() == Structure_Silo) {
-                        capturedSpice = currentGame->objectData.data[Structure_Silo][originalHouseID].capacity * (pOwner->getStoredCredits() / pOwner->getCapacity());
+                        capturedSpice = currentGame->objectData.data[Structure_Silo][getProductionHouseID()].capacity * (pOwner->getStoredCredits() / pOwner->getCapacity());
                     } else if(pCapturedStructure->getItemID() == Structure_Refinery) {
-                        capturedSpice = currentGame->objectData.data[Structure_Silo][originalHouseID].capacity * (pOwner->getStoredCredits() / pOwner->getCapacity());
+                        capturedSpice = currentGame->objectData.data[Structure_Silo][getProductionHouseID()].capacity * (pOwner->getStoredCredits() / pOwner->getCapacity());
                         Refinery* pRefinery = static_cast<Refinery*>(pCapturedStructure);
                         if(pRefinery->isFree() == false) {
                             pContainedUnit = pRefinery->getContainedHarvester();
@@ -296,7 +296,7 @@ void InfantryBase::checkPos() {
                     }
 
                     if(containedUnitID != NONE_ID) {
-                        UnitBase* pNewUnit = owner->createUnit(containedUnitID);
+                        UnitBase* pNewUnit = owner->createUnit(containedUnitID, false, origHouse);
 
                         pNewUnit->setRespondable(false);
                         pNewUnit->setActive(false);
@@ -526,7 +526,7 @@ void InfantryBase::setSpeeds() {
         dx -= sx;
         dy -= sy;
 
-        FixPoint scale = currentGame->objectData.data[itemID][originalHouseID].maxspeed/FixPoint::sqrt((dx*dx + dy*dy));
+        FixPoint scale = currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed/FixPoint::sqrt((dx*dx + dy*dy));
         xSpeed = dx*scale;
         ySpeed = dy*scale;
     }

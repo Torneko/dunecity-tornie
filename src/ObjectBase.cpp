@@ -262,7 +262,7 @@ Coord ObjectBase::getClosestCenterPoint(const Coord& objectLocation) const {
 
 
 int ObjectBase::getMaxHealth() const {
-    return currentGame->objectData.data[itemID][originalHouseID].hitpoints;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].hitpoints;
 }
 
 void ObjectBase::handleDamage(int damage, Uint32 damagerID, House* damagerOwner) {
@@ -811,7 +811,7 @@ const ObjectBase* ObjectBase::findTarget() const {
 }
 
 int ObjectBase::getViewRange() const {
-    return currentGame->objectData.data[itemID][originalHouseID].viewrange;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].viewrange;
 }
 
 int ObjectBase::getAreaGuardRange() const {
@@ -819,18 +819,18 @@ int ObjectBase::getAreaGuardRange() const {
 }
 
 int ObjectBase::getWeaponRange() const {
-    return currentGame->objectData.data[itemID][originalHouseID].weaponrange;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].weaponrange;
 }
 
 int ObjectBase::getWeaponReloadTime() const {
-    return currentGame->objectData.data[itemID][originalHouseID].weaponreloadtime;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].weaponreloadtime;
 }
 
 int ObjectBase::getInfSpawnProp() const {
-    return currentGame->objectData.data[itemID][originalHouseID].infspawnprop;
+    return currentGame->objectData.data[itemID][getProductionHouseID()].infspawnprop;
 }
 
-ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) {
+ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario, int productionHouseID) {
 
     ObjectBase* newObject = nullptr;
     switch(itemID) {
@@ -902,7 +902,8 @@ ObjectBase* ObjectBase::createObject(int itemID, House* Owner, bool byScenario) 
             const bool tornieActive = modInitialized && ModManager::instance().isTornieContentActive();
             const bool jerichoActive = modInitialized
                 && ModManager::instance().getActiveModName() == "Jericho";
-            const int houseID = Owner->getHouseID();
+            const int houseID = productionHouseID >= 0 && productionHouseID < NUM_HOUSES
+                ? productionHouseID : Owner->getHouseID();
             const bool corruptiqueActive = modInitialized
                 && isHouseFaction(static_cast<HOUSETYPE>(houseID), HOUSE_CUSTOM);
             const auto objectDataIxCandidates = discoverHouseSpecialVehicleCandidates([&](int candidate) {
@@ -1043,5 +1044,5 @@ bool ObjectBase::targetInWeaponRange() const {
     Coord coord = (target.getObjPointer())->getClosestPoint(location);
     FixPoint dist = blockDistance(location,coord);
 
-    return ( dist <= currentGame->objectData.data[itemID][originalHouseID].weaponrange);
+    return ( dist <= currentGame->objectData.data[itemID][getProductionHouseID()].weaponrange);
 }

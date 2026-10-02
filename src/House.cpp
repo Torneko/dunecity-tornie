@@ -40,6 +40,7 @@
 #include <structures/HarvesterDropoff.h>
 #include <structures/ConstructionYard.h>
 #include <units/Carryall.h>
+#include <mod/ModManager.h>
 
 #include <limits>
 #include <vector>
@@ -706,8 +707,9 @@ void House::freeHarvester(int xPos, int yPos) {
         Coord closestPos = currentGameMap->findClosestEdgePoint(
             refinery->getLocation() + Coord(refinery->getStructureSizeX() - 1, 0), Coord(1,1));
 
-        Carryall* carryall = static_cast<Carryall*>(createUnit(Unit_Carryall));
-        Harvester* harvester = static_cast<Harvester*>(createUnit(Unit_Harvester));
+        const int productionHouseID = refinery->getProductionHouseID();
+        Carryall* carryall = static_cast<Carryall*>(createUnit(Unit_Carryall, false, productionHouseID));
+        Harvester* harvester = static_cast<Harvester*>(createUnit(Unit_Harvester, false, productionHouseID));
         harvester->setAmountOfSpice(5);
         carryall->setOwned(false);
         carryall->giveCargo(harvester);
@@ -732,7 +734,7 @@ void House::freeHarvester(int xPos, int yPos) {
 
 
 
-StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int yPos, bool byScenario, bool bForcePlacing) {
+StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int yPos, bool byScenario, bool bForcePlacing, int productionHouseID) {
     if(!currentGameMap->tileExists(xPos,yPos)) {
         return nullptr;
     }
@@ -842,6 +844,16 @@ StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int
             if(newStructure == nullptr) {
                 delete newObject;
                 THROW(std::runtime_error, "Cannot create structure with itemID %d!", itemID);
+            }
+
+            if(!byScenario && ModManager::instance().isTornieContentActive()) {
+                const int technologyHouse = pBuilder != nullptr
+                    ? pBuilder->getProductionHouseID() : productionHouseID;
+                if(technologyHouse >= 0 && technologyHouse < NUM_HOUSES
+                   && technologyHouse != newStructure->getOriginalHouseID()) {
+                    newStructure->setOriginalHouseID(technologyHouse);
+                    newStructure->setHealth(newStructure->getMaxHealth());
+                }
             }
 
             const int actualSizeX = newStructure->getStructureSizeX();
@@ -974,13 +986,22 @@ StructureBase* House::placeStructure(Uint32 builderID, int itemID, int xPos, int
 
 
 
-UnitBase* House::createUnit(int itemID, bool byScenario) {
-    ObjectBase* newObject = ObjectBase::createObject(itemID,this,byScenario);
+UnitBase* House::createUnit(int itemID, bool byScenario, int productionHouseID) {
+    const bool inheritTechnology = !byScenario && ModManager::instance().isTornieContentActive()
+        && productionHouseID >= 0 && productionHouseID < NUM_HOUSES
+        && productionHouseID != getHouseID();
+    ObjectBase* newObject = ObjectBase::createObject(itemID, this, byScenario,
+        inheritTechnology ? productionHouseID : getHouseID());
     UnitBase* newUnit = dynamic_cast<UnitBase*>(newObject);
 
     if(newUnit == nullptr) {
         delete newObject;
         THROW(std::runtime_error, "Cannot create unit with itemID %d!", itemID);
+    }
+
+    if(inheritTechnology) {
+        newUnit->setProductionHouseID(productionHouseID);
+        newUnit->setHealth(newUnit->getMaxHealth());
     }
 
     return newUnit;

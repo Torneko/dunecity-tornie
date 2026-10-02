@@ -25,6 +25,7 @@ class Palace final : public StructureBase
 public:
     explicit Palace(House* newOwner);
     explicit Palace(InputStream& stream);
+    void setOriginalHouseID(int houseID) override;
     void init();
     virtual ~Palace();
 

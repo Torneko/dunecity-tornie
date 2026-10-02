@@ -48,7 +48,7 @@ int applyJerichoKleshmershFireResistance(const ObjectBase* target, Uint32 bullet
 
     const ModManager& modManager = ModManager::instance();
     if(!modManager.isInitialized() || modManager.getActiveModName() != "Jericho"
-       || target->getOriginalHouseID() != HOUSE_REBELS) {
+       || target->getProductionHouseID() != HOUSE_REBELS) {
         return damage;
     }
 
@@ -189,7 +189,7 @@ void Map::damage(Uint32 damagerID, House* damagerOwner, const Coord& realPos, Ui
                     if(bulletID == Bullet_DRocket) {
                         if((pAirUnit->getItemID() != Unit_Carryall) && (pAirUnit->getItemID() != Unit_Sandworm) && (pAirUnit->getItemID() != Unit_Frigate)) {
                             // try to deviate
-                            if(currentGame->randomGen.randFixPoint() < getDeviateWeakness(static_cast<HOUSETYPE>(pAirUnit->getOriginalHouseID()))) {
+                            if(currentGame->randomGen.randFixPoint() < getDeviateWeakness(static_cast<HOUSETYPE>(pAirUnit->getProductionHouseID()))) {
                                 pAirUnit->deviate(damagerOwner);
                             }
                         }
@@ -259,7 +259,7 @@ void Map::damage(Uint32 damagerID, House* damagerOwner, const Coord& realPos, Ui
                         if(bulletID == Bullet_DRocket) {
                             if((pUnit->getItemID() != Unit_Carryall) && (pUnit->getItemID() != Unit_Sandworm) && (pUnit->getItemID() != Unit_Frigate)) {
                                 // try to deviate
-                                if(currentGame->randomGen.randFixPoint() < getDeviateWeakness(static_cast<HOUSETYPE>(pUnit->getOriginalHouseID()))) {
+                                if(currentGame->randomGen.randFixPoint() < getDeviateWeakness(static_cast<HOUSETYPE>(pUnit->getProductionHouseID()))) {
                                     pUnit->deviate(damagerOwner);
                                 }
                             }

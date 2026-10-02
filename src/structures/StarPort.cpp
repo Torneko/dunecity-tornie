@@ -247,7 +247,7 @@ void StarPort::updateBuildList() {
 }
 
 bool StarPort::deploySingleUnit(Uint32 unitItemID, bool announce) {
-    UnitBase* newUnit = getOwner()->createUnit(unitItemID);
+    UnitBase* newUnit = getOwner()->createUnit(unitItemID, false, getProductionHouseID());
     if(newUnit == nullptr) {
         return false;
     }

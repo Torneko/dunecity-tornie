@@ -48,6 +48,11 @@ public:
 
     void save(OutputStream& stream) const override;
 
+    // Technology can come from a captured factory; originalHouseID remains
+    // the permanent owner used by unit counts and Deviator allegiance.
+    int getProductionHouseID() const override { return productionHouseID; }
+    virtual void setProductionHouseID(int houseID);
+
     void blitToScreen() override;
 
     ObjectInterface* getInterfaceContainer() override;
@@ -306,6 +311,7 @@ protected:
     int      lastFiredBulletType;    ///< Bullet actually fired, including distance-based weapon changes
 
     // unit state/properties
+    int      productionHouseID = HOUSE_INVALID;
     Coord    guardPoint;             ///< The guard point where to return to after the micro-AI hunted some nearby enemy unit
     Coord    attackPos;              ///< The position to attack
     bool     goingToRepairYard;      ///< Are we currently going to a repair yard?

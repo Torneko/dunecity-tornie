@@ -606,7 +606,7 @@ void StructureBase::destroy() {
                 currentGame->getExplosionList().push_back(new Explosion(explosionID, position, owner->getHouseID()) );
 
                 if(currentGame->randomGen.rand(1,100) <= getInfSpawnProp()) {
-                    UnitBase* pNewUnit = owner->createUnit(Unit_Soldier);
+                    UnitBase* pNewUnit = owner->createUnit(Unit_Soldier, false, getProductionHouseID());
                     pNewUnit->setHealth(pNewUnit->getMaxHealth()/2);
                     pNewUnit->deploy(location + Coord(i,j));
                 }

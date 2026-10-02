@@ -145,7 +145,7 @@ void Ornithopter::init() {
     numWeapons = 1;
     bulletType = Bullet_SmallRocket;
 
-    currentMaxSpeed = currentGame->objectData.data[itemID][originalHouseID].maxspeed;
+    currentMaxSpeed = currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed;
 
     static bool loggedInit = false;
     if(!loggedInit) {

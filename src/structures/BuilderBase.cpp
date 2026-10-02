@@ -343,9 +343,11 @@ void BuilderBase::produceNextAvailableItem() {
 
 int BuilderBase::getMaxUpgradeLevel() const {
     int upgradeLevel = 0;
+    const int technologyHouse = ModManager::instance().isTornieContentActive()
+        ? originalHouseID : owner->getHouseID();
 
     for(int i = ItemID_FirstID; i <= ItemID_LastID; i++) {
-        const int dataHouseID = (i == Unit_ChemicalCarryall) ? owner->getHouseID() : originalHouseID;
+        const int dataHouseID = (i == Unit_ChemicalCarryall) ? technologyHouse : originalHouseID;
         const ObjectData::ObjectDataStruct& objData = currentGame->objectData.data[i][dataHouseID];
 
         if(objData.enabled && (objData.builder == (int) itemID) && (objData.techLevel <= currentGame->techLevel)) {
@@ -355,7 +357,7 @@ int BuilderBase::getMaxUpgradeLevel() const {
 
     if(itemID == Structure_HighTechFactory && owner != nullptr
        && ModManager::instance().getActiveModName() != "vanilla"
-       && getHouseScenarioLetter(static_cast<HOUSETYPE>(owner->getHouseID())) == 'W'
+       && getHouseScenarioLetter(static_cast<HOUSETYPE>(technologyHouse)) == 'W'
        && currentGame->techLevel >= 7) {
         upgradeLevel = std::max(upgradeLevel, 2);
     }
@@ -405,18 +407,20 @@ void BuilderBase::updateBuildList()
         }
 
         const auto activeModName = ModManager::instance().getActiveModName();
+        const int technologyHouse = ModManager::instance().isTornieContentActive()
+            ? originalHouseID : owner->getHouseID();
         const bool specialChemicalCarryall = itemID2Add == Unit_ChemicalCarryall
             && itemID == Structure_HighTechFactory
             && owner != nullptr
             && activeModName != "vanilla"
-            && ((isHouseFaction(static_cast<HOUSETYPE>(owner->getHouseID()), HOUSE_WILDSPADE))
+            && ((isHouseFaction(static_cast<HOUSETYPE>(technologyHouse), HOUSE_WILDSPADE))
                 || ((activeModName == "Tornie" || activeModName == "TornieLite")
-                    && owner->getHouseID() == HOUSE_ATREIDES));
+                    && technologyHouse == HOUSE_ATREIDES));
         if(itemID2Add == Unit_ChemicalCarryall && !specialChemicalCarryall) {
             removeItem(buildList, iter, itemID2Add);
             continue;
         }
-        const int dataHouseID = (itemID2Add == Unit_ChemicalCarryall) ? owner->getHouseID() : originalHouseID;
+        const int dataHouseID = (itemID2Add == Unit_ChemicalCarryall) ? technologyHouse : originalHouseID;
         const ObjectData::ObjectDataStruct& objData = currentGame->objectData.data[itemID2Add][dataHouseID];
 
         const bool itemEnabled = objData.enabled || specialChemicalCarryall;
@@ -577,7 +581,7 @@ bool BuilderBase::update() {
 
             Coord groupDeploySpot = Coord::Invalid();
             for(int i = 0; i < num2Place; i++) {
-                UnitBase* newUnit = getOwner()->createUnit(finishedItemID);
+                UnitBase* newUnit = getOwner()->createUnit(finishedItemID, false, getProductionHouseID());
 
                 if(newUnit != nullptr) {
                     Coord unitDestination;

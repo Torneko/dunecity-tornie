@@ -45,13 +45,20 @@ ChemicalCarryall::ChemicalCarryall(InputStream& stream)
 
 ChemicalCarryall::~ChemicalCarryall() = default;
 
+void ChemicalCarryall::setProductionHouseID(int houseID)
+{
+    Carryall::setProductionHouseID(houseID);
+    ensureRuntimeObjectData();
+    currentMaxSpeed = currentGame->objectData.data[itemID][getProductionHouseID()].maxspeed;
+}
+
 void ChemicalCarryall::ensureRuntimeObjectData()
 {
     if(currentGame == nullptr || owner == nullptr) {
         return;
     }
 
-    auto& chemicalData = currentGame->objectData.data[Unit_ChemicalCarryall][originalHouseID];
+    auto& chemicalData = currentGame->objectData.data[Unit_ChemicalCarryall][getProductionHouseID()];
     if(chemicalData.hitpoints > 0 && chemicalData.maxspeed > 0
        && chemicalData.turnspeed > 0 && chemicalData.buildtime > 0) {
         return;
@@ -59,7 +66,7 @@ void ChemicalCarryall::ensureRuntimeObjectData()
 
     // Old saves and stale mod data may not contain appended item ID 66. Start
     // from the normal Carryall so transport and movement remain identical.
-    chemicalData = currentGame->objectData.data[Unit_Carryall][originalHouseID];
+    chemicalData = currentGame->objectData.data[Unit_Carryall][getProductionHouseID()];
     chemicalData.enabled = true;
     chemicalData.hitpoints = 100;
     chemicalData.price = 950;

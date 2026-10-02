@@ -202,7 +202,7 @@ int TechCenter::spawnRandomVehicles(int count) {
         const int idx = currentGame->randomGen.rand(0, static_cast<int>(vehiclePool.size()) - 1);
         const int itemID = vehiclePool[idx];
 
-        UnitBase* newUnit = getOwner()->createUnit(itemID);
+        UnitBase* newUnit = getOwner()->createUnit(itemID, false, getProductionHouseID());
         if(newUnit == nullptr) {
             continue;
         }
