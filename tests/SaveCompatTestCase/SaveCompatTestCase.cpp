@@ -34,10 +34,9 @@ TEST_CASE("Save compat: current Num_ItemID >= legacy",
     REQUIRE(Num_ItemID >= LEGACY_NUM_ITEM_ID_DUNELEGACY);
 }
 
-TEST_CASE("Save compat: SAVEGAMEVERSION is 9811 or higher",
+TEST_CASE("Save compat: SAVEGAMEVERSION includes captured unit technology",
           "[save-compat][regression]") {
-    REQUIRE(SAVEGAMEVERSION == 9823);
-    REQUIRE(SAVEGAMEVERSION >= 9818);
+    REQUIRE(SAVEGAMEVERSION >= 9824);
 }
 
 TEST_CASE("Save compat: extended houses preserve legacy IDs",
