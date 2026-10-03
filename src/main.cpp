@@ -86,9 +86,6 @@
 #include <misc/MacFunctions.h>
 #endif
 
-#if defined(__linux__)
-#include <dlfcn.h>
-#endif
 
 #if !defined(__GNUG__) || (defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1) && (ATOMIC_INT_LOCK_FREE > 1) && !defined(_GLIBCXX_HAS_GTHREADS))
 // g++ does not provide std::async on all platforms
@@ -873,43 +870,7 @@ int main(int argc, char *argv[]) {
 
         SDL_Log("Starting DuneCity %s on %s", VERSION, SDL_GetPlatform());
 
-#if defined(__linux__) && !defined(__ANDROID__)
-        // Verify that required shared libraries are loadable before proceeding.
-        // If the binary was installed without bundled .so files and the system
-        // libraries are the wrong version or absent, dlopen catches this and
-        // logs a human-readable error instead of crashing silently on SDL_Init.
-        {
-            const char* const requiredLibs[] = {
-                "libSDL2-2.0.so.0",
-                "libSDL2_mixer-2.0.so.0",
-                "libSDL2_ttf-2.0.so.0",
-            };
-            bool allLibsFound = true;
-            for (const char* lib : requiredLibs) {
-                // RTLD_NOLOAD checks if already loaded (it is, since we're running);
-                // if it returns null anyway, fall back to a full load attempt.
-                void* handle = dlopen(lib, RTLD_LAZY | RTLD_NOLOAD);
-                if (!handle) {
-                    handle = dlopen(lib, RTLD_LAZY);
-                }
-                if (!handle) {
-                    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                        "Required library missing or incompatible: %s — %s", lib, dlerror());
-                    allLibsFound = false;
-                } else {
-                    dlclose(handle);
-                }
-            }
-            if (!allLibsFound) {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                    "Cannot start: one or more required shared libraries could not be loaded. "
-                    "See log at: %s", getLogFilepath().c_str());
-                return EXIT_FAILURE;
-            }
-        }
-#endif
-
-        // First check for missing files
+        // Check for missing data files.
         std::vector<std::string> missingFiles = FileManager::getMissingFiles();
 
         if(!missingFiles.empty()) {
@@ -1138,12 +1099,25 @@ int main(int argc, char *argv[]) {
 
             if(bFirstInit == true) {
                 SDL_Log("Initializing audio...");
-                if( Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0 ) {
-                    SDL_Quit();
-                    THROW(sdl_error, "Couldn't set %d Hz 16-bit audio. Reason: %s!", AUDIO_FREQUENCY, SDL_GetError());
-                } else {
-                    SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
+                if(Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0) {
+                    const std::string deviceError = Mix_GetError();
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                "Audio device unavailable (%s); retrying with SDL dummy audio driver.",
+                                deviceError.c_str());
+
+                    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+                    SDL_SetHint(SDL_HINT_AUDIODRIVER, "dummy");
+                    if(Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_S16SYS, 2, 1024) < 0) {
+                        const std::string fallbackError = Mix_GetError();
+                        THROW(sdl_error,
+                              "Couldn't initialize audio. Device error: %s. Dummy driver error: %s!",
+                              deviceError.c_str(), fallbackError.c_str());
+                    }
+
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                "Audio output unavailable; continuing with silent dummy audio.");
                 }
+                SDL_Log("%d audio channels were allocated.", Mix_AllocateChannels(28));
             }
 
             pFileManager = std::make_unique<FileManager>();

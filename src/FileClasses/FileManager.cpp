@@ -504,10 +504,20 @@ sdl2::RWops_ptr FileManager::openFileFromNamedPak(const std::string& filename, c
 }
 
 bool FileManager::exists(const std::string& filename) const {
+    const auto upperFilename = strToUpper(filename);
+    const bool isVocFile = upperFilename.size() >= 4
+                        && upperFilename.substr(upperFilename.size() - 4) == ".VOC";
 
     for(const auto& modDataPath : getActiveModDataPaths()) {
         auto modFilename = modDataPath + "/" + filename;
         if(getCaseInsensitiveFilename(modFilename)) {
+            if(isVocFile) {
+                auto rwop = openExternalFileIfPresent(modFilename);
+                if(rwop && isTinyVocPlaceholder(filename, rwop.get())) {
+                    SDL_Log("FileManager: ignoring tiny active-mod VOC placeholder '%s'", modFilename.c_str());
+                    continue;
+                }
+            }
             return true;
         }
     }
@@ -517,6 +527,13 @@ bool FileManager::exists(const std::string& filename) const {
         auto externalFilename = searchPath + "/";
         externalFilename += filename;
         if(getCaseInsensitiveFilename(externalFilename)) {
+            if(isVocFile) {
+                auto rwop = openExternalFileIfPresent(externalFilename);
+                if(rwop && isTinyVocPlaceholder(filename, rwop.get())) {
+                    SDL_Log("FileManager: ignoring tiny external VOC placeholder '%s'", externalFilename.c_str());
+                    continue;
+                }
+            }
             return true;
         }
     }
@@ -528,6 +545,14 @@ bool FileManager::exists(const std::string& filename) const {
         }
 
         if(pPakFile->exists(filename)) {
+            if(isVocFile) {
+                auto rwop = pPakFile->openFile(filename);
+                if(isTinyVocPlaceholder(filename, rwop.get())) {
+                    SDL_Log("FileManager: ignoring tiny VOC placeholder '%s' from %s",
+                            filename.c_str(), getBaseFilenameUpper(pPakFile->getPakFilename()).c_str());
+                    continue;
+                }
+            }
             return true;
         }
     }
@@ -536,12 +561,22 @@ bool FileManager::exists(const std::string& filename) const {
 }
 
 bool FileManager::existsInPak(const std::string& filename) const {
+    const auto upperFilename = strToUpper(filename);
+    const bool isVocFile = upperFilename.size() >= 4
+                        && upperFilename.substr(upperFilename.size() - 4) == ".VOC";
+
     for(const auto& pPakFile : pakFiles) {
         if(!isPakEnabledForFallbackLookup(*pPakFile, filename)) {
             continue;
         }
 
         if(pPakFile->exists(filename)) {
+            if(isVocFile) {
+                auto rwop = pPakFile->openFile(filename);
+                if(isTinyVocPlaceholder(filename, rwop.get())) {
+                    continue;
+                }
+            }
             return true;
         }
     }
