@@ -2,6 +2,9 @@
 
 ## Version 1.0.524-26
 
+- Correction du plantage au démarrage en français lorsqu’une annonce vocale facultative est absente ou inutilisable. Les appels audio restent sûrs si les sons ne peuvent pas être initialisés.
+- Linux : les AppImages et installations déplacées retrouvent les traductions, les configurations et les mods inclus avec le jeu.
+
 - Tornie, Tornie Lite et Jericho : les bâtiments construits depuis un chantier capturé conservent la technologie de sa faction. Leurs unités utilisent cette technologie tout en appartenant au joueur qui les construit, avec ses couleurs et ses limites d’unités.
 - Cet héritage couvre les unités spéciales, les améliorations des usines et les VCM déployés. Les prérequis et le niveau technologique de la partie restent applicables.
 - Sauvegardes : la technologie des unités est enregistrée séparément de leur propriétaire permanent (format 9824). Les anciennes sauvegardes restent lisibles ; les nouvelles nécessitent cette version du jeu.

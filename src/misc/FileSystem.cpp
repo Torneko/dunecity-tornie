@@ -599,6 +599,18 @@ std::string getDuneLegacyDataDir() {
     if(duneLegacyDataDir.empty()) {
 
         std::string dataDir;
+#if defined(__linux__) && !defined(__ANDROID__)
+        // AppImages and relocated FHS installs keep their payload beside bin/.
+        // Prefer that payload so an older system install cannot override it.
+        if(char* basePath = SDL_GetBasePath()) {
+            const std::string relativeDataDir = std::string(basePath) + "../share/DuneCity/";
+            SDL_free(basePath);
+            if(existsFile(relativeDataDir + "locale/English.en.po")) {
+                dataDir = relativeDataDir;
+                SDL_Log("Using relocatable Linux data dir: %s", dataDir.c_str());
+            }
+        }
+#endif
 #ifdef __ANDROID__
         char androidDataPath[FILENAME_MAX];
         if(fnkdat(nullptr, androidDataPath, FILENAME_MAX, FNKDAT_USER | FNKDAT_CREAT) == 0

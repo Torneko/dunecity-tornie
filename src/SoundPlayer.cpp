@@ -53,7 +53,7 @@ SoundPlayer::SoundPlayer() {
 SoundPlayer::~SoundPlayer() = default;
 
 void SoundPlayer::playVoice(Voice_enum id, int houseID) {
-    if(soundOn) {
+    if(soundOn && pSFXManager != nullptr) {
         constexpr Uint32 wormWarningCooldownMs = 5000;
         const bool isWormWarning = id == WarningWormSign;
         const Uint32 currentTick = isWormWarning ? SDL_GetTicks() : 0;
@@ -81,7 +81,7 @@ void SoundPlayer::playVoice(Voice_enum id, int houseID) {
 
 void SoundPlayer::playSoundAt(Sound_enum soundID, const Coord& location)
 {
-    if(soundOn) {
+    if(soundOn && pSFXManager != nullptr) {
         if( !currentGameMap->tileExists(location)
             || !currentGameMap->getTile(location)->isExploredByTeam(pLocalHouse->getTeamID()) ) {
             return;
@@ -152,7 +152,7 @@ void SoundPlayer::playSound(Sound_enum soundID, int volume)
         ChannelGroup::Credits,              // Sound_CityMilestone
     };
 
-    if(soundOn) {
+    if(soundOn && pSFXManager != nullptr) {
         Mix_Chunk* sound;
 
         if((sound = pSFXManager->getSound(soundID)) == nullptr) {

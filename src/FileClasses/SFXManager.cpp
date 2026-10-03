@@ -416,12 +416,18 @@ void SFXManager::loadNonEnglishVoice(const std::string& languagePrefix) {
     lngVoice[BloomLocated] = getChunkFromFile(languagePrefix + "BLOOM.VOC");
 
     // "Warning Wormsign"
+    lngVoice[WarningWormSign] = getChunkFromFile(languagePrefix + "WARNING.VOC");
     if(pFileManager->exists(languagePrefix + "WORMY.VOC")) {
-        auto WarningChunk = getChunkFromFile(languagePrefix + "WARNING.VOC");
-        auto WormSignChunk = getChunkFromFile(languagePrefix + "WORMY.VOC");
-        lngVoice[WarningWormSign] = concat2Chunks(WarningChunk.get(), WormSignChunk.get());
-    } else {
-        lngVoice[WarningWormSign] = getChunkFromFile(languagePrefix + "WARNING.VOC");
+        // Some language packs have only WARNING; a loose dummy WORMY file
+        // can still pass exists() even though FileManager will refuse it.
+        try {
+            auto WormSignChunk = getChunkFromFile(languagePrefix + "WORMY.VOC");
+            lngVoice[WarningWormSign] = concat2Chunks(lngVoice[WarningWormSign].get(), WormSignChunk.get());
+        } catch(const std::runtime_error& e) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_AUDIO,
+                "SFXManager: Optional '%sWORMY.VOC' unavailable; using '%sWARNING.VOC': %s",
+                languagePrefix.c_str(), languagePrefix.c_str(), e.what());
+        }
     }
 
     // "Our base is under attack"
